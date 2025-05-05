@@ -1,0 +1,22 @@
+[
+  {
+    "id": 1,
+    "offerNumber": "AB-12345",
+    "customer": { "name": "Test Customer" },
+    "currentVersion": {
+      "versionNumber": "V1",
+      "status": "Entwurf",
+      "createdAt": "2023-01-01T00:00:00.000Z"
+    }
+  },
+  {
+    "id": 2,
+    "offerNumber": "AB-67890",
+    "customer": { "name": "Another Customer" },
+    "currentVersion": {
+      "versionNumber": "V2",
+      "status": "Veröffentlicht",
+      "createdAt": "2023-01-02T00:00:00.000Z"
+    }
+  }
+]

@@ -1,0 +1,20 @@
+{
+  "id": 1,
+  "offerNumber": "AB-12345",
+  "customer": { "name": "Test Customer" },
+  "currentVersion": {
+    "id": 1,
+    "versionNumber": "V1",
+    "title": "Test Offer",
+    "status": "Entwurf"
+  },
+  "versions": [
+    {
+      "id": 1,
+      "versionNumber": "V1",
+      "title": "Test Offer",
+      "status": "Entwurf",
+      "createdAt": "2023-01-01T00:00:00.000Z"
+    }
+  ]
+}
