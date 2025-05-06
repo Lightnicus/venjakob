@@ -12,6 +12,8 @@ import { AngebotBlockTree } from "./angebot-block-tree"
 import { AngebotKalkulation } from "./angebot-kalkulation"
 import { AngebotVorschau } from "./angebot-vorschau"
 import { AngebotVersionen } from "./angebot-versionen"
+import { useRouter } from "next/navigation"
+import { Loader2 } from "lucide-react"
 
 export interface Angebot {
   id?: string
@@ -53,6 +55,8 @@ export function AngebotEditor({ angebot: initialAngebot, isNew = false, onSave, 
   )
 
   const [activeTab, setActiveTab] = useState("details")
+  const [isSaving, setIsSaving] = useState(false)
+  const router = useRouter()
 
   useEffect(() => {
     if (initialAngebot) {
@@ -68,9 +72,14 @@ export function AngebotEditor({ angebot: initialAngebot, isNew = false, onSave, 
     }
   }
 
-  const handleSave = () => {
-    if (onSave) {
-      onSave(angebot)
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      if (onSave) {
+        await onSave(angebot)
+      }
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -78,12 +87,30 @@ export function AngebotEditor({ angebot: initialAngebot, isNew = false, onSave, 
     handleChange("blocks", blocks)
   }
 
+  const handleCancel = () => {
+    router.push("/angebote")
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">{isNew ? "Neues Angebot erstellen" : `Angebot: ${angebot.titel}`}</h1>
         <div className="space-x-2">
-          <Button onClick={handleSave}>Speichern</Button>
+          <div className="flex space-x-2">
+            <Button variant="outline" onClick={handleCancel}>
+              Abbrechen
+            </Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Speichern...
+                </>
+              ) : (
+                "Speichern"
+              )}
+            </Button>
+          </div>
           {!isNew && <Button variant="outline">PDF exportieren</Button>}
         </div>
       </div>

@@ -42,11 +42,20 @@ export function BlockEditor({ id }: BlockEditorProps) {
   const handleSave = () => {
     setEditMode(false)
     // In a real app, you would save the changes here
+    // For example:
+    // saveBlock(block).then(() => {
+    //   toast({
+    //     title: "Block gespeichert",
+    //     description: "Der Block wurde erfolgreich gespeichert.",
+    //   });
+    // });
   }
 
   const handleCancel = () => {
     setEditMode(false)
     // In a real app, you would reset the form here
+    // For example:
+    // setBlock(originalBlock);
   }
 
   return (

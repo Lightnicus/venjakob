@@ -1,16 +1,16 @@
 "use client"
 
-import type React from "react"
-
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useToast } from "@/hooks/use-toast"
 import { AngebotEditor, type Angebot } from "./angebot-editor"
 import { useToast as useToastLib } from "@/lib/hooks/use-toast"
+import { fetchSalesOpportunityById } from "@/lib/crm-service"
+import { LoadingSpinner } from "@/components/loading-spinner"
 
 interface AngebotEditorWithDbProps {
   angebotId?: string
   isNew?: boolean
+  verkaufschanceId?: string
 }
 
 interface VersionChangeData {
@@ -24,7 +24,23 @@ interface OrderConfirmationData {
   notes: string
 }
 
-export function AngebotEditorWithDb({ angebotId, isNew = false }: AngebotEditorWithDbProps) {
+// Leeres Angebot-Objekt für neue Angebote
+const emptyAngebot: Angebot = {
+  id: "",
+  title: "Neues Angebot",
+  customer: {
+    id: "",
+    name: "",
+    contactPerson: "",
+  },
+  status: "Entwurf",
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  blocks: [],
+  positions: [],
+}
+
+export function AngebotEditorWithDb({ angebotId, isNew = false, verkaufschanceId }: AngebotEditorWithDbProps) {
   const [activeTab, setActiveTab] = useState("bloecke")
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null)
   const [selectedArticle, setSelectedArticle] = useState<string | null>(null)
@@ -32,9 +48,10 @@ export function AngebotEditorWithDb({ angebotId, isNew = false }: AngebotEditorW
   const [isCreatingOrderConfirmation, setIsCreatingOrderConfirmation] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
+  const [isLoadingVerkaufschance, setIsLoadingVerkaufschance] = useState(!!verkaufschanceId)
   const [offer, setOffer] = useState<any>(null)
   const [currentVersion, setCurrentVersion] = useState<any>(null)
-  const { toast } = useToast()
+  const [verkaufschance, setVerkaufschance] = useState<any>(null)
   const [versionChangeData, setVersionChangeData] = useState<VersionChangeData>({
     title: "",
     description: "",
@@ -44,19 +61,103 @@ export function AngebotEditorWithDb({ angebotId, isNew = false }: AngebotEditorW
     confirmationDate: new Date().toISOString().split("T")[0],
     notes: "",
   })
-  const [angebot, setAngebotState] = useState<Angebot | null>(null)
+  const [angebot, setAngebotState] = useState<Angebot | null>(isNew ? { ...emptyAngebot } : null)
   const [loading, setLoadingState] = useState(true)
   const [saving, setSavingState] = useState(false)
   const router = useRouter()
   const { toast: toastLib } = useToastLib()
 
+  // Debug-Ausgabe
+  useEffect(() => {
+    console.log("AngebotEditorWithDb props:", { angebotId, isNew, verkaufschanceId })
+  }, [angebotId, isNew, verkaufschanceId])
+
+  // Lade Verkaufschance, wenn eine ID übergeben wurde
+  useEffect(() => {
+    if (verkaufschanceId) {
+      console.log("Loading Verkaufschance with ID:", verkaufschanceId)
+      loadVerkaufschance(verkaufschanceId)
+    } else {
+      setIsLoadingVerkaufschance(false)
+      if (isNew) {
+        // Wenn kein verkaufschanceId vorhanden ist, aber ein neues Angebot erstellt wird,
+        // initialisieren wir mit einem leeren Angebot
+        setAngebotState({ ...emptyAngebot })
+        setLoadingState(false)
+        setIsLoading(false)
+      }
+    }
+  }, [verkaufschanceId, isNew])
+
+  // Lade Angebot, wenn eine ID übergeben wurde
   useEffect(() => {
     if (!isNew && angebotId) {
       fetchAngebot()
-    } else {
+    } else if (!verkaufschanceId && isNew) {
+      // Nur wenn keine Verkaufschance geladen wird, setzen wir loading auf false
       setLoadingState(false)
+      setIsLoading(false)
     }
-  }, [angebotId, isNew])
+  }, [angebotId, isNew, verkaufschanceId])
+
+  const loadVerkaufschance = async (id: string) => {
+    try {
+      setIsLoadingVerkaufschance(true)
+      console.log("Fetching sales opportunity with ID:", id)
+      const data = await fetchSalesOpportunityById(id)
+      console.log("Fetched sales opportunity:", data)
+
+      if (data) {
+        setVerkaufschance(data)
+
+        // Erstelle ein neues Angebot mit Daten aus der Verkaufschance
+        if (isNew) {
+          console.log("Creating new offer from sales opportunity:", data)
+
+          // Erstelle ein neues Angebot-Objekt mit den Daten aus der Verkaufschance
+          const newAngebot: Angebot = {
+            ...emptyAngebot,
+            title: data.KEYWORD || "Neues Angebot",
+            customer: {
+              id: data.ID || "",
+              name: data.ACCOUNTINFORMATION || "",
+              contactPerson: data.PERSONINCHARGE || "",
+            },
+            verkaufschanceId: id,
+            // Weitere Felder aus der Verkaufschance übernehmen
+            liefertermin: data.VJ_LIEFERTERMIN || "",
+            waehrung: data.CURRENCYNAT || "EUR",
+            gesamtbetrag: data.VJ_ANGEBOTSVOLUMEN || 0,
+          }
+
+          console.log("Created new offer object:", newAngebot)
+          setAngebotState(newAngebot)
+        }
+      } else {
+        console.error("Sales opportunity not found")
+        toastLib({
+          title: "Fehler",
+          description: "Die Verkaufschance konnte nicht gefunden werden.",
+          variant: "destructive",
+        })
+        // Wenn keine Verkaufschance gefunden wurde, initialisieren wir mit einem leeren Angebot
+        setAngebotState({ ...emptyAngebot })
+      }
+    } catch (error) {
+      console.error("Error loading sales opportunity:", error)
+      toastLib({
+        title: "Fehler",
+        description: "Die Verkaufschance konnte nicht geladen werden.",
+        variant: "destructive",
+      })
+      // Bei einem Fehler initialisieren wir mit einem leeren Angebot
+      setAngebotState({ ...emptyAngebot })
+    } finally {
+      setIsLoadingVerkaufschance(false)
+      setLoadingState(false)
+      setIsLoading(false)
+    }
+  }
 
   const fetchAngebot = async () => {
     try {
@@ -92,15 +193,18 @@ export function AngebotEditorWithDb({ angebotId, isNew = false }: AngebotEditorW
     }
   }, [offer])
 
-  const handleCreateVersion = () => {
-    setIsCreatingVersion(true)
-  }
-
   const handleSave = async (updatedAngebot: Angebot) => {
     try {
       setSavingState(true)
       const url = isNew ? "/api/offers" : `/api/offers/${angebotId}`
       const method = isNew ? "POST" : "PUT"
+
+      // Füge Verkaufschance-ID hinzu, wenn vorhanden
+      if (verkaufschance && isNew) {
+        updatedAngebot.verkaufschanceId = verkaufschanceId
+      }
+
+      console.log("Saving offer:", updatedAngebot)
 
       const response = await fetch(url, {
         method,
@@ -115,6 +219,7 @@ export function AngebotEditorWithDb({ angebotId, isNew = false }: AngebotEditorW
       }
 
       const savedAngebot = await response.json()
+      console.log("Saved offer:", savedAngebot)
 
       toastLib({
         title: "Erfolg",
@@ -149,130 +254,28 @@ export function AngebotEditorWithDb({ angebotId, isNew = false }: AngebotEditorW
     setCurrentVersion(updatedAngebot.currentVersion)
   }
 
-  const handleSaveOld = async () => {
-    setIsSaving(true)
-
-    // Simuliere eine Speicheroperation
-    setTimeout(() => {
-      toast({
-        title: "Gespeichert",
-        description: "Änderungen wurden erfolgreich gespeichert",
-      })
-      setIsSaving(false)
-    }, 1000)
+  if (loading || isLoading || isLoadingVerkaufschance) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64">
+        <LoadingSpinner size={40} />
+        <p className="mt-4 text-muted-foreground">
+          {isLoadingVerkaufschance ? "Verkaufschance wird geladen..." : "Angebot wird geladen..."}
+        </p>
+      </div>
+    )
   }
 
-  const handleCreateOrderConfirmation = () => {
-    setIsCreatingOrderConfirmation(true)
-  }
-
-  const handleOrderConfirmationChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setOrderConfirmationData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
-
-  const handleVersionChangeDataChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target
-    setVersionChangeData((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
-  }
-
-  const createOrderConfirmation = async () => {
-    try {
-      // Simuliere die Erstellung einer Auftragsbestätigung
-      setTimeout(() => {
-        toast({
-          title: "Auftragsbestätigung erstellt",
-          description: `Die Auftragsbestätigung ${orderConfirmationData.confirmationNumber} wurde erfolgreich erstellt`,
-        })
-        setIsCreatingOrderConfirmation(false)
-      }, 1000)
-    } catch (error) {
-      console.error("Error creating order confirmation:", error)
-      toast({
-        title: "Fehler",
-        description: "Auftragsbestätigung konnte nicht erstellt werden",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const createNewVersion = async () => {
-    try {
-      // Get the latest version number and increment it
-      const latestVersion = offer?.versions?.[0]
-      const versionNumber = latestVersion
-        ? `V${Number.parseInt(latestVersion.versionNumber.replace("V", "")) + 1}`
-        : "V1"
-
-      const response = await fetch(`/api/offers/${angebotId}/versions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          versionNumber,
-          title: offer?.currentVersion?.title || "",
-          description: offer?.currentVersion?.description || "",
-          status: "Veröffentlicht",
-          recipientName: offer?.currentVersion?.recipientName || "",
-          recipientEmail: offer?.currentVersion?.recipientEmail || "",
-          recipientPhone: offer?.currentVersion?.recipientPhone || "",
-          changeTitle: versionChangeData.title,
-          changeDescription: versionChangeData.description,
-          publishedById: 1, // In a real app, this would be the current user's ID
-          copyFromVersionId: offer?.currentVersion?.id,
-          copyPositions: true,
-        }),
-      })
-
-      if (!response.ok) throw new Error("Failed to create version")
-
-      const newVersion = await response.json()
-
-      // Update the UI
-      setOffer({
-        ...offer,
-        currentVersion: newVersion,
-        versions: [newVersion, ...(offer?.versions || [])],
-      })
-      setCurrentVersion(newVersion)
-
-      toast({
-        title: "Erfolg",
-        description: `Version ${versionNumber} wurde erfolgreich erstellt und veröffentlicht`,
-      })
-
-      setIsCreatingVersion(false)
-      setVersionChangeData({ title: "", description: "" })
-    } catch (error) {
-      console.error("Error creating version:", error)
-      toast({
-        title: "Fehler",
-        description: "Neue Version konnte nicht erstellt werden",
-        variant: "destructive",
-      })
-    }
-  }
-
-  const viewVersion = async (versionNumber) => {
-    // Finde die Version im Offer-Objekt
-    const versionToView = offer?.versions?.find((v) => v.versionNumber === versionNumber)
-    if (versionToView) {
-      setCurrentVersion(versionToView)
-      // Wechseln Sie zur Blöcke-Registerkarte, um die Version anzuzeigen
-      setActiveTab("bloecke")
-    }
-  }
-
-  if (loading || isLoading) {
-    return <div className="flex items-center justify-center h-64">Angebot wird geladen...</div>
-  }
+  // Debug-Ausgabe vor dem Rendern
+  console.log("Rendering AngebotEditor with angebot:", angebot)
 
   return <AngebotEditor angebot={angebot || undefined} isNew={isNew} onSave={handleSave} onChange={handleChange} />
 }
+
+// Stelle sicher, dass die Komponente keine eigene Layout-Struktur hat, die mit dem MainLayout kollidieren könnte
+
+// Entferne jegliche Container-Elemente, die mit dem MainLayout kollidieren könnte
+// und stelle sicher, dass die Komponente nur ihren eigenen Inhalt rendert
+
+// Wenn die Komponente einen eigenen Container hat, entferne ihn oder passe ihn an
+// Beispiel: Wenn es einen Container mit "container mx-auto py-6" gibt, entferne ihn,
+// da dieser bereits in der Page-Komponente definiert ist
