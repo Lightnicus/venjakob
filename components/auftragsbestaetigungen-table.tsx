@@ -48,7 +48,7 @@ export function AuftragsbestaetigungenTable() {
   const handleViewPDF = (id: string) => {
     toast({
       title: "PDF wird geöffnet",
-      description: `Die PDF für Auftragsbestätigung ${id} wird geöffnet.`,
+      description: `Hier wird später die PDF für Auftragsbestätigung ${id} geöffnet.`,
     })
     // In einer echten Anwendung würden wir hier die PDF öffnen
     // Für dieses Beispiel zeigen wir nur einen Toast an
@@ -93,7 +93,7 @@ export function AuftragsbestaetigungenTable() {
                   <TableCell>{ab.betrag.toLocaleString("de-DE")} €</TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <IconButton icon={Eye} label="Details ansehen" asChild href={`/auftragsbestatigungen/${ab.id}`} />
+                      <IconButton icon={Eye} label="Details ansehen" href={`/auftragsbestatigungen/${ab.id}`} />
                       <IconButton icon={FileText} label="PDF anzeigen" onClick={() => handleViewPDF(ab.id)} />
                     </div>
                   </TableCell>

@@ -71,7 +71,7 @@ const versionHistory = [
 
 interface AngebotVersionenProps {
   versions: any[]
-  offerId: number
+  offerId: string
   onViewVersion?: (versionNumber: string) => void
 }
 

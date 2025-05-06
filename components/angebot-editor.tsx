@@ -261,7 +261,7 @@ export function AngebotEditor({ angebot: initialAngebot, isNew = false, onSave, 
                 <CardTitle>Angebotsversionen</CardTitle>
               </CardHeader>
               <CardContent>
-                <AngebotVersionen angebotId={angebot.id || ""} versionen={angebot.versionen || []} />
+                <AngebotVersionen offerId={angebot.id || ""} versions={angebot.versionen || []} />
               </CardContent>
             </Card>
           </TabsContent>
