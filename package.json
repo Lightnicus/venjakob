@@ -10,8 +10,7 @@
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "tsx db/run-seed.ts",
-    "db:seed-passwords": "tsx db/run-seed-passwords.ts"
+    "db:seed": "tsx db/run-seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-rds-data": "latest",

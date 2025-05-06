@@ -1,5 +1,5 @@
 // This file contains seed data for the database
-import { db } from "./db"
+import { db } from "../db"
 import {
   users,
   customers,
@@ -13,7 +13,7 @@ import {
   offerBlocks,
   positions,
   orderConfirmations,
-} from "./schema"
+} from "../schema"
 
 export async function seed() {
   console.log("🌱 Seeding database...")
