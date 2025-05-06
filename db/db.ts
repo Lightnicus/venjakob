@@ -3,7 +3,7 @@ import postgres from "postgres"
 import * as schema from "./schema"
 
 // Database connection string
-const connectionString = process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/b2b_portal"
+const connectionString = process.env.DATABASE_URL || "postgres://postgres:postgres@localhost:5432/venjakob"
 
 // Create postgres client
 const client = postgres(connectionString)
