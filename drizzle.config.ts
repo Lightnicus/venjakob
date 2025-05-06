@@ -6,10 +6,12 @@ export default {
     out: "./drizzle",
     dialect: "postgresql",
     dbCredentials: {
-        port: process.env.PGPORT ? +process.env.PGPORT : 5432,
-        host: process.env.PGHOST || "",
-        user: process.env.PGUSER || "",
-        password: process.env.PGPASSWORD || "",
-        database: process.env.PGDATABASE || "",
+        url: process.env.DATABASE_URL || ""
+        // ssl: 'allow',
+        // port: process.env.PGPORT ? +process.env.PGPORT : 5432,
+        // host: process.env.PGHOST || "",
+        // user: process.env.PGUSER || "",
+        // password: process.env.PGPASSWORD || "",
+        // database: process.env.PGDATABASE || "",
     },
 } satisfies Config;

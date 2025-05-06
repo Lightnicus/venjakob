@@ -5,11 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "next build",
+    "build": "drizzle-kit generate && drizzle-kit migrate && next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx db/migrate.ts",
+    "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx db/run-seed.ts",
     "db:seed-passwords": "tsx db/run-seed-passwords.ts"
   },
