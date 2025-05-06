@@ -91,6 +91,18 @@ export function MainLayout({ children }: MainLayoutProps) {
               </Link>
             )
           })}
+          {/* Fügen Sie diesen Link zur Navigation hinzu */}
+          <Link
+            href="/einstellungen"
+            className={`flex items-center px-2 py-2 text-base font-medium rounded-md ${
+              isActive("/einstellungen")
+                ? "bg-gray-100 text-gray-900"
+                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+            }`}
+          >
+            <Settings className="mr-4 h-5 w-5" />
+            <span>Einstellungen</span>
+          </Link>
         </nav>
       </div>
 

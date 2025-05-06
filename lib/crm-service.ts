@@ -1,189 +1,147 @@
-// Mock CRM service for integration with CAS genesisWorld
-
-import { v4 as uuidv4 } from "uuid"
-
-// Types for CRM data
-export interface CRMSalesOpportunity {
-  GGUID: string
-  ACCOUNTINFORMATION: string
-  PERSONINCHARGE: string
-  CURRENCYNAT: string
+export type CRMSalesOpportunity = {
+  ID: string
   KEYWORD: string
-  DISTRIBUTIONPHASE: string
+  ACCOUNTINFORMATION: string
   STATUS: string
-  VJ_LIEFERTERMIN?: string
+  DISTRIBUTIONPHASE: string
   VJ_ANGEBOTSVOLUMEN?: number
-  VJ_TESTNOTWENDIG?: boolean
-  VJ_GEHEIMHALTUNGSVEREINBARUNG?: boolean
+  VJ_LIEFERTERMIN?: string
+  VJ_WAHRSCHEINLICHKEIT?: number
+  CURRENCYNAT: string
+  GGUID: string
   INSERTDATE: string
   CHANGEDATE: string
+  PERSONINCHARGE: string
+  DESCRIPTION: string
 }
 
-export interface CRMDocument {
-  objectType: string
-  fields: {
-    DOCDATE: string
-    GWFILETYPE: string
-    GWSTYPE: string
-    KEYWORD: string
-    INSERTUSER: string
-    OWNERNAME: string
-  }
-}
-
-// Mock data for sales opportunities
-const mockSalesOpportunities: CRMSalesOpportunity[] = [
+// Simulierte CRM-Daten für Verkaufschancen
+const salesOpportunities: CRMSalesOpportunity[] = [
   {
-    GGUID: uuidv4(),
-    ACCOUNTINFORMATION: "Schüller Möbelwerk KG",
-    PERSONINCHARGE: "Enrica Pietig",
+    ID: "1",
+    KEYWORD: "Neues ERP-System",
+    ACCOUNTINFORMATION: "Kunde A GmbH",
+    STATUS: "In Bearbeitung",
+    DISTRIBUTIONPHASE: "Angebotserstellung",
+    VJ_ANGEBOTSVOLUMEN: 75000,
+    VJ_LIEFERTERMIN: "2023-12-15",
+    VJ_WAHRSCHEINLICHKEIT: 70,
     CURRENCYNAT: "EUR",
-    KEYWORD: "Schüller Umbau 2024",
-    DISTRIBUTIONPHASE: "Angebot",
-    STATUS: "offen",
-    VJ_LIEFERTERMIN: "2024-06-30",
-    VJ_ANGEBOTSVOLUMEN: 45000,
-    VJ_TESTNOTWENDIG: true,
-    VJ_GEHEIMHALTUNGSVEREINBARUNG: true,
-    INSERTDATE: "2023-11-15T10:30:00",
-    CHANGEDATE: "2024-01-20T14:45:00",
-  },
-  {
-    GGUID: uuidv4(),
-    ACCOUNTINFORMATION: "TechGiant GmbH",
+    GGUID: "123e4567-e89b-12d3-a456-426614174000",
+    INSERTDATE: "2023-01-01",
+    CHANGEDATE: "2023-01-02",
     PERSONINCHARGE: "Max Mustermann",
-    CURRENCYNAT: "EUR",
-    KEYWORD: "TechGiant Büroausstattung",
-    DISTRIBUTIONPHASE: "Anfrage",
-    STATUS: "offen",
-    VJ_LIEFERTERMIN: "2024-08-15",
-    VJ_ANGEBOTSVOLUMEN: 28500,
-    VJ_TESTNOTWENDIG: false,
-    VJ_GEHEIMHALTUNGSVEREINBARUNG: false,
-    INSERTDATE: "2024-01-05T09:15:00",
-    CHANGEDATE: "2024-01-10T11:20:00",
+    DESCRIPTION: "Implementierung eines neuen ERP-Systems für die Buchhaltung und Lagerverwaltung.",
   },
   {
-    GGUID: uuidv4(),
-    ACCOUNTINFORMATION: "Global Services AG",
-    PERSONINCHARGE: "Anna Schmidt",
-    CURRENCYNAT: "USD",
-    KEYWORD: "Global Services Expansion",
-    DISTRIBUTIONPHASE: "Beauftragt",
-    STATUS: "gewonnen",
-    VJ_LIEFERTERMIN: "2024-05-20",
+    ID: "2",
+    KEYWORD: "Webshop-Erweiterung",
+    ACCOUNTINFORMATION: "Online Shop B",
+    STATUS: "Angeboten",
+    DISTRIBUTIONPHASE: "Verhandlung",
+    VJ_ANGEBOTSVOLUMEN: 25000,
+    VJ_LIEFERTERMIN: "2023-10-30",
+    VJ_WAHRSCHEINLICHKEIT: 60,
+    CURRENCYNAT: "EUR",
+    GGUID: "550e8400-e29b-41d4-a716-446655440000",
+    INSERTDATE: "2023-02-01",
+    CHANGEDATE: "2023-02-03",
+    PERSONINCHARGE: "Erika Mustermann",
+    DESCRIPTION: "Erweiterung des bestehenden Webshops um neue Funktionen und Zahlungsmethoden.",
+  },
+  {
+    ID: "3",
+    KEYWORD: "IT-Infrastruktur Modernisierung",
+    ACCOUNTINFORMATION: "Produktion C AG",
+    STATUS: "Gewonnen",
+    DISTRIBUTIONPHASE: "Abgeschlossen",
     VJ_ANGEBOTSVOLUMEN: 120000,
-    VJ_TESTNOTWENDIG: true,
-    VJ_GEHEIMHALTUNGSVEREINBARUNG: true,
-    INSERTDATE: "2023-09-22T14:30:00",
-    CHANGEDATE: "2024-02-01T16:45:00",
+    VJ_LIEFERTERMIN: "2023-08-15",
+    VJ_WAHRSCHEINLICHKEIT: 100,
+    CURRENCYNAT: "EUR",
+    GGUID: "6ba7b810-9dad-11d1-80b4-00c04fd430c8",
+    INSERTDATE: "2023-03-05",
+    CHANGEDATE: "2023-03-10",
+    PERSONINCHARGE: "Hans Schmidt",
+    DESCRIPTION: "Komplette Modernisierung der IT-Infrastruktur inklusive Serverhardware und Netzwerkkomponenten.",
   },
   {
-    GGUID: uuidv4(),
-    ACCOUNTINFORMATION: "Möbel Meyer GmbH",
-    PERSONINCHARGE: "Enrica Pietig",
+    ID: "4",
+    KEYWORD: "CRM-System Einführung",
+    ACCOUNTINFORMATION: "Dienstleister D",
+    STATUS: "Verloren",
+    DISTRIBUTIONPHASE: "Abgebrochen",
+    VJ_ANGEBOTSVOLUMEN: 45000,
+    VJ_LIEFERTERMIN: "2023-07-01",
+    VJ_WAHRSCHEINLICHKEIT: 0,
     CURRENCYNAT: "EUR",
-    KEYWORD: "Meyer Showroom 2024",
-    DISTRIBUTIONPHASE: "Angebot",
-    STATUS: "offen",
-    VJ_LIEFERTERMIN: "2024-07-15",
-    VJ_ANGEBOTSVOLUMEN: 65000,
-    VJ_TESTNOTWENDIG: false,
-    VJ_GEHEIMHALTUNGSVEREINBARUNG: true,
-    INSERTDATE: "2023-12-10T11:30:00",
-    CHANGEDATE: "2024-01-15T09:45:00",
-  },
-  {
-    GGUID: uuidv4(),
-    ACCOUNTINFORMATION: "Bürokonzept Schneider",
-    PERSONINCHARGE: "Max Mustermann",
-    CURRENCYNAT: "EUR",
-    KEYWORD: "Schneider Komplettausstattung",
-    DISTRIBUTIONPHASE: "Anfrage",
-    STATUS: "offen",
-    VJ_LIEFERTERMIN: "2024-09-30",
-    VJ_ANGEBOTSVOLUMEN: 32000,
-    VJ_TESTNOTWENDIG: true,
-    VJ_GEHEIMHALTUNGSVEREINBARUNG: false,
-    INSERTDATE: "2024-01-20T13:30:00",
-    CHANGEDATE: "2024-01-25T10:15:00",
+    GGUID: "7427b810-9dad-11d1-80b4-00c04fd430c8",
+    INSERTDATE: "2023-04-10",
+    CHANGEDATE: "2023-04-12",
+    PERSONINCHARGE: "Peter Müller",
+    DESCRIPTION: "Einführung eines CRM-Systems zur Verwaltung von Kundenbeziehungen und Vertriebsprozessen.",
   },
 ]
 
-// Mock documents
-const mockDocuments: Record<string, CRMDocument[]> = {
-  [mockSalesOpportunities[0].GGUID]: [
-    {
-      objectType: "DOCUMENT",
-      fields: {
-        DOCDATE: "2024-01-20",
-        GWFILETYPE: "PDF",
-        GWSTYPE: "Angebot",
-        KEYWORD: "A-21581A",
-        INSERTUSER: "EPietig",
-        OWNERNAME: "Vertrieb",
-      },
+const documents = [
+  {
+    GGUID: "123e4567-e89b-12d3-a456-426614174000",
+    fields: {
+      DOCDATE: "2023-11-01",
+      GWSTYPE: "Angebot",
+      KEYWORD: "ERP Angebot",
+      INSERTUSER: "Max",
+      OWNERNAME: "Max Mustermann",
     },
-    {
-      objectType: "DOCUMENT",
-      fields: {
-        DOCDATE: "2024-01-25",
-        GWFILETYPE: "PDF",
-        GWSTYPE: "Angebot",
-        KEYWORD: "A-21581B",
-        INSERTUSER: "EPietig",
-        OWNERNAME: "Vertrieb",
-      },
+  },
+  {
+    GGUID: "123e4567-e89b-12d3-a456-426614174000",
+    fields: {
+      DOCDATE: "2023-11-15",
+      GWSTYPE: "Vertrag",
+      KEYWORD: "ERP Vertrag",
+      INSERTUSER: "Max",
+      OWNERNAME: "Max Mustermann",
     },
-  ],
-}
+  },
+  {
+    GGUID: "550e8400-e29b-41d4-a716-446655440000",
+    fields: {
+      DOCDATE: "2023-10-01",
+      GWSTYPE: "Angebot",
+      KEYWORD: "Webshop Angebot",
+      INSERTUSER: "Erika",
+      OWNERNAME: "Erika Mustermann",
+    },
+  },
+]
 
-// Mock CRM API functions
+// Funktion zum Abrufen aller Verkaufschancen
 export async function fetchSalesOpportunities(): Promise<CRMSalesOpportunity[]> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 800))
-
-  return mockSalesOpportunities
+  // Simuliere API-Aufruf mit Verzögerung
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(salesOpportunities)
+    }, 800)
+  })
 }
 
-export async function fetchSalesOpportunityById(id: string): Promise<CRMSalesOpportunity | null> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 500))
-
-  const opportunity = mockSalesOpportunities.find((opp) => opp.GGUID === id)
-  return opportunity || null
+// Funktion zum Abrufen einer einzelnen Verkaufschance anhand der ID
+export async function fetchSalesOpportunityById(id: string): Promise<CRMSalesOpportunity | undefined> {
+  // Simuliere API-Aufruf mit Verzögerung
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const opportunity = salesOpportunities.find((opp) => opp.ID === id)
+      resolve(opportunity)
+    }, 500)
+  })
 }
 
-export async function fetchDocumentsByOpportunityId(opportunityId: string): Promise<CRMDocument[]> {
-  // Simulate API delay
-  await new Promise((resolve) => setTimeout(resolve, 600))
-
-  return mockDocuments[opportunityId] || []
-}
-
-// Synchronization function to be called by a background job
-export async function synchronizeSalesOpportunities() {
-  try {
-    // In a real implementation, this would:
-    // 1. Fetch opportunities from CRM API
-    // 2. Compare with local database
-    // 3. Update/insert as needed
-
-    console.log("Synchronizing sales opportunities from CRM...")
-    const opportunities = await fetchSalesOpportunities()
-    console.log(`Synchronized ${opportunities.length} sales opportunities`)
-
-    return {
-      success: true,
-      count: opportunities.length,
-      timestamp: new Date().toISOString(),
-    }
-  } catch (error) {
-    console.error("Error synchronizing sales opportunities:", error)
-    return {
-      success: false,
-      error: String(error),
-      timestamp: new Date().toISOString(),
-    }
-  }
+export async function fetchDocumentsByOpportunityId(gguid: string): Promise<any[]> {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const relevantDocs = documents.filter((doc) => doc.GGUID === gguid)
+      resolve(relevantDocs)
+    }, 500)
+  })
 }
