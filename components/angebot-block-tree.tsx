@@ -176,7 +176,7 @@ export function AngebotBlockTree({
                 e.stopPropagation()
                 handleToggleExpand(block.id)
               }}
-              className="mr-2 p-1 rounded-full hover:bg-gray-200"
+              className="mr-2 p-1 rounded-full hover:bg-gray-200 cursor-pointer"
               aria-label={isExpanded ? "Collapse" : "Expand"}
             >
               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -185,7 +185,7 @@ export function AngebotBlockTree({
             <div className="w-8"></div>
           )}
 
-          <div className="flex-grow font-medium">{block.title}</div>
+          <div className="flex-grow font-medium cursor-pointer">{block.title}</div>
 
           <div className="flex space-x-1">
             <Button

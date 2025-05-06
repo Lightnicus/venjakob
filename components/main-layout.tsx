@@ -64,7 +64,11 @@ export function MainLayout({ children }: MainLayoutProps) {
         }`}
       >
         <div className="flex h-16 items-center justify-between px-4 border-b">
-          <h1 className="text-xl font-bold">Venjakob Angebotsportal</h1>
+          <h1 className="text-xl font-bold">
+            <Link href={"/dashboard"}>
+              Venjakob Angebotsportal
+            </Link>
+          </h1>
           <button className="md:hidden" onClick={() => setSidebarOpen(false)}>
             <X className="h-6 w-6" />
           </button>
@@ -133,12 +137,16 @@ export function MainLayout({ children }: MainLayoutProps) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  <span>Einstellungen</span>
+                  <Link href={'/einstellungen'} title={"Einstellungen"} className={"flex flex-row"}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    <span>Einstellungen</span>
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  <span>Abmelden</span>
+                  <Link href={'/'} title={"Abmelden"} className={"flex flex-row"}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    <span>Abmelden</span>
+                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
