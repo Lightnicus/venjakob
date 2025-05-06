@@ -10,7 +10,8 @@
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx db/migrate.ts",
-    "db:seed": "tsx db/run-seed.ts"
+    "db:seed": "tsx db/run-seed.ts",
+    "db:seed-passwords": "tsx db/run-seed-passwords.ts"
   },
   "dependencies": {
     "@aws-sdk/client-rds-data": "latest",
@@ -56,6 +57,7 @@
     "@testing-library/jest-dom": "latest",
     "@testing-library/react": "latest",
     "@tidbcloud/serverless": "latest",
+    "@types/bcryptjs": "^3.0.0",
     "@types/better-sqlite3": "latest",
     "@types/debug": "latest",
     "@types/pg": "latest",
@@ -65,6 +67,7 @@
     "@vitest/ui": "latest",
     "@xata.io/client": "latest",
     "autoprefixer": "^10.4.20",
+    "bcryptjs": "^3.0.2",
     "better-sqlite3": "latest",
     "bun-types": "latest",
     "class-variance-authority": "^0.7.1",

@@ -20,6 +20,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { loginUser, registerUser, requestPasswordReset } from "@/app/_actions/auth"
 
 export function LoginForm() {
   const router = useRouter()
@@ -43,31 +44,29 @@ export function LoginForm() {
     setRegisterData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoginError("")
 
-    // Simple validation
     if (!loginData.email || !loginData.password) {
       setLoginError("Please enter both email and password")
       return
     }
 
-    // Mock login - in a real app, this would be an API call
-    if (loginData.email === "admin@example.com" && loginData.password === "password") {
-      // Successful login
+    const result = await loginUser(loginData.email, loginData.password)
+    
+    if (result.success) {
       router.push("/dashboard")
     } else {
-      setLoginError("Invalid email or password")
+      setLoginError(result.error || "Invalid email or password")
     }
   }
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setRegisterError("")
     setRegisterSuccess(false)
 
-    // Simple validation
     if (!registerData.name || !registerData.email || !registerData.password || !registerData.confirmPassword) {
       setRegisterError("Please fill in all fields")
       return
@@ -78,36 +77,44 @@ export function LoginForm() {
       return
     }
 
-    // Mock registration - in a real app, this would be an API call
-    // For demo purposes, we'll just show a success message
-    setRegisterSuccess(true)
-    setRegisterData({ name: "", email: "", password: "", confirmPassword: "" })
+    const result = await registerUser(
+      registerData.name, 
+      registerData.email, 
+      registerData.password
+    )
+    
+    if (result.success) {
+      setRegisterSuccess(true)
+      setRegisterData({ name: "", email: "", password: "", confirmPassword: "" })
+    } else {
+      setRegisterError(result.error || "Registration failed")
+    }
   }
 
-  const handleForgotPasswordSubmit = (e: React.FormEvent) => {
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setForgotPasswordError("")
     setForgotPasswordSuccess(false)
 
-    // Simple validation
     if (!forgotPasswordEmail) {
       setForgotPasswordError("Please enter your email address")
       return
     }
 
-    // Mock password reset - in a real app, this would be an API call
-    // For demo purposes, we'll just show a success message
-    setForgotPasswordSuccess(true)
-
-    // In a real app, this would send a password reset email
-    console.log("Password reset requested for:", forgotPasswordEmail)
-
-    // Clear the form after 3 seconds and close the dialog
-    setTimeout(() => {
-      setForgotPasswordEmail("")
-      setForgotPasswordSuccess(false)
-      setForgotPasswordDialogOpen(false)
-    }, 3000)
+    const result = await requestPasswordReset(forgotPasswordEmail)
+    
+    if (result.success) {
+      setForgotPasswordSuccess(true)
+      
+      // Clear the form after 3 seconds and close the dialog
+      setTimeout(() => {
+        setForgotPasswordEmail("")
+        setForgotPasswordSuccess(false)
+        setForgotPasswordDialogOpen(false)
+      }, 3000)
+    } else {
+      setForgotPasswordError(result.error || "Password reset request failed")
+    }
   }
 
   return (
@@ -288,7 +295,6 @@ export function LoginForm() {
             </Tabs>
           </CardContent>
           <CardFooter className="flex flex-col space-y-2">
-            <div className="text-sm text-center text-gray-500">Demo credentials: admin@example.com / password</div>
             <div className="text-xs text-center text-gray-500">
               © {new Date().getFullYear()} B2B Quotation Portal. All rights reserved.
             </div>
