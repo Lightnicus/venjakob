@@ -1,0 +1,6 @@
+[
+  { "label": "Startseite", "href": "/" },
+  { "label": "Portal", "href": "/portal" },
+  { "label": "Über uns", "href": "/ueber-uns" },
+  { "label": "Kontakt", "href": "/kontakt" }
+] 
