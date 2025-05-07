@@ -44,12 +44,18 @@ export function LoginForm() {
     setRegisterData((prev) => ({ ...prev, [name]: value }))
   }
 
+  const clearErrors = () => {
+    setLoginError("")
+    setRegisterError("")
+    setForgotPasswordError("")
+  }
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoginError("")
+    clearErrors()
 
     if (!loginData.email || !loginData.password) {
-      setLoginError("Please enter both email and password")
+      setLoginError("Bitte geben Sie E-Mail und Passwort ein")
       return
     }
 
@@ -58,22 +64,22 @@ export function LoginForm() {
     if (result.success) {
       router.push("/dashboard")
     } else {
-      setLoginError(result.error || "Invalid email or password")
+      setLoginError(result.error || "Ungültige E-Mail oder Passwort")
     }
   }
 
   const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setRegisterError("")
+    clearErrors()
     setRegisterSuccess(false)
 
     if (!registerData.name || !registerData.email || !registerData.password || !registerData.confirmPassword) {
-      setRegisterError("Please fill in all fields")
+      setRegisterError("Bitte füllen Sie alle Felder aus")
       return
     }
 
     if (registerData.password !== registerData.confirmPassword) {
-      setRegisterError("Passwords do not match")
+      setRegisterError("Die Passwörter stimmen nicht überein")
       return
     }
 
@@ -87,17 +93,17 @@ export function LoginForm() {
       setRegisterSuccess(true)
       setRegisterData({ name: "", email: "", password: "", confirmPassword: "" })
     } else {
-      setRegisterError(result.error || "Registration failed")
+      setRegisterError(result.error || "Registrierung fehlgeschlagen")
     }
   }
 
   const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setForgotPasswordError("")
+    clearErrors()
     setForgotPasswordSuccess(false)
 
     if (!forgotPasswordEmail) {
-      setForgotPasswordError("Please enter your email address")
+      setForgotPasswordError("Bitte geben Sie Ihre E-Mail-Adresse ein")
       return
     }
 
@@ -113,7 +119,7 @@ export function LoginForm() {
         setForgotPasswordDialogOpen(false)
       }, 3000)
     } else {
-      setForgotPasswordError(result.error || "Password reset request failed")
+      setForgotPasswordError(result.error || "Anfrage zum Zurücksetzen des Passworts fehlgeschlagen")
     }
   }
 
@@ -122,31 +128,31 @@ export function LoginForm() {
       <div className="w-full max-w-md p-4">
         <Card className="w-full">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl font-bold text-center">B2B Quotation Portal</CardTitle>
-            <CardDescription className="text-center">Enter your credentials to access your account</CardDescription>
+            <CardTitle className="text-2xl font-bold text-center">B2B Angebotsportal</CardTitle>
+            <CardDescription className="text-center">Geben Sie Ihre Anmeldedaten ein, sich einzuloggen</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="login" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="login">Login</TabsTrigger>
-                <TabsTrigger value="register">Register</TabsTrigger>
+                <TabsTrigger value="login">Anmelden</TabsTrigger>
+                <TabsTrigger value="register">Registrieren</TabsTrigger>
               </TabsList>
               <TabsContent value="login">
                 <form onSubmit={handleLoginSubmit} className="space-y-4 mt-4">
                   {loginError && (
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Error</AlertTitle>
+                      <AlertTitle>Fehler</AlertTitle>
                       <AlertDescription>{loginError}</AlertDescription>
                     </Alert>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor="email">Email</Label>
+                    <Label htmlFor="email">E-Mail</Label>
                     <Input
                       id="email"
                       name="email"
                       type="email"
-                      placeholder="m.mustermann@example.com"
+                      placeholder="m.mustermann@beispiel.de"
                       value={loginData.email}
                       onChange={handleLoginChange}
                       required
@@ -154,43 +160,43 @@ export function LoginForm() {
                   </div>
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password">Passwort</Label>
                       <Dialog open={forgotPasswordDialogOpen} onOpenChange={setForgotPasswordDialogOpen}>
                         <DialogTrigger asChild>
                           <Button variant="link" className="px-0 text-sm font-medium text-primary">
-                            Forgot password?
+                            Passwort vergessen?
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="sm:max-w-md">
                           <DialogHeader>
-                            <DialogTitle>Reset Password</DialogTitle>
+                            <DialogTitle>Passwort zurücksetzen</DialogTitle>
                             <DialogDescription>
-                              Enter your email address and we'll send you a link to reset your password.
+                              Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen Ihres Passworts.
                             </DialogDescription>
                           </DialogHeader>
                           <form onSubmit={handleForgotPasswordSubmit} className="space-y-4 py-4">
                             {forgotPasswordError && (
                               <Alert variant="destructive">
                                 <AlertCircle className="h-4 w-4" />
-                                <AlertTitle>Error</AlertTitle>
+                                <AlertTitle>Fehler</AlertTitle>
                                 <AlertDescription>{forgotPasswordError}</AlertDescription>
                               </Alert>
                             )}
                             {forgotPasswordSuccess && (
                               <Alert className="border-green-500 text-green-700">
                                 <CheckCircle2 className="h-4 w-4" />
-                                <AlertTitle>Success</AlertTitle>
+                                <AlertTitle>Erfolg</AlertTitle>
                                 <AlertDescription>
-                                  Password reset instructions have been sent to your email.
+                                  Anweisungen zum Zurücksetzen des Passworts wurden an Ihre E-Mail gesendet.
                                 </AlertDescription>
                               </Alert>
                             )}
                             <div className="space-y-2">
-                              <Label htmlFor="reset-email">Email</Label>
+                              <Label htmlFor="reset-email">E-Mail</Label>
                               <Input
                                 id="reset-email"
                                 type="email"
-                                placeholder="m.mustermann@example.com"
+                                placeholder="m.mustermann@beispiel.de"
                                 value={forgotPasswordEmail}
                                 onChange={(e) => setForgotPasswordEmail(e.target.value)}
                                 required
@@ -202,9 +208,9 @@ export function LoginForm() {
                                 variant="outline"
                                 onClick={() => setForgotPasswordDialogOpen(false)}
                               >
-                                Cancel
+                                Abbrechen
                               </Button>
-                              <Button type="submit">Send Reset Link</Button>
+                              <Button type="submit">Link senden</Button>
                             </DialogFooter>
                           </form>
                         </DialogContent>
@@ -220,7 +226,7 @@ export function LoginForm() {
                     />
                   </div>
                   <Button type="submit" className="w-full">
-                    Login
+                    Anmelden
                   </Button>
                 </form>
               </TabsContent>
@@ -229,21 +235,21 @@ export function LoginForm() {
                   {registerError && (
                     <Alert variant="destructive">
                       <AlertCircle className="h-4 w-4" />
-                      <AlertTitle>Error</AlertTitle>
+                      <AlertTitle>Fehler</AlertTitle>
                       <AlertDescription>{registerError}</AlertDescription>
                     </Alert>
                   )}
                   {registerSuccess && (
                     <Alert className="border-green-500 text-green-700">
                       <CheckCircle2 className="h-4 w-4" />
-                      <AlertTitle>Success</AlertTitle>
+                      <AlertTitle>Erfolg</AlertTitle>
                       <AlertDescription>
-                        Registration successful! You can now login with your credentials.
+                        Registrierung erfolgreich! Sie können sich jetzt mit Ihren Anmeldedaten einloggen.
                       </AlertDescription>
                     </Alert>
                   )}
                   <div className="space-y-2">
-                    <Label htmlFor="name">Full Name</Label>
+                    <Label htmlFor="name">Vollständiger Name</Label>
                     <Input
                       id="name"
                       name="name"
@@ -254,19 +260,19 @@ export function LoginForm() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="register-email">Email</Label>
+                    <Label htmlFor="register-email">E-Mail</Label>
                     <Input
                       id="register-email"
                       name="email"
                       type="email"
-                      placeholder="m.mustermann@example.com"
+                      placeholder="m.mustermann@beispiel.de"
                       value={registerData.email}
                       onChange={handleRegisterChange}
                       required
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="register-password">Password</Label>
+                    <Label htmlFor="register-password">Passwort</Label>
                     <Input
                       id="register-password"
                       name="password"
@@ -277,7 +283,7 @@ export function LoginForm() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm Password</Label>
+                    <Label htmlFor="confirm-password">Passwort bestätigen</Label>
                     <Input
                       id="confirm-password"
                       name="confirmPassword"
@@ -288,7 +294,7 @@ export function LoginForm() {
                     />
                   </div>
                   <Button type="submit" className="w-full">
-                    Register
+                    Registrieren
                   </Button>
                 </form>
               </TabsContent>
@@ -296,7 +302,7 @@ export function LoginForm() {
           </CardContent>
           <CardFooter className="flex flex-col space-y-2">
             <div className="text-xs text-center text-gray-500">
-              © {new Date().getFullYear()} B2B Quotation Portal. All rights reserved.
+              © {new Date().getFullYear()} B2B Angebotsportal. Alle Rechte vorbehalten.
             </div>
           </CardFooter>
         </Card>

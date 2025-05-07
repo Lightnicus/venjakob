@@ -12,7 +12,7 @@ const resetTokens = new Map<string, { email: string; expires: Date }>()
 export async function loginUser(email: string, password: string) {
   try {
     if (!email || !password) {
-      return { success: false, error: "Email and password are required" }
+      return { success: false, error: "E-Mail und Passwort sind erforderlich" }
     }
 
     // Find user by email
@@ -21,14 +21,14 @@ export async function loginUser(email: string, password: string) {
     })
 
     if (!user || !user.password) {
-      return { success: false, error: "Invalid email or password" }
+      return { success: false, error: "Ungültige E-Mail oder Passwort" }
     }
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, user.password)
 
     if (!isPasswordValid) {
-      return { success: false, error: "Invalid email or password" }
+      return { success: false, error: "Ungültige E-Mail oder Passwort" }
     }
 
     // Update last login timestamp
@@ -46,14 +46,14 @@ export async function loginUser(email: string, password: string) {
     }
   } catch (error) {
     console.error("Login error:", error)
-    return { success: false, error: "An unexpected error occurred" }
+    return { success: false, error: "Ein unerwarteter Fehler ist aufgetreten" }
   }
 }
 
 export async function registerUser(name: string, email: string, password: string) {
   try {
     if (!name || !email || !password) {
-      return { success: false, error: "Name, email, and password are required" }
+      return { success: false, error: "Name, E-Mail und Passwort sind erforderlich" }
     }
 
     // Check if email already exists
@@ -62,7 +62,7 @@ export async function registerUser(name: string, email: string, password: string
     })
 
     if (existingUser) {
-      return { success: false, error: "Email already in use" }
+      return { success: false, error: "Diese E-Mail-Adresse wird bereits verwendet" }
     }
 
     // Hash password
@@ -95,14 +95,14 @@ export async function registerUser(name: string, email: string, password: string
     }
   } catch (error) {
     console.error("Registration error:", error)
-    return { success: false, error: "An unexpected error occurred" }
+    return { success: false, error: "Ein unerwarteter Fehler ist aufgetreten" }
   }
 }
 
 export async function requestPasswordReset(email: string) {
   try {
     if (!email) {
-      return { success: false, error: "Email is required" }
+      return { success: false, error: "E-Mail ist erforderlich" }
     }
 
     // Check if user exists
@@ -125,32 +125,32 @@ export async function requestPasswordReset(email: string) {
 
     // In a real app, you would send an email with a link containing the token
     // For development, just log it
-    console.log(`Password reset token for ${email}: ${token}`)
-    console.log(`Reset URL would be: https://your-domain.com/reset-password?token=${token}`)
+    console.log(`Passwort-Reset-Token für ${email}: ${token}`)
+    console.log(`Reset-URL wäre: https://your-domain.com/reset-password?token=${token}`)
 
     return { success: true }
   } catch (error) {
     console.error("Password reset error:", error)
-    return { success: false, error: "An unexpected error occurred" }
+    return { success: false, error: "Ein unerwarteter Fehler ist aufgetreten" }
   }
 }
 
 export async function resetPassword(token: string, password: string) {
   try {
     if (!token || !password) {
-      return { success: false, error: "Token and password are required" }
+      return { success: false, error: "Token und Passwort sind erforderlich" }
     }
 
     // Check if token exists and is valid
     const tokenData = resetTokens.get(token)
     if (!tokenData) {
-      return { success: false, error: "Invalid or expired token" }
+      return { success: false, error: "Ungültiger oder abgelaufener Token" }
     }
 
     // Check if token is expired
     if (tokenData.expires < new Date()) {
       resetTokens.delete(token)
-      return { success: false, error: "Token has expired" }
+      return { success: false, error: "Token ist abgelaufen" }
     }
 
     // Get user by email
@@ -159,7 +159,7 @@ export async function resetPassword(token: string, password: string) {
     })
 
     if (!user) {
-      return { success: false, error: "User not found" }
+      return { success: false, error: "Benutzer nicht gefunden" }
     }
 
     // Hash new password
@@ -180,6 +180,6 @@ export async function resetPassword(token: string, password: string) {
     return { success: true }
   } catch (error) {
     console.error("Password reset error:", error)
-    return { success: false, error: "An unexpected error occurred" }
+    return { success: false, error: "Ein unerwarteter Fehler ist aufgetreten" }
   }
 } 
