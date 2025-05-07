@@ -78,6 +78,7 @@ export function AngebotEditor({ angebot: initialAngebot, isNew = false, onSave, 
       if (onSave) {
         await onSave(angebot)
       }
+      router.push("/angebote")
     } finally {
       setIsSaving(false)
     }
@@ -110,8 +111,8 @@ export function AngebotEditor({ angebot: initialAngebot, isNew = false, onSave, 
                 "Speichern"
               )}
             </Button>
+            {!isNew && <Button variant="outline">PDF exportieren</Button>}
           </div>
-          {!isNew && <Button variant="outline">PDF exportieren</Button>}
         </div>
       </div>
 

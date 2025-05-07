@@ -4,9 +4,27 @@ import { useState } from "react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { Download, Printer } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 export function AngebotVorschau() {
   const [language, setLanguage] = useState("de")
+  const { toast } = useToast()
+
+  const handlePrint = () => {
+    toast({
+      title: "Drucken",
+      description: "In Zukunft wird hier Ihr Angebot zum Drucken vorbereitet.",
+      variant: "default",
+    })
+  }
+
+  const handleDownload = () => {
+    toast({
+      title: "Download",
+      description: "In Zukunft wird hier Ihr Angebot als PDF-Datei heruntergeladen.",
+      variant: "default",
+    })
+  }
 
   return (
     <div className="space-y-4">
@@ -23,10 +41,10 @@ export function AngebotVorschau() {
               <SelectItem value="fr">Französisch</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" onClick={handleDownload}>
             <Download className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="icon">
+          <Button variant="outline" size="icon" onClick={handlePrint}>
             <Printer className="h-4 w-4" />
           </Button>
         </div>
