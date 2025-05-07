@@ -6,17 +6,8 @@ export default function Page() {
       <div className="w-full max-w-md space-y-8">
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-            Sign in to your account
+            Loggen Sie sich ein
           </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Or{' '}
-            <a
-              href="/register"
-              className="font-medium text-blue-600 hover:text-blue-500"
-            >
-              create a new account
-            </a>
-          </p>
         </div>
         <LoginForm />
       </div>

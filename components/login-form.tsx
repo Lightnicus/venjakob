@@ -41,7 +41,7 @@ export function LoginForm() {
       // Redirect to dashboard after successful login
       router.push('/dashboard');
     } catch (err) {
-      setError('Invalid email or password. Please try again.');
+      setError('Ungültige E-Mail oder Passwort. Bitte versuchen Sie es erneut.');
     } finally {
       setIsLoading(false);
     }
@@ -61,7 +61,7 @@ export function LoginForm() {
       // Redirect to dashboard after successful login
       router.push('/dashboard');
     } catch (err) {
-      setError('Microsoft login failed. Please try again.');
+      setError('Microsoft-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
     } finally {
       setIsLoading(false);
     }
@@ -70,9 +70,9 @@ export function LoginForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sign In</CardTitle>
+        <CardTitle>Anmelden</CardTitle>
         <CardDescription>
-          Enter your credentials to access your account
+          Geben Sie Ihre Zugangsdaten ein, um sich einzuloggen
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -84,11 +84,11 @@ export function LoginForm() {
         )}
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">E-Mail</Label>
             <Input
               id="email"
               type="email"
-              placeholder="name@example.com"
+              placeholder="name@beispiel.de"
               value={email}
               onChange={e => setEmail(e.target.value)}
               required
@@ -96,12 +96,12 @@ export function LoginForm() {
           </div>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Passwort</Label>
               <a
                 href="/forgot-password"
                 className="text-sm font-medium text-blue-600 hover:text-blue-500"
               >
-                Forgot password?
+                Passwort vergessen?
               </a>
             </div>
             <Input
@@ -116,10 +116,10 @@ export function LoginForm() {
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Signing in...
+                Anmeldung läuft...
               </>
             ) : (
-              'Sign in'
+              'Anmelden'
             )}
           </Button>
         </form>
@@ -131,7 +131,7 @@ export function LoginForm() {
             </div>
             <div className="relative flex justify-center text-xs uppercase">
               <span className="bg-white px-2 text-gray-500">
-                Or continue with
+                Oder fortfahren mit
               </span>
             </div>
           </div>
@@ -159,7 +159,7 @@ export function LoginForm() {
                   <path d="M22 12.6H12.6V22H22V12.6Z" fill="#FFB900" />
                 </svg>
               )}
-              Sign in with Microsoft
+              Mit Microsoft anmelden
             </Button>
           </div>
         </div>
