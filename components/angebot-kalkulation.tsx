@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
 
 type Position = {
   id: string
@@ -38,6 +39,7 @@ type Block = {
 }
 
 export function AngebotKalkulation() {
+  const { toast } = useToast()
   // Mock initial data
   const initialBlocks: Block[] = [
     {
@@ -276,16 +278,32 @@ export function AngebotKalkulation() {
     )
   }
 
+  const handleExcelExport = () => {
+    toast({
+      title: "Excel Export",
+      description: "In Zukunft werden hier Ihre Kalkulationsdaten als Excel-Datei exportiert.",
+      variant: "default",
+    })
+  }
+
+  const handleExcelImport = () => {
+    toast({
+      title: "Excel Import",
+      description: "In Zukunft können Sie hier Ihre Kalkulationsdaten aus einer Excel-Datei importieren.",
+      variant: "default",
+    })
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-medium">Kalkulation</h3>
         <div className="flex gap-2">
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="outline" onClick={handleExcelImport}>
             <FileUp className="h-4 w-4 mr-1" />
             Excel Import
           </Button>
-          <Button size="sm" variant="outline">
+          <Button size="sm" variant="outline" onClick={handleExcelExport}>
             <FileDown className="h-4 w-4 mr-1" />
             Excel Export
           </Button>
