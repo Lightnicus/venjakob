@@ -8,8 +8,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { Card, CardContent } from "@/components/ui/card"
-import { Save, Edit, Eye, Settings, X, Trash } from "lucide-react"
+import {Save, Edit, Eye, Settings, X, Trash, ArrowLeft} from "lucide-react"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useRouter } from "next/navigation"
 
 interface BlockEditorProps {
   id: string
@@ -18,6 +19,7 @@ interface BlockEditorProps {
 export function BlockEditor({ id }: BlockEditorProps) {
   const [activeTab, setActiveTab] = useState("beschreibung")
   const [editMode, setEditMode] = useState(false)
+  const router = useRouter();
 
   // Mock data for a block
   const block = {
@@ -58,9 +60,17 @@ export function BlockEditor({ id }: BlockEditorProps) {
     // setBlock(originalBlock);
   }
 
+  function handleReturn(): void {
+      router.push('/bloecke');
+    }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
+        <Button variant="outline" onClick={() => router.back()}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Zurück
+        </Button>
         <h1 className="text-2xl font-bold tracking-tight">
           {id === "neu" ? "Neuer Block" : `Block: ${block.bezeichnung}`}
         </h1>
@@ -77,10 +87,12 @@ export function BlockEditor({ id }: BlockEditorProps) {
               </Button>
             </>
           ) : (
-            <Button onClick={handleEdit}>
-              <Edit className="mr-2 h-4 w-4" />
-              Bearbeiten
-            </Button>
+            <>
+              <Button onClick={handleEdit}>
+                <Edit className="mr-2 h-4 w-4" />
+                Bearbeiten
+              </Button>
+            </>
           )}
         </div>
       </div>
