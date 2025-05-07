@@ -1,7 +1,7 @@
 import { MainLayout } from "@/components/main-layout"
 import { BlockEditor } from "@/components/block-editor"
 
-export default function BlockEditPage({ params }: { params: { id: string } }) {
+export default async function BlockEditPage({ params }: { params: { id: string } }) {
   return (
     <MainLayout>
       <BlockEditor id={params.id} />
