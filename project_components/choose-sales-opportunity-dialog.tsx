@@ -9,12 +9,14 @@ type ChooseSalesOpportunityDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   data: SaleChance[];
+  onWeiter?: () => void;
 };
 
 const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({ 
   open, 
   onOpenChange,
-  data 
+  data,
+  onWeiter
 }) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="max-w-[99%] min-w-[99%]" aria-label="Verkaufschance auswählen">
@@ -38,7 +40,7 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
           <Button type="button" variant="outline" aria-label="Zurück" onClick={() => onOpenChange(false)}>
             Zurück
           </Button>
-          <Button type="button" aria-label="Weiter" onClick={() => onOpenChange(false)}>
+          <Button type="button" aria-label="Weiter" onClick={onWeiter ? onWeiter : () => onOpenChange(false)}>
             Weiter
           </Button>
         </div>

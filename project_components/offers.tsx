@@ -10,6 +10,7 @@ import { useState } from 'react';
 import NewOfferFromExistingDialog from './new-offer-from-existing-dialog';
 import ChooseOfferDialog from './choose-offer-dialog';
 import ChooseSalesOpportunityDialog from './choose-sales-opportunity-dialog';
+import OfferAsNewVariantDialog from './offer-as-new-variant-dialog';
 import { SaleChance } from './sale-opportunities-table';
 
 const dummySalesOpportunities: SaleChance[] = [
@@ -41,6 +42,7 @@ const Offers = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [chooseOfferDialogOpen, setChooseOfferDialogOpen] = useState(false);
   const [chooseSalesOpportunityDialogOpen, setChooseSalesOpportunityDialogOpen] = useState(false);
+  const [offerAsNewVariantDialogOpen, setOfferAsNewVariantDialogOpen] = useState(false);
 
   const handleCopyOfferDialogCancel = () => setDialogOpen(false);
   const handleCopyOfferDialogNo = () => {
@@ -50,6 +52,10 @@ const Offers = () => {
   const handleCopyOfferDialogYes = () => {
     setDialogOpen(false);
     setChooseOfferDialogOpen(true);
+  };
+  const handleSalesOpportunityWeiter = () => {
+    setChooseSalesOpportunityDialogOpen(false);
+    setOfferAsNewVariantDialogOpen(true);
   };
 
   return (
@@ -92,6 +98,11 @@ const Offers = () => {
         open={chooseSalesOpportunityDialogOpen}
         onOpenChange={setChooseSalesOpportunityDialogOpen}
         data={dummySalesOpportunities}
+        onWeiter={handleSalesOpportunityWeiter}
+      />
+      <OfferAsNewVariantDialog
+        open={offerAsNewVariantDialogOpen}
+        onOpenChange={setOfferAsNewVariantDialogOpen}
       />
     </div>
   );
