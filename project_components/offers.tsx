@@ -9,13 +9,44 @@ import { OffersTable } from '@/project_components/offers-table';
 import { useState } from 'react';
 import NewOfferFromExistingDialog from './new-offer-from-existing-dialog';
 import ChooseOfferDialog from './choose-offer-dialog';
+import ChooseSalesOpportunityDialog from './choose-sales-opportunity-dialog';
+import { SaleChance } from './sale-opportunities-table';
+
+const dummySalesOpportunities: SaleChance[] = [
+  {
+    titel: 'Beispielchance 1',
+    kunde: 'Kunde A',
+    verantwortlicher: 'Max Mustermann',
+    status: 'Offen',
+    gb: 'GB1',
+    volumen: '10000',
+    liefertermin: '01.01.2025',
+    geaendertAm: '01.06.2024',
+    angebote: 2,
+  },
+  {
+    titel: 'Beispielchance 2',
+    kunde: 'Kunde B',
+    verantwortlicher: 'Erika Musterfrau',
+    status: 'In Bearbeitung',
+    gb: 'GB2',
+    volumen: '20000',
+    liefertermin: '15.02.2025',
+    geaendertAm: '02.06.2024',
+    angebote: 1,
+  },
+];
 
 const Offers = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [chooseOfferDialogOpen, setChooseOfferDialogOpen] = useState(false);
+  const [chooseSalesOpportunityDialogOpen, setChooseSalesOpportunityDialogOpen] = useState(false);
 
   const handleCopyOfferDialogCancel = () => setDialogOpen(false);
-  const handleCopyOfferDialogNo = () => setDialogOpen(false);
+  const handleCopyOfferDialogNo = () => {
+    setDialogOpen(false);
+    setChooseSalesOpportunityDialogOpen(true);
+  };
   const handleCopyOfferDialogYes = () => {
     setDialogOpen(false);
     setChooseOfferDialogOpen(true);
@@ -56,6 +87,11 @@ const Offers = () => {
       <ChooseOfferDialog
         open={chooseOfferDialogOpen}
         onOpenChange={setChooseOfferDialogOpen}
+      />
+      <ChooseSalesOpportunityDialog
+        open={chooseSalesOpportunityDialogOpen}
+        onOpenChange={setChooseSalesOpportunityDialogOpen}
+        data={dummySalesOpportunities}
       />
     </div>
   );

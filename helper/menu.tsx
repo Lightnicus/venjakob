@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import { Tab } from '@/project_components/tabbed-interface-provider';
 import Offers from '@/project_components/offers';
-import SaleOpportunities from '@/project_components/sale-opportunities';
+import SaleOpportunitiesTable from '@/project_components/sale-opportunities-table';
 import saleChancesData from '@/data/sale-chances.json';
 import OrderConfirmations, {
   OrderConfirmation,
@@ -35,7 +35,7 @@ export const tabMappings: Record<string, TabDefinition> = {
     content: () => (
       <>
         <h2 className="text-2xl font-bold">Verkaufschancen</h2>
-        <SaleOpportunities data={saleChancesData} />
+        <SaleOpportunitiesTable data={saleChancesData} />
       </>
     ),
     closable: true,
@@ -65,4 +65,4 @@ export const tabMappings: Record<string, TabDefinition> = {
     content: () => <EinstellungenPlaceholder />,
     closable: true,
   },
-}; 
+};
