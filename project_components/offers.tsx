@@ -1,15 +1,25 @@
 import { Button } from '@/components/ui/button';
-import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+} from '@/components/ui/select';
 import { OffersTable } from '@/project_components/offers-table';
 import { useState } from 'react';
 import NewOfferFromExistingDialog from './new-offer-from-existing-dialog';
+import ChooseOfferDialog from './choose-offer-dialog';
 
 const Offers = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [chooseOfferDialogOpen, setChooseOfferDialogOpen] = useState(false);
 
-  const handleDialogCancel = () => setDialogOpen(false);
-  const handleDialogNo = () => setDialogOpen(false);
-  const handleDialogYes = () => setDialogOpen(false);
+  const handleCopyOfferDialogCancel = () => setDialogOpen(false);
+  const handleCopyOfferDialogNo = () => setDialogOpen(false);
+  const handleCopyOfferDialogYes = () => {
+    setDialogOpen(false);
+    setChooseOfferDialogOpen(true);
+  };
 
   return (
     <div>
@@ -39,12 +49,16 @@ const Offers = () => {
       <NewOfferFromExistingDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        onCancel={handleDialogCancel}
-        onNo={handleDialogNo}
-        onYes={handleDialogYes}
+        onCancel={handleCopyOfferDialogCancel}
+        onNo={handleCopyOfferDialogNo}
+        onYes={handleCopyOfferDialogYes}
+      />
+      <ChooseOfferDialog
+        open={chooseOfferDialogOpen}
+        onOpenChange={setChooseOfferDialogOpen}
       />
     </div>
   );
 };
 
-export default Offers; 
+export default Offers;
