@@ -12,6 +12,7 @@ import ChooseOfferDialog from './choose-offer-dialog';
 import ChooseSalesOpportunityDialog from './choose-sales-opportunity-dialog';
 import OfferAsNewVariantDialog from './offer-as-new-variant-dialog';
 import { SaleChance } from './sale-opportunities-table';
+import ChooseOfferLanguageDialog from '@/project_components/choose-offer-language-dialog';
 
 const dummySalesOpportunities: SaleChance[] = [
   {
@@ -41,8 +42,14 @@ const dummySalesOpportunities: SaleChance[] = [
 const Offers = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [chooseOfferDialogOpen, setChooseOfferDialogOpen] = useState(false);
-  const [chooseSalesOpportunityDialogOpen, setChooseSalesOpportunityDialogOpen] = useState(false);
-  const [offerAsNewVariantDialogOpen, setOfferAsNewVariantDialogOpen] = useState(false);
+  const [
+    chooseSalesOpportunityDialogOpen,
+    setChooseSalesOpportunityDialogOpen,
+  ] = useState(false);
+  const [offerAsNewVariantDialogOpen, setOfferAsNewVariantDialogOpen] =
+    useState(false);
+  const [chooseOfferLanguageDialogOpen, setChooseOfferLanguageDialogOpen] =
+    useState(false);
 
   const handleCopyOfferDialogCancel = () => setDialogOpen(false);
   const handleCopyOfferDialogNo = () => {
@@ -53,9 +60,14 @@ const Offers = () => {
     setDialogOpen(false);
     setChooseOfferDialogOpen(true);
   };
-  const handleSalesOpportunityWeiter = () => {
-    setChooseSalesOpportunityDialogOpen(false);
+  const handleChooseOfferWeiter = () => {
+    setChooseOfferDialogOpen(false);
     setOfferAsNewVariantDialogOpen(true);
+  };
+
+  const handleOfferAsNewVariantDialogJa = () => {
+    setOfferAsNewVariantDialogOpen(false);
+    setChooseOfferLanguageDialogOpen(true);
   };
 
   return (
@@ -93,16 +105,21 @@ const Offers = () => {
       <ChooseOfferDialog
         open={chooseOfferDialogOpen}
         onOpenChange={setChooseOfferDialogOpen}
+        onWeiter={handleChooseOfferWeiter}
       />
       <ChooseSalesOpportunityDialog
         open={chooseSalesOpportunityDialogOpen}
         onOpenChange={setChooseSalesOpportunityDialogOpen}
         data={dummySalesOpportunities}
-        onWeiter={handleSalesOpportunityWeiter}
       />
       <OfferAsNewVariantDialog
         open={offerAsNewVariantDialogOpen}
         onOpenChange={setOfferAsNewVariantDialogOpen}
+        onJa={handleOfferAsNewVariantDialogJa}
+      />
+      <ChooseOfferLanguageDialog
+        open={chooseOfferLanguageDialogOpen}
+        onOpenChange={setChooseOfferLanguageDialogOpen}
       />
     </div>
   );

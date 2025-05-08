@@ -7,9 +7,18 @@ import { FC } from 'react';
 type ChooseOfferDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onAbbrechen?: () => void;
+  onZurueck?: () => void;
+  onWeiter?: () => void;
 };
 
-const ChooseOfferDialog: FC<ChooseOfferDialogProps> = ({ open, onOpenChange }) => (
+const ChooseOfferDialog: FC<ChooseOfferDialogProps> = ({ 
+  open, 
+  onOpenChange, 
+  onAbbrechen, 
+  onZurueck, 
+  onWeiter 
+}) => (
   <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className="max-w-[99%] min-w-[99%]" aria-label="Angebot auswählen">
       <DialogHeader>
@@ -26,13 +35,36 @@ const ChooseOfferDialog: FC<ChooseOfferDialogProps> = ({ open, onOpenChange }) =
       </div>
       <DialogFooter>
         <div className="flex gap-2 justify-end w-full">
-          <Button type="button" variant="outline" aria-label="Abbrechen" onClick={() => onOpenChange(false)}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            aria-label="Abbrechen" 
+            onClick={() => {
+              if (onAbbrechen) onAbbrechen();
+              else onOpenChange(false);
+            }}
+          >
             Abbrechen
           </Button>
-          <Button type="button" variant="outline" aria-label="Zurück" onClick={() => onOpenChange(false)}>
+          <Button 
+            type="button" 
+            variant="outline" 
+            aria-label="Zurück" 
+            onClick={() => {
+              if (onZurueck) onZurueck();
+              else onOpenChange(false);
+            }}
+          >
             Zurück
           </Button>
-          <Button type="button" aria-label="Weiter" onClick={() => onOpenChange(false)}>
+          <Button 
+            type="button" 
+            aria-label="Weiter" 
+            onClick={() => {
+              if (onWeiter) onWeiter();
+              else onOpenChange(false);
+            }}
+          >
             Weiter
           </Button>
         </div>
