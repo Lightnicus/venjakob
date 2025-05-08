@@ -21,6 +21,7 @@ import salesOpportunityDetailData from '../data/sales-opportunity-detail.json';
 import NewOfferFromExistingDialog from './new-offer-from-existing-dialog';
 import OrderConfirmations, { OrderConfirmation } from './order-confirmations';
 import orderConfirmationsData from '../data/order-confirmations.json';
+import Offers from './offers';
 
 export function TabbedInterface() {
   const [activeTab, setActiveTab] = useState('angebote');
@@ -70,67 +71,27 @@ export function TabbedInterface() {
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="angebote" className="m-0 p-0">
-              <div className="p-4">
-                <h2 className="mb-4 text-2xl font-bold">Angebote</h2>
-                <div className="mb-4 flex items-center gap-2">
-                  <Button
-                    className="flex items-center gap-1"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setDialogOpen(true)}
-                  >
-                    Erstellen
-                  </Button>
-                  <Select defaultValue="Offen">
-                    <SelectTrigger
-                      className="h-8 w-[140px] rounded border px-2 py-1 text-sm"
-                      aria-label="Status wählen"
-                    >
-                      Status
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Offen">Offen</SelectItem>
-                      <SelectItem value="Geschlossen">Geschlossen</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <OffersTable />
-                <NewOfferFromExistingDialog
-                  open={dialogOpen}
-                  onOpenChange={setDialogOpen}
-                  onCancel={handleDialogCancel}
-                  onNo={handleDialogNo}
-                  onYes={handleDialogYes}
-                />
-              </div>
+            <TabsContent value="angebote" className="m-0 p-4">
+              <h2 className="text-2xl font-bold">Angebote</h2>
+              <Offers />
             </TabsContent>
 
-            <TabsContent value="verkaufschancen" className="m-0 p-0">
-              <div className="p-4">
-                <h2 className="text-2xl font-bold">Verkaufschancen</h2>
-                <SaleOpportunities data={saleChancesData} />
-              </div>
+            <TabsContent value="verkaufschancen" className="m-0 p-4">
+              <h2 className="text-2xl font-bold">Verkaufschancen</h2>
+              <SaleOpportunities data={saleChancesData} />
             </TabsContent>
 
-            <TabsContent value="verkaufschance-muster" className="m-0 p-0">
-              <div className="p-4">
-                <h2 className="text-2xl font-bold">
-                  Verkaufschance Mustermann
-                </h2>
-                <SalesOpportunityDetail
-                  data={
-                    salesOpportunityDetailData as SalesOpportunityDetailData
-                  }
-                />
-              </div>
+            <TabsContent value="verkaufschance-muster" className="m-0 p-4">
+              <SalesOpportunityDetail
+                    data={
+                      salesOpportunityDetailData as SalesOpportunityDetailData
+                    }
+                  />
             </TabsContent>
 
-            <TabsContent value="abs" className="m-0 p-0">
-              <div className="p-4">
-                <h2 className="text-2xl font-bold">Auftragsbestätigungen</h2>
-                <OrderConfirmations data={orderConfirmationsData as OrderConfirmation[]} />
-              </div>
+            <TabsContent value="abs" className="m-0 p-4">
+              <h2 className="text-2xl font-bold">Auftragsbestätigungen</h2>
+              <OrderConfirmations data={orderConfirmationsData as OrderConfirmation[]} />
             </TabsContent>
           </Tabs>
         </div>

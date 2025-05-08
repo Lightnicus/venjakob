@@ -1,6 +1,7 @@
 [
-  { "label": "Startseite", "href": "/" },
-  { "label": "Portal", "href": "/portal" },
-  { "label": "Über uns", "href": "/ueber-uns" },
-  { "label": "Kontakt", "href": "/kontakt" }
+  { "label": "Angebote", "href": "/angebote" },
+  { "label": "Verkaufschancen", "href": "/verkaufschancen" },
+  { "label": "Auftragsbestätigungen", "href": "/auftragsbestaetigungen" },
+  { "label": "Stammdaten", "href": "/stammdaten" },
+  { "label": "Einstellungen", "href": "/einstellungen" }
 ] 
