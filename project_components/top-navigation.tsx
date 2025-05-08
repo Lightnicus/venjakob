@@ -9,6 +9,7 @@ import {
   NavigationMenuLink,
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 
 type MenuItem = {
   label: string;
@@ -42,6 +43,13 @@ const TopNavigation: FC = () => (
           ))}
         </NavigationMenuList>
       </NavigationMenu>
+      <div className="flex items-center gap-2 ml-4">
+        <Avatar>
+          <AvatarImage src="/avatar.png" alt="Benutzeravatar" />
+          <AvatarFallback>MM</AvatarFallback>
+        </Avatar>
+        <span className="text-sm font-medium text-gray-700">Max Mustermann</span>
+      </div>
     </div>
   </div>
 );
