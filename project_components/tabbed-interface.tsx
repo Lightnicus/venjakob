@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { OffersTable } from '@/components/offers-table';
+import { OffersTable } from '@/project_components/offers-table';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Select,
   SelectTrigger,
   SelectContent,
-  SelectItem
+  SelectItem,
 } from '@/components/ui/select';
 
 export function TabbedInterface() {
@@ -52,11 +52,18 @@ export function TabbedInterface() {
               <div className="p-4">
                 <h2 className="mb-4 text-2xl font-bold">Angebote</h2>
                 <div className="mb-4 flex items-center gap-2">
-                  <Button className="flex items-center gap-1" variant="outline" size="sm">
+                  <Button
+                    className="flex items-center gap-1"
+                    variant="outline"
+                    size="sm"
+                  >
                     Erstellen
                   </Button>
                   <Select defaultValue="Offen">
-                    <SelectTrigger className="h-8 w-[140px] rounded border px-2 py-1 text-sm" aria-label="Status wählen">
+                    <SelectTrigger
+                      className="h-8 w-[140px] rounded border px-2 py-1 text-sm"
+                      aria-label="Status wählen"
+                    >
                       Status
                     </SelectTrigger>
                     <SelectContent>
