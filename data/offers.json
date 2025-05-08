@@ -1,0 +1,53 @@
+[
+  {
+    "id": "1",
+    "checked": false,
+    "offerNumber": "200515-A",
+    "offer": "Mustermann - Kofferverkleidung",
+    "vcStatus": "qualifiziert",
+    "customerNumber": "83616",
+    "recipient": "Mustermann AG",
+    "location": "Sursee",
+    "gb": "HB",
+    "amount": "20.000€",
+    "version": "1.0",
+    "published": false,
+    "responsible": "Max Mustermann",
+    "modifiedBy": "Max Mustermann",
+    "modifiedOn": "17.05.2024"
+  },
+  {
+    "id": "2",
+    "checked": false,
+    "offerNumber": "200515-B",
+    "offer": "Mustermann - Kofferverkleidung",
+    "vcStatus": "qualifiziert",
+    "customerNumber": "83616",
+    "recipient": "Mustermann AG",
+    "location": "Sursee",
+    "gb": "HB",
+    "amount": "8.000€",
+    "version": "1.0",
+    "published": false,
+    "responsible": "Stefan Mustermann",
+    "modifiedBy": "Max Mustermann",
+    "modifiedOn": "12.07.2024"
+  },
+  {
+    "id": "3",
+    "checked": true,
+    "offerNumber": "200588-B",
+    "offer": "Meiermann - Türenlackierung",
+    "vcStatus": "gewonnen",
+    "customerNumber": "51302",
+    "recipient": "Meiermann AG",
+    "location": "Oeide",
+    "gb": "HB",
+    "amount": "12.000€",
+    "version": "1.0",
+    "published": false,
+    "responsible": "Stefan Mustermann",
+    "modifiedBy": "Max Mustermann",
+    "modifiedOn": "22.08.2024"
+  }
+] 
