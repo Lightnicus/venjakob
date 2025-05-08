@@ -1,0 +1,41 @@
+[
+  {
+    "abNumber": "AB-1001",
+    "opportunity": "Projekt Alpha",
+    "customerNumber": "46654",
+    "customer": "Erwin Müller GbR",
+    "location": "Rheda-Wiedenbrück",
+    "gb": "HB",
+    "amount": "15.000€",
+    "version": "1.0",
+    "responsible": "Anna Schmidt",
+    "modifiedBy": "Max Mustermann",
+    "modifiedOn": "17.05.2024"
+  },
+  {
+    "abNumber": "AB-1002",
+    "opportunity": "Projekt Beta",
+    "customerNumber": "51302",
+    "customer": "Schulze AG",
+    "location": "Sursee",
+    "gb": "HB",
+    "amount": "8.500€",
+    "version": "1.0",
+    "responsible": "Stefan Mustermann",
+    "modifiedBy": "Lisa Müller",
+    "modifiedOn": "12.07.2024"
+  },
+  {
+    "abNumber": "AB-1003",
+    "opportunity": "Projekt Gamma",
+    "customerNumber": "83616",
+    "customer": "Beispiel KG",
+    "location": "Oeide",
+    "gb": "HB",
+    "amount": "5.200€",
+    "version": "1.0",
+    "responsible": "Max Mustermann",
+    "modifiedBy": "Anna Schmidt",
+    "modifiedOn": "22.08.2024"
+  }
+] 

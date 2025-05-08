@@ -19,6 +19,8 @@ import {
 } from './sales-opportunity-detail';
 import salesOpportunityDetailData from '../data/sales-opportunity-detail.json';
 import NewOfferFromExistingDialog from './new-offer-from-existing-dialog';
+import OrderConfirmations, { OrderConfirmation } from './order-confirmations';
+import orderConfirmationsData from '../data/order-confirmations.json';
 
 export function TabbedInterface() {
   const [activeTab, setActiveTab] = useState('angebote');
@@ -57,6 +59,13 @@ export function TabbedInterface() {
                 className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100"
               >
                 Verkaufschance Musterm...
+                <X className="h-4 w-4" />
+              </TabsTrigger>
+              <TabsTrigger
+                value="abs"
+                className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100"
+              >
+                Auftragsbestätigungen
                 <X className="h-4 w-4" />
               </TabsTrigger>
             </TabsList>
@@ -114,6 +123,13 @@ export function TabbedInterface() {
                     salesOpportunityDetailData as SalesOpportunityDetailData
                   }
                 />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="abs" className="m-0 p-0">
+              <div className="p-4">
+                <h2 className="text-2xl font-bold">Auftragsbestätigungen</h2>
+                <OrderConfirmations data={orderConfirmationsData as OrderConfirmation[]} />
               </div>
             </TabsContent>
           </Tabs>
