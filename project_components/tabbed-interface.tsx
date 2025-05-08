@@ -11,9 +11,12 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
-import SaleChances from './sale-chances';
+import SaleOpportunities from './sale-opportunities';
 import saleChancesData from '../data/sale-chances.json';
-import { SalesOpportunityDetail, SalesOpportunityDetailData } from './sales-opportunity-detail';
+import {
+  SalesOpportunityDetail,
+  SalesOpportunityDetailData,
+} from './sales-opportunity-detail';
 import salesOpportunityDetailData from '../data/sales-opportunity-detail.json';
 
 export function TabbedInterface() {
@@ -83,7 +86,7 @@ export function TabbedInterface() {
             <TabsContent value="verkaufschancen" className="m-0 p-0">
               <div className="p-4">
                 <h2 className="text-2xl font-bold">Verkaufschancen</h2>
-                <SaleChances data={saleChancesData} />
+                <SaleOpportunities data={saleChancesData} />
               </div>
             </TabsContent>
 
@@ -92,7 +95,11 @@ export function TabbedInterface() {
                 <h2 className="text-2xl font-bold">
                   Verkaufschance Mustermann
                 </h2>
-                <SalesOpportunityDetail data={salesOpportunityDetailData as SalesOpportunityDetailData} />
+                <SalesOpportunityDetail
+                  data={
+                    salesOpportunityDetailData as SalesOpportunityDetailData
+                  }
+                />
               </div>
             </TabsContent>
           </Tabs>

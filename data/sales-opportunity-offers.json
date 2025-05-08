@@ -1,0 +1,29 @@
+[
+  {
+    "offerNumber": "200515-A",
+    "accepted": false,
+    "amount": "20.000€",
+    "version": "1.0",
+    "published": false,
+    "modifiedBy": "Max Mustermann",
+    "modifiedOn": "17.05.2024"
+  },
+  {
+    "offerNumber": "200515-B",
+    "accepted": false,
+    "amount": "8.000€",
+    "version": "1.0",
+    "published": false,
+    "modifiedBy": "Stefan Mustermann",
+    "modifiedOn": "12.07.2024"
+  },
+  {
+    "offerNumber": "200588-B",
+    "accepted": true,
+    "amount": "12.000€",
+    "version": "1.0",
+    "published": true,
+    "modifiedBy": "Max Mustermann",
+    "modifiedOn": "22.08.2024"
+  }
+] 

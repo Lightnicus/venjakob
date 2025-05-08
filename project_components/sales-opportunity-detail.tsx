@@ -4,6 +4,8 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Building, FileText, MapPin, Phone, Globe } from 'lucide-react';
+import SalesOpportunityOffers, { SalesOpportunityOffer } from './sales-opportunity-offers';
+import salesOpportunityOffersData from '../data/sales-opportunity-offers.json';
 
 export type SalesOpportunityDetailData = {
   title: string;
@@ -200,10 +202,8 @@ export function SalesOpportunityDetail({ data }: Props) {
         </TabsContent>
 
         <TabsContent value="angebote">
-          <div className="mt-4 rounded-md border border-gray-300 p-6">
-            <p className="text-center text-gray-500">
-              Angebote content would go here
-            </p>
+          <div className="mt-4">
+            <SalesOpportunityOffers data={salesOpportunityOffersData as SalesOpportunityOffer[]} />
           </div>
         </TabsContent>
       </Tabs>
