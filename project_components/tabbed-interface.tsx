@@ -18,9 +18,15 @@ import {
   SalesOpportunityDetailData,
 } from './sales-opportunity-detail';
 import salesOpportunityDetailData from '../data/sales-opportunity-detail.json';
+import NewOfferFromExistingDialog from './new-offer-from-existing-dialog';
 
 export function TabbedInterface() {
   const [activeTab, setActiveTab] = useState('angebote');
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleDialogCancel = () => setDialogOpen(false);
+  const handleDialogNo = () => setDialogOpen(false);
+  const handleDialogYes = () => setDialogOpen(false);
 
   return (
     <div className="w-full border rounded">
@@ -63,6 +69,7 @@ export function TabbedInterface() {
                     className="flex items-center gap-1"
                     variant="outline"
                     size="sm"
+                    onClick={() => setDialogOpen(true)}
                   >
                     Erstellen
                   </Button>
@@ -80,6 +87,13 @@ export function TabbedInterface() {
                   </Select>
                 </div>
                 <OffersTable />
+                <NewOfferFromExistingDialog
+                  open={dialogOpen}
+                  onOpenChange={setDialogOpen}
+                  onCancel={handleDialogCancel}
+                  onNo={handleDialogNo}
+                  onYes={handleDialogYes}
+                />
               </div>
             </TabsContent>
 

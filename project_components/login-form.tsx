@@ -41,7 +41,9 @@ export function LoginForm() {
       // Redirect to dashboard after successful login
       router.push('/dashboard');
     } catch (err) {
-      setError('Ungültige E-Mail oder Passwort. Bitte versuchen Sie es erneut.');
+      setError(
+        'Ungültige E-Mail oder Passwort. Bitte versuchen Sie es erneut.',
+      );
     } finally {
       setIsLoading(false);
     }
@@ -59,9 +61,11 @@ export function LoginForm() {
       await new Promise(resolve => setTimeout(resolve, 1000));
 
       // Redirect to dashboard after successful login
-      router.push('/dashboard');
+      router.push('/portal');
     } catch (err) {
-      setError('Microsoft-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
+      setError(
+        'Microsoft-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.',
+      );
     } finally {
       setIsLoading(false);
     }
