@@ -13,6 +13,7 @@ import ChooseSalesOpportunityDialog from './choose-sales-opportunity-dialog';
 import OfferAsNewVariantDialog from './offer-as-new-variant-dialog';
 import { SaleChance } from './sale-opportunities-table';
 import ChooseOfferLanguageDialog from '@/project_components/choose-offer-language-dialog';
+import { ChooseOfferVariantDialog } from '@/project_components/choose-offer-variant-dialog';
 
 const dummySalesOpportunities: SaleChance[] = [
   {
@@ -50,6 +51,8 @@ const Offers = () => {
     useState(false);
   const [chooseOfferLanguageDialogOpen, setChooseOfferLanguageDialogOpen] =
     useState(false);
+  const [chooseOfferVariantDialogOpen, setChooseOfferVariantDialogOpen] = 
+    useState(false);
 
   const handleCopyOfferDialogCancel = () => setDialogOpen(false);
   const handleCopyOfferDialogNo = () => {
@@ -68,6 +71,25 @@ const Offers = () => {
   const handleOfferAsNewVariantDialogJa = () => {
     setOfferAsNewVariantDialogOpen(false);
     setChooseOfferLanguageDialogOpen(true);
+  };
+
+  const handleOfferAsNewVariantDialogNein = () => {
+    setOfferAsNewVariantDialogOpen(false);
+    setChooseOfferVariantDialogOpen(true);
+  };
+
+  const handleChooseOfferVariantCancel = () => {
+    setChooseOfferVariantDialogOpen(false);
+  };
+
+  const handleChooseOfferVariantBack = () => {
+    setChooseOfferVariantDialogOpen(false);
+    setOfferAsNewVariantDialogOpen(true);
+  };
+
+  const handleChooseOfferVariantCreate = () => {
+    setChooseOfferVariantDialogOpen(false);
+    // Hier kann weitere Logik für das Erstellen implementiert werden
   };
 
   return (
@@ -116,10 +138,18 @@ const Offers = () => {
         open={offerAsNewVariantDialogOpen}
         onOpenChange={setOfferAsNewVariantDialogOpen}
         onJa={handleOfferAsNewVariantDialogJa}
+        onNein={handleOfferAsNewVariantDialogNein}
       />
       <ChooseOfferLanguageDialog
         open={chooseOfferLanguageDialogOpen}
         onOpenChange={setChooseOfferLanguageDialogOpen}
+      />
+      <ChooseOfferVariantDialog
+        open={chooseOfferVariantDialogOpen}
+        onOpenChange={setChooseOfferVariantDialogOpen}
+        onCancel={handleChooseOfferVariantCancel}
+        onBack={handleChooseOfferVariantBack}
+        onCreate={handleChooseOfferVariantCreate}
       />
     </div>
   );
