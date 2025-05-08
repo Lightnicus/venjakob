@@ -1,0 +1,26 @@
+{
+  "title": "Verkaufschance Mustermann - Kofferverkleidung",
+  "customer": {
+    "id": "46654",
+    "name": "Erwin Müller GbR",
+    "address": ["Hauptstr. 44", "33378 Rheda-Wiedenbrück"],
+    "phone": "05242-566312",
+    "casLink": "#"
+  },
+  "orderConfirmation": null,
+  "info": {
+    "vertriebsverantwortung": "Max Mustermann",
+    "geschaeftsbereich": "Holzbaustoffe",
+    "casId": "471199",
+    "casStichwort": "Mustermann - Kofferverkleidung",
+    "casKurzbeschreibung": "Mustermann - Kofferverkleidung",
+    "liefertermin": "15.11.2025"
+  },
+  "recipient": {
+    "anrede": "Herr",
+    "name": "Max",
+    "nachname": "Mustermann",
+    "telefon": "+49 177 12345678",
+    "email": "max@mustermann.de"
+  }
+} 

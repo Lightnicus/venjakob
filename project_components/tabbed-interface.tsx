@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/select';
 import SaleChances from './sale-chances';
 import saleChancesData from '../data/sale-chances.json';
+import { SalesOpportunityDetail, SalesOpportunityDetailData } from './sales-opportunity-detail';
+import salesOpportunityDetailData from '../data/sales-opportunity-detail.json';
 
 export function TabbedInterface() {
   const [activeTab, setActiveTab] = useState('angebote');
@@ -90,9 +92,7 @@ export function TabbedInterface() {
                 <h2 className="text-2xl font-bold">
                   Verkaufschance Mustermann
                 </h2>
-                <p className="mt-4">
-                  Verkaufschance Mustermann content goes here.
-                </p>
+                <SalesOpportunityDetail data={salesOpportunityDetailData as SalesOpportunityDetailData} />
               </div>
             </TabsContent>
           </Tabs>
