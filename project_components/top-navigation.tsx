@@ -2,8 +2,7 @@
 
 import menuConfig from '@/config/menu.json';
 import sitewide from '@/config/sitewide.json';
-// import Link from 'next/link'; // NavigationMenuLink will be used, might not need direct Link
-import type { FC, ReactNode } from 'react';
+import type { FC } from 'react';
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -12,76 +11,18 @@ import {
   navigationMenuTriggerStyle,
 } from '@/components/ui/navigation-menu';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
-import { useTabbedInterface, Tab } from '@/project_components/tabbed-interface-provider';
+import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
+import { tabMappings } from '@/helper/menu';
 
-// Import tab content components
-import Offers from '@/project_components/offers';
-import SaleOpportunities from '@/project_components/sale-opportunities';
-import saleChancesData from '@/data/sale-chances.json';
-import OrderConfirmations, { OrderConfirmation } from '@/project_components/order-confirmations';
-import orderConfirmationsData from '@/data/order-confirmations.json';
-import StammdatenPlaceholder from '@/project_components/stammdaten-placeholder';
-import EinstellungenPlaceholder from '@/project_components/einstellungen-placeholder';
+// Import tab content components - no longer needed here as they are imported in menu.tsx
 
 type MenuConfigItem = {
   label: string;
   href: string; // href from menu.json might be used as a unique key or part of tab ID
 };
 
-interface TabDefinition extends Omit<Tab, 'content'> {
-  content: () => ReactNode; // Use a function to render content to avoid immediate rendering
-}
-
 const TopNavigation: FC = () => {
   const { openNewTab } = useTabbedInterface();
-
-  const tabMappings: Record<string, TabDefinition> = {
-    '/angebote': {
-      id: 'angebote',
-      title: 'Angebote',
-      content: () => (
-        <>
-          <h2 className="text-2xl font-bold">Angebote</h2>
-          <Offers />
-        </>
-      ),
-      closable: true,
-    },
-    '/verkaufschancen': {
-      id: 'verkaufschancen',
-      title: 'Verkaufschancen',
-      content: () => (
-        <>
-          <h2 className="text-2xl font-bold">Verkaufschancen</h2>
-          <SaleOpportunities data={saleChancesData} />
-        </>
-      ),
-      closable: true,
-    },
-    '/auftragsbestaetigungen': {
-      id: 'auftragsbestaetigungen',
-      title: 'Auftragsbestätigungen',
-      content: () => (
-        <>
-          <h2 className="text-2xl font-bold">Auftragsbestätigungen</h2>
-          <OrderConfirmations data={orderConfirmationsData as OrderConfirmation[]} />
-        </>
-      ),
-      closable: true,
-    },
-    '/stammdaten': {
-      id: 'stammdaten',
-      title: 'Stammdaten',
-      content: () => <StammdatenPlaceholder />,
-      closable: true,
-    },
-    '/einstellungen': {
-      id: 'einstellungen',
-      title: 'Einstellungen',
-      content: () => <EinstellungenPlaceholder />,
-      closable: true,
-    },
-  };
 
   const handleMenuClick = (menuItemHref: string) => {
     const tabDef = tabMappings[menuItemHref];
@@ -116,13 +57,13 @@ const TopNavigation: FC = () => {
                     Setting href='#' and relying on onClick is a common pattern. */}
                 <NavigationMenuLink
                   href="#" // Prevent actual navigation
-                  className={navigationMenuTriggerStyle() + " cursor-pointer"}
+                  className={navigationMenuTriggerStyle() + ' cursor-pointer'}
                   aria-label={label}
-                  onClick={(e) => {
+                  onClick={e => {
                     e.preventDefault(); // Prevent default link behavior
                     handleMenuClick(href);
                   }}
-                  onKeyDown={(e) => {
+                  onKeyDown={e => {
                     if (e.key === 'Enter' || e.key === ' ') {
                       e.preventDefault();
                       handleMenuClick(href);
@@ -141,7 +82,9 @@ const TopNavigation: FC = () => {
             <AvatarImage src="/avatar.png" alt="Benutzeravatar" />
             <AvatarFallback>MM</AvatarFallback>
           </Avatar>
-          <span className="text-sm font-medium text-gray-700">Max Mustermann</span>
+          <span className="text-sm font-medium text-gray-700">
+            Max Mustermann
+          </span>
         </div>
       </div>
     </div>

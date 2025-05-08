@@ -10,8 +10,6 @@ export function TabbedInterface() {
 
   return (
     <div className="w-full">
-      {/* Top menu previously here is now removed */}
-
       {openTabs.length > 0 ? (
         <div className="w-full border rounded">
           <div className="flex-1 overflow-x-auto border-b last:border-b-0">
