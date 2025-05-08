@@ -14,6 +14,7 @@ import OfferAsNewVariantDialog from './offer-as-new-variant-dialog';
 import { SaleChance } from './sale-opportunities-table';
 import ChooseOfferLanguageDialog from '@/project_components/choose-offer-language-dialog';
 import { ChooseOfferVariantDialog } from '@/project_components/choose-offer-variant-dialog';
+import { ConfirmOverwriteVariantDialog } from '@/project_components/confirm-overwrite-variant-dialog';
 
 const dummySalesOpportunities: SaleChance[] = [
   {
@@ -53,6 +54,8 @@ const Offers = () => {
     useState(false);
   const [chooseOfferVariantDialogOpen, setChooseOfferVariantDialogOpen] = 
     useState(false);
+  const [confirmOverwriteVariantDialogOpen, setConfirmOverwriteVariantDialogOpen] =
+    useState(false);
 
   const handleCopyOfferDialogCancel = () => setDialogOpen(false);
   const handleCopyOfferDialogNo = () => {
@@ -89,7 +92,21 @@ const Offers = () => {
 
   const handleChooseOfferVariantCreate = () => {
     setChooseOfferVariantDialogOpen(false);
-    // Hier kann weitere Logik für das Erstellen implementiert werden
+    setConfirmOverwriteVariantDialogOpen(true);
+  };
+
+  const handleConfirmOverwriteCancel = () => {
+    setConfirmOverwriteVariantDialogOpen(false);
+  };
+
+  const handleConfirmOverwriteBack = () => {
+    setConfirmOverwriteVariantDialogOpen(false);
+    setChooseOfferVariantDialogOpen(true);
+  };
+
+  const handleConfirmOverwriteConfirm = () => {
+    setConfirmOverwriteVariantDialogOpen(false);
+    // Hier weitere Logik nach Bestätigung implementieren
   };
 
   return (
@@ -150,6 +167,15 @@ const Offers = () => {
         onCancel={handleChooseOfferVariantCancel}
         onBack={handleChooseOfferVariantBack}
         onCreate={handleChooseOfferVariantCreate}
+      />
+      <ConfirmOverwriteVariantDialog
+        open={confirmOverwriteVariantDialogOpen}
+        onOpenChange={setConfirmOverwriteVariantDialogOpen}
+        offerNumber="ANG-2023-0001"
+        variantIdentifier="V2"
+        onCancel={handleConfirmOverwriteCancel}
+        onBack={handleConfirmOverwriteBack}
+        onConfirm={handleConfirmOverwriteConfirm}
       />
     </div>
   );
