@@ -1,0 +1,35 @@
+[
+  {
+    "titel": "Projekt Alpha",
+    "kunde": "Müller GmbH",
+    "verantwortlicher": "Anna Schmidt",
+    "status": "qualifiziert",
+    "gb": "HB",
+    "volumen": "15.000€",
+    "liefertermin": "10.09.2024",
+    "geaendertAm": "01.08.2024",
+    "angebote": 3
+  },
+  {
+    "titel": "Projekt Beta",
+    "kunde": "Schulze AG",
+    "verantwortlicher": "Max Mustermann",
+    "status": "qualifiziert",
+    "gb": "HB",
+    "volumen": "8.500€",
+    "liefertermin": "22.10.2024",
+    "geaendertAm": "15.09.2024",
+    "angebote": 2
+  },
+  {
+    "titel": "Projekt Gamma",
+    "kunde": "Beispiel KG",
+    "verantwortlicher": "Lisa Müller",
+    "status": "qualifiziert",
+    "gb": "HB",
+    "volumen": "5.200€",
+    "liefertermin": "05.12.2024",
+    "geaendertAm": "20.10.2024",
+    "angebote": 1
+  }
+] 

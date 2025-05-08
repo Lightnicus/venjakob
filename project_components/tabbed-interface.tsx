@@ -11,6 +11,8 @@ import {
   SelectContent,
   SelectItem,
 } from '@/components/ui/select';
+import SaleChances from './sale-chances';
+import saleChancesData from '../data/sale-chances.json';
 
 export function TabbedInterface() {
   const [activeTab, setActiveTab] = useState('angebote');
@@ -79,7 +81,7 @@ export function TabbedInterface() {
             <TabsContent value="verkaufschancen" className="m-0 p-0">
               <div className="p-4">
                 <h2 className="text-2xl font-bold">Verkaufschancen</h2>
-                <p className="mt-4">Verkaufschancen content goes here.</p>
+                <SaleChances data={saleChancesData} />
               </div>
             </TabsContent>
 
