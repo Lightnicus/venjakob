@@ -15,6 +15,7 @@ import { SaleChance } from './sale-opportunities-table';
 import ChooseOfferLanguageDialog from '@/project_components/choose-offer-language-dialog';
 import { ChooseOfferVariantDialog } from '@/project_components/choose-offer-variant-dialog';
 import { ConfirmOverwriteVariantDialog } from '@/project_components/confirm-overwrite-variant-dialog';
+import { VersionsForOfferVariantDialog } from '@/project_components/versions-for-offer-variant-dialog';
 
 const dummySalesOpportunities: SaleChance[] = [
   {
@@ -56,6 +57,10 @@ const Offers = () => {
     useState(false);
   const [confirmOverwriteVariantDialogOpen, setConfirmOverwriteVariantDialogOpen] =
     useState(false);
+  const [versionsForOfferVariantDialogOpen, setVersionsForOfferVariantDialogOpen] =
+    useState(false);
+  const [selectedOfferNumber, setSelectedOfferNumber] = useState('ANG-2023-0001');
+  const [selectedVariantIdentifier, setSelectedVariantIdentifier] = useState('A');
 
   const handleCopyOfferDialogCancel = () => setDialogOpen(false);
   const handleCopyOfferDialogNo = () => {
@@ -109,6 +114,16 @@ const Offers = () => {
     // Hier weitere Logik nach Bestätigung implementieren
   };
 
+  const handleVersionsForOfferVariantClose = () => {
+    setVersionsForOfferVariantDialogOpen(false);
+  };
+
+  const handleOpenVersionsDialog = (offerNumber: string, variantIdentifier: string) => {
+    setSelectedOfferNumber(offerNumber);
+    setSelectedVariantIdentifier(variantIdentifier);
+    setVersionsForOfferVariantDialogOpen(true);
+  };
+
   return (
     <div>
       <div className="mb-4 flex items-center gap-2">
@@ -133,7 +148,7 @@ const Offers = () => {
           </SelectContent>
         </Select>
       </div>
-      <OffersTable />
+      <OffersTable onOpenVersionsDialog={handleOpenVersionsDialog} />
       <NewOfferFromExistingDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -176,6 +191,13 @@ const Offers = () => {
         onCancel={handleConfirmOverwriteCancel}
         onBack={handleConfirmOverwriteBack}
         onConfirm={handleConfirmOverwriteConfirm}
+      />
+      <VersionsForOfferVariantDialog
+        open={versionsForOfferVariantDialogOpen}
+        onOpenChange={setVersionsForOfferVariantDialogOpen}
+        offerNumber={selectedOfferNumber}
+        variantIdentifier={selectedVariantIdentifier}
+        onClose={handleVersionsForOfferVariantClose}
       />
     </div>
   );

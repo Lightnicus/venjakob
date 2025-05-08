@@ -33,9 +33,13 @@ type Offer = {
 
 export interface OffersTableProps {
   reducedMode?: boolean;
+  onOpenVersionsDialog?: (offerNumber: string, variantIdentifier: string) => void;
 }
 
-export function OffersTable({ reducedMode = false }: OffersTableProps) {
+export function OffersTable({ 
+  reducedMode = false, 
+  onOpenVersionsDialog 
+}: OffersTableProps) {
   const [offers, setOffers] = useState<Offer[]>(offersData);
 
   const toggleCheckbox = (id: string) => {
@@ -47,6 +51,16 @@ export function OffersTable({ reducedMode = false }: OffersTableProps) {
         return offer;
       }),
     );
+  };
+
+  const handleOfferNumberClick = (offerNumber: string) => {
+    if (onOpenVersionsDialog) {
+      // Extract the variant identifier from the version field or use a default
+      const selectedOffer = offers.find(offer => offer.offerNumber === offerNumber);
+      const variantIdentifier = selectedOffer?.version?.split(' ')[0] || 'A';
+      
+      onOpenVersionsDialog(offerNumber, variantIdentifier);
+    }
   };
 
   return (
@@ -183,7 +197,17 @@ export function OffersTable({ reducedMode = false }: OffersTableProps) {
               key={offer.id}
               className={offer.checked ? 'bg-blue-50' : ''}
             >
-              <TableCell className="border p-2 text-blue-600 hover:underline">
+              <TableCell 
+                className="border p-2 text-blue-600 hover:underline cursor-pointer" 
+                onClick={() => handleOfferNumberClick(offer.offerNumber)}
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    handleOfferNumberClick(offer.offerNumber);
+                  }
+                }}
+                aria-label={`Versionen für Angebot ${offer.offerNumber} anzeigen`}
+              >
                 {offer.offerNumber}
               </TableCell>
               <TableCell className="border p-2 text-center">
