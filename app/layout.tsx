@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import ShowNavigation from '../project_components/show-navigation';
+import { TabbedInterfaceProvider } from '@/project_components/tabbed-interface-provider';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -28,8 +29,10 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ShowNavigation />
-        {children}
+        <TabbedInterfaceProvider initialTabs={[]}>
+          <ShowNavigation />
+          {children}
+        </TabbedInterfaceProvider>
       </body>
     </html>
   );
