@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ArboristTree } from './arborist-tree';
 import { CustomNode, MyTreeNodeData } from './custom-node';
 import initialTreeData from '@/data/tree-data.json';
@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { NodeApi, TreeApi } from 'react-arborist';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import QuillRichTextEditor from './quill-rich-text-editor';
 
 const InteractiveSplitPanel: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,6 +17,7 @@ const InteractiveSplitPanel: React.FC = () => {
   const [treeData, setTreeData] = useState<readonly MyTreeNodeData[]>(initialTreeData);
   const [selectedNode, setSelectedNode] = useState<NodeApi<MyTreeNodeData> | null>(null);
   const [contentType, setContentType] = useState<'details' | 'text' | 'chart' | 'form'>('details');
+  const [formDescriptionHtml, setFormDescriptionHtml] = useState<string>('');
   
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
 
@@ -26,6 +28,7 @@ const InteractiveSplitPanel: React.FC = () => {
   const handleClearSelection = () => {
     setSelectedNodeId(undefined);
     setSelectedNode(null);
+    setFormDescriptionHtml('');
     if (treeRef.current) {
       treeRef.current.deselectAll();
     }
@@ -36,13 +39,23 @@ const InteractiveSplitPanel: React.FC = () => {
       const node = nodes[0];
       setSelectedNodeId(node.id);
       setSelectedNode(node);
-      setContentType('details'); // Reset to details view when selecting a new node
+      setContentType('details');
+      setFormDescriptionHtml(`<p>Beschreibung für ${node.data.name}...</p>`);
       console.log(`Node selected: ${node.data.name}`);
     } else {
       setSelectedNodeId(undefined);
       setSelectedNode(null);
+      setFormDescriptionHtml('');
     }
   };
+
+  useEffect(() => {
+    if (selectedNode) {
+      setFormDescriptionHtml(`<p>Beschreibung für ${selectedNode.data.name}...</p>`);
+    } else {
+      setFormDescriptionHtml('');
+    }
+  }, [selectedNode]);
 
   // Render chart content
   const renderChartContent = () => {
@@ -84,33 +97,41 @@ const InteractiveSplitPanel: React.FC = () => {
           <CardContent>
             <form className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Name</label>
-                <input 
+                <label htmlFor="nodeNameInput" className="text-sm font-medium">Name</label>
+                <Input 
+                  id="nodeNameInput"
                   type="text" 
-                  className="w-full p-2 border rounded-md" 
                   placeholder="Knotenname"
                   value={selectedNode?.data.name || ''}
-                  onChange={() => {}}
+                  onChange={(e) => {
+                    // Basic example: update local state if you want to edit name here
+                    // For now, assume name changes are handled elsewhere or not directly editable here
+                  }}
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Beschreibung</label>
-                <textarea 
-                  className="w-full p-2 border rounded-md" 
-                  rows={3}
-                  placeholder="Beschreibung des Knotens"
+                <label htmlFor="nodeDescriptionEditor" className="text-sm font-medium">Beschreibung</label>
+                <QuillRichTextEditor
+                  id="nodeDescriptionEditor"
+                  value={formDescriptionHtml}
+                  onChange={(html) => setFormDescriptionHtml(html)}
+                  placeholder="Geben Sie hier eine detaillierte Beschreibung ein..."
+                  theme="snow"
+                  className="min-h-[200px] border rounded-md"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Kategorie</label>
-                <select className="w-full p-2 border rounded-md">
+                <label htmlFor="nodeCategorySelect" className="text-sm font-medium">Kategorie</label>
+                <select id="nodeCategorySelect" className="w-full p-2 border rounded-md bg-white dark:bg-gray-700 dark:text-white">
                   <option>Allgemein</option>
                   <option>Spezial</option>
                   <option>Andere</option>
                 </select>
               </div>
               <div className="pt-4">
-                <Button type="button">Speichern</Button>
+                <Button type="button" onClick={() => alert('Speichern geklickt! Beschreibung:\n' + formDescriptionHtml)}>
+                  Speichern
+                </Button>
               </div>
             </form>
           </CardContent>
