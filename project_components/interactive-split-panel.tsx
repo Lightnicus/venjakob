@@ -1,0 +1,344 @@
+"use client";
+
+import React, { useState, useRef } from 'react';
+import { ArboristTree } from './arborist-tree';
+import { CustomNode, MyTreeNodeData } from './custom-node';
+import initialTreeData from '@/data/tree-data.json';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { NodeApi, TreeApi } from 'react-arborist';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
+const InteractiveSplitPanel: React.FC = () => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
+  const [treeData, setTreeData] = useState<readonly MyTreeNodeData[]>(initialTreeData);
+  const [selectedNode, setSelectedNode] = useState<NodeApi<MyTreeNodeData> | null>(null);
+  const [contentType, setContentType] = useState<'details' | 'text' | 'chart' | 'form'>('details');
+  
+  const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
+
+  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(event.target.value);
+  };
+
+  const handleClearSelection = () => {
+    setSelectedNodeId(undefined);
+    setSelectedNode(null);
+    if (treeRef.current) {
+      treeRef.current.deselectAll();
+    }
+  };
+
+  const handleNodeSelect = (nodes: NodeApi<MyTreeNodeData>[]) => {
+    if (nodes.length > 0) {
+      const node = nodes[0];
+      setSelectedNodeId(node.id);
+      setSelectedNode(node);
+      setContentType('details'); // Reset to details view when selecting a new node
+      console.log(`Node selected: ${node.data.name}`);
+    } else {
+      setSelectedNodeId(undefined);
+      setSelectedNode(null);
+    }
+  };
+
+  // Render chart content
+  const renderChartContent = () => {
+    return (
+      <div className="p-6 h-full">
+        <h2 className="text-xl font-medium mb-6">
+          {selectedNode ? `Diagramm für: ${selectedNode.data.name}` : 'Diagramm Ansicht'}
+        </h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md h-[400px] flex items-center justify-center">
+          <div className="w-full h-[300px] bg-gradient-to-r from-blue-100 to-blue-200 dark:from-blue-900 dark:to-blue-800 rounded-md relative">
+            <div className="absolute bottom-0 left-0 w-1/4 h-[60%] bg-blue-500 rounded-t-md ml-[10%]"></div>
+            <div className="absolute bottom-0 left-[30%] w-1/4 h-[40%] bg-green-500 rounded-t-md ml-[5%]"></div>
+            <div className="absolute bottom-0 left-[60%] w-1/4 h-[80%] bg-purple-500 rounded-t-md ml-[0%]"></div>
+            <div className="absolute top-5 left-0 w-full text-center text-gray-700 dark:text-gray-200 font-medium">
+              {selectedNode ? `Daten für ${selectedNode.data.name}` : 'Beispiel-Diagramm'}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Render form content
+  const renderFormContent = () => {
+    return (
+      <div className="p-6 h-full">
+        <h2 className="text-xl font-medium mb-6">
+          {selectedNode ? `Einstellungen für: ${selectedNode.data.name}` : 'Formular Ansicht'}
+        </h2>
+        <Card>
+          <CardHeader>
+            <CardTitle>Einstellungen</CardTitle>
+            <CardDescription>
+              {selectedNode 
+                ? `Konfigurieren Sie die Parameter für "${selectedNode.data.name}"`
+                : 'Konfigurieren Sie die Parameter für den ausgewählten Knoten'}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Name</label>
+                <input 
+                  type="text" 
+                  className="w-full p-2 border rounded-md" 
+                  placeholder="Knotenname"
+                  value={selectedNode?.data.name || ''}
+                  onChange={() => {}}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Beschreibung</label>
+                <textarea 
+                  className="w-full p-2 border rounded-md" 
+                  rows={3}
+                  placeholder="Beschreibung des Knotens"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Kategorie</label>
+                <select className="w-full p-2 border rounded-md">
+                  <option>Allgemein</option>
+                  <option>Spezial</option>
+                  <option>Andere</option>
+                </select>
+              </div>
+              <div className="pt-4">
+                <Button type="button">Speichern</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
+  // Render text content
+  const renderTextContent = () => {
+    return (
+      <div className="p-6 h-full">
+        <h2 className="text-xl font-medium mb-6">
+          {selectedNode ? `Informationen zu: ${selectedNode.data.name}` : 'Text Ansicht'}
+        </h2>
+        <div className="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+          <h3 className="text-lg font-medium mb-3">
+            {selectedNode ? selectedNode.data.name : 'Kein Knoten ausgewählt'}
+          </h3>
+          <p className="mb-4">
+            {selectedNode 
+              ? `Dies ist die Textansicht für den Knoten "${selectedNode.data.name}". Hier können detaillierte Informationen über den Knoten angezeigt werden.`
+              : 'Wählen Sie einen Knoten aus dem Baum, um Informationen anzuzeigen.'}
+          </p>
+          {selectedNode && (
+            <>
+              <p className="mb-4">
+                Dieser Knoten befindet sich auf Ebene {selectedNode.level} und ist vom Typ {selectedNode.isInternal ? 'Ordner' : 'Datei'}.
+                {selectedNode.isInternal && ` Er enthält ${selectedNode.children?.length || 0} Unterelemente.`}
+              </p>
+              <div className="mt-6 p-4 bg-gray-100 dark:bg-gray-700 rounded-md">
+                <pre className="text-sm">
+                  {`{
+  "id": "${selectedNode.id}",
+  "name": "${selectedNode.data.name}",
+  "type": "${selectedNode.isInternal ? 'folder' : 'file'}",
+  "metadata": {
+    "level": ${selectedNode.level},
+    "index": ${selectedNode.rowIndex},
+    "isOpen": ${selectedNode.isOpen || false}
+  }
+}`}
+                </pre>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Right panel content based on selected node and content type
+  const renderRightPanel = () => {
+    // If no node is selected, show a placeholder
+    if (!selectedNode) {
+      return (
+        <div className="h-full flex flex-col items-center justify-center text-center">
+          <div className="mb-4 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md max-w-md">
+            <h2 className="text-xl font-medium mb-4">Knotendetails</h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-3">
+              Wählen Sie einen Eintrag aus dem Baum auf der linken Seite, um Details anzuzeigen.
+            </p>
+            <div className="h-24 bg-gray-100 dark:bg-gray-700 rounded-md flex items-center justify-center mt-4">
+              <p className="text-gray-500 dark:text-gray-400">Keine Auswahl</p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Show different content based on the selected content type
+    switch (contentType) {
+      case 'chart':
+        return renderChartContent();
+      case 'form':
+        return renderFormContent();
+      case 'text':
+        return renderTextContent();
+      default:
+        // Default details view
+        const isFolder = selectedNode.isInternal;
+        
+        return (
+          <div className="p-6 h-full">
+            <Card>
+              <CardHeader>
+                <CardTitle>
+                  {isFolder ? '📁' : '📄'} {selectedNode.data.name}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">ID</h3>
+                    <p>{selectedNode.id}</p>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Typ</h3>
+                    <p>{isFolder ? 'Ordner' : 'Datei'}</p>
+                  </div>
+                  
+                  {isFolder && (
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-500">Unterelemente</h3>
+                      <p>{selectedNode.isOpen ? 'Geöffnet' : 'Geschlossen'}</p>
+                      <p className="mt-1">
+                        {selectedNode.children 
+                          ? `${selectedNode.children.length} Unterelemente` 
+                          : 'Keine Unterelemente'}
+                      </p>
+                    </div>
+                  )}
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Position</h3>
+                    <p>Level: {selectedNode.level}</p>
+                    <p>Index: {selectedNode.rowIndex}</p>
+                  </div>
+                  
+                  <div className="pt-4">
+                    <Button 
+                      onClick={() => {
+                        if (isFolder && selectedNode.toggle) {
+                          selectedNode.toggle();
+                        }
+                      }}
+                      disabled={!isFolder}
+                    >
+                      {isFolder 
+                        ? selectedNode.isOpen ? 'Ordner schließen' : 'Ordner öffnen' 
+                        : 'Kein Ordner'}
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        );
+    }
+  };
+
+  return (
+    <div className="flex h-full w-full border rounded-md overflow-hidden">
+      {/* Left Panel - Tree View */}
+      <div className="w-1/3 border-r flex flex-col bg-white dark:bg-gray-800">
+        <div className="p-3 border-b">
+          <Input
+            type="text"
+            placeholder="Baum durchsuchen..."
+            value={searchTerm}
+            onChange={handleSearchChange}
+            className="w-full"
+          />
+        </div>
+        <div className="flex-1 overflow-auto">
+          <ArboristTree<MyTreeNodeData>
+            ref={treeRef}
+            initialData={treeData}
+            openByDefault={false}
+            width="100%"
+            height={600}
+            indent={24}
+            rowHeight={36}
+            searchTerm={searchTerm}
+            searchMatch={(node, term) =>
+              node.data.name.toLowerCase().includes(term.toLowerCase())
+            }
+            selection={selectedNodeId}
+            onSelect={handleNodeSelect}
+          >
+            {CustomNode}
+          </ArboristTree>
+        </div>
+        <div className="p-3 border-t bg-gray-50 dark:bg-gray-700">
+          <Button 
+            onClick={handleClearSelection} 
+            variant="outline" 
+            className="w-full"
+            disabled={!selectedNode}
+          >
+            Auswahl aufheben
+          </Button>
+        </div>
+      </div>
+
+      {/* Right Panel - Node Details */}
+      <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto flex flex-col">
+        {/* Buttons for content switching */}
+        {selectedNode && (
+          <div className="bg-white dark:bg-gray-800 p-3 border-b flex flex-wrap gap-2">
+            <Button 
+              variant={contentType === 'details' ? "default" : "outline"} 
+              onClick={() => setContentType('details')}
+              size="sm"
+            >
+              Details
+            </Button>
+            <Button 
+              variant={contentType === 'text' ? "default" : "outline"} 
+              onClick={() => setContentType('text')}
+              size="sm"
+            >
+              Text
+            </Button>
+            <Button 
+              variant={contentType === 'chart' ? "default" : "outline"} 
+              onClick={() => setContentType('chart')}
+              size="sm"
+            >
+              Diagramm
+            </Button>
+            <Button 
+              variant={contentType === 'form' ? "default" : "outline"} 
+              onClick={() => setContentType('form')}
+              size="sm"
+            >
+              Formular
+            </Button>
+          </div>
+        )}
+        
+        {/* Content area */}
+        <div className="flex-1 overflow-auto">
+          {renderRightPanel()}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default InteractiveSplitPanel; 

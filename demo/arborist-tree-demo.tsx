@@ -1,11 +1,11 @@
 "use client"; // Required for useState, useEffect, and event handlers
 
 import React, { useState, useRef } from 'react';
-import { ArboristTree, ArboristTreeProps } from './arborist-tree'; // Adjust path as needed
-import { CustomNode, MyTreeNodeData } from './custom-node'; // Adjust path as needed
+import { ArboristTree, ArboristTreeProps } from '../project_components/arborist-tree';
+import { CustomNode, MyTreeNodeData } from '../project_components/custom-node';
 import initialTreeData from '@/data/tree-data.json'; // Using Next.js alias for /data
-import { Input } from '@/components/ui/input'; // Assuming shadcn Input component
-import { Button } from '@/components/ui/button'; // Assuming shadcn Button component
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { TreeApi } from 'react-arborist';
 
 const ArboristTreeDemo: React.FC = () => {

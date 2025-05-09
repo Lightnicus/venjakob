@@ -13,7 +13,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar, Copy, Edit, FileText, Search, Trash, Check, Square } from 'lucide-react';
 import offersData from '@/data/offers.json';
 import { useTabbedInterface } from './tabbed-interface-provider';
-import OffersTreeTab from './offers-tree-tab';
+import TabbedSplitPanelDemo from '../demo/tabbed-split-panel-demo';
+import InteractiveSplitPanel from './interactive-split-panel';
 
 type Offer = {
   id: string;
@@ -67,11 +68,11 @@ export function OffersTable({
   };
 
   const handleOfferNameClick = (offer: Offer) => {
-    // Open a new tab with OffersTreeTab and pass offer data
+    // Open a new tab with TabbedSplitPanelDemo
     openNewTab({
-      id: `offer-tree-${offer.id}`,
+      id: `split-panel-demo-${offer.id}`,
       title: `Angebot ${offer.offer}`,
-      content: <OffersTreeTab offerId={offer.id} offerName={offer.offer} />,
+      content: <InteractiveSplitPanel />,
       closable: true,
     });
   };
