@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { NodeApi, TreeApi } from 'react-arborist';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 const InteractiveSplitPanel: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -180,76 +181,99 @@ const InteractiveSplitPanel: React.FC = () => {
       );
     }
 
-    // Show different content based on the selected content type
-    switch (contentType) {
-      case 'chart':
-        return renderChartContent();
-      case 'form':
-        return renderFormContent();
-      case 'text':
-        return renderTextContent();
-      default:
-        // Default details view
-        const isFolder = selectedNode.isInternal;
-        
-        return (
-          <div className="p-6 h-full">
-            <Card>
-              <CardHeader>
-                <CardTitle>
-                  {isFolder ? '📁' : '📄'} {selectedNode.data.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">ID</h3>
-                    <p>{selectedNode.id}</p>
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Typ</h3>
-                    <p>{isFolder ? 'Ordner' : 'Datei'}</p>
-                  </div>
-                  
-                  {isFolder && (
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-500">Unterelemente</h3>
-                      <p>{selectedNode.isOpen ? 'Geöffnet' : 'Geschlossen'}</p>
-                      <p className="mt-1">
-                        {selectedNode.children 
-                          ? `${selectedNode.children.length} Unterelemente` 
-                          : 'Keine Unterelemente'}
-                      </p>
-                    </div>
-                  )}
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-gray-500">Position</h3>
-                    <p>Level: {selectedNode.level}</p>
-                    <p>Index: {selectedNode.rowIndex}</p>
-                  </div>
-                  
-                  <div className="pt-4">
-                    <Button 
-                      onClick={() => {
-                        if (isFolder && selectedNode.toggle) {
-                          selectedNode.toggle();
-                        }
-                      }}
-                      disabled={!isFolder}
-                    >
-                      {isFolder 
-                        ? selectedNode.isOpen ? 'Ordner schließen' : 'Ordner öffnen' 
-                        : 'Kein Ordner'}
-                    </Button>
-                  </div>
+    // Default details view content (moved here to be wrapped in TabsContent)
+    const renderDetailsContent = () => {
+      const isFolder = selectedNode.isInternal;
+      return (
+        <div className="p-6 h-full">
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {isFolder ? '📁' : '📄'} {selectedNode.data.name}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">ID</h3>
+                  <p>{selectedNode.id}</p>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
-        );
-    }
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Typ</h3>
+                  <p>{isFolder ? 'Ordner' : 'Datei'}</p>
+                </div>
+                
+                {isFolder && (
+                  <div>
+                    <h3 className="text-sm font-medium text-gray-500">Unterelemente</h3>
+                    <p>{selectedNode.isOpen ? 'Geöffnet' : 'Geschlossen'}</p>
+                    <p className="mt-1">
+                      {selectedNode.children 
+                        ? `${selectedNode.children.length} Unterelemente` 
+                        : 'Keine Unterelemente'}
+                    </p>
+                  </div>
+                )}
+                
+                <div>
+                  <h3 className="text-sm font-medium text-gray-500">Position</h3>
+                  <p>Level: {selectedNode.level}</p>
+                  <p>Index: {selectedNode.rowIndex}</p>
+                </div>
+                
+                <div className="pt-4">
+                  <Button 
+                    onClick={() => {
+                      if (isFolder && selectedNode.toggle) {
+                        selectedNode.toggle();
+                      }
+                    }}
+                    disabled={!isFolder}
+                  >
+                    {isFolder 
+                      ? selectedNode.isOpen ? 'Ordner schließen' : 'Ordner öffnen' 
+                      : 'Kein Ordner'}
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    };
+    
+    // Show different content based on the selected content type using Tabs
+    return (
+      <Tabs value={contentType} onValueChange={(value) => setContentType(value as 'details' | 'text' | 'chart' | 'form')} className="w-full h-full flex flex-col">
+        <TabsList className="shrink-0 bg-white dark:bg-gray-800 p-0 border-b flex flex-wrap gap-2 justify-start rounded-none w-full">
+          <TabsTrigger value="details" className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100">
+            Details
+          </TabsTrigger>
+          <TabsTrigger value="text" className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100 dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm">
+            Text
+          </TabsTrigger>
+          <TabsTrigger value="chart" className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100 dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm">
+            Diagramm
+          </TabsTrigger>
+          <TabsTrigger value="form" className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100 dark:data-[state=active]:bg-gray-700 text-xs sm:text-sm">
+            Formular
+          </TabsTrigger>
+        </TabsList>
+        <TabsContent value="details" className="flex-1 overflow-auto">
+          {renderDetailsContent()}
+        </TabsContent>
+        <TabsContent value="text" className="flex-1 overflow-auto">
+          {renderTextContent()}
+        </TabsContent>
+        <TabsContent value="chart" className="flex-1 overflow-auto">
+          {renderChartContent()}
+        </TabsContent>
+        <TabsContent value="form" className="flex-1 overflow-auto">
+          {renderFormContent()}
+        </TabsContent>
+      </Tabs>
+    );
   };
 
   return (
@@ -299,38 +323,7 @@ const InteractiveSplitPanel: React.FC = () => {
       {/* Right Panel - Node Details */}
       <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto flex flex-col">
         {/* Buttons for content switching */}
-        {selectedNode && (
-          <div className="bg-white dark:bg-gray-800 p-3 border-b flex flex-wrap gap-2">
-            <Button 
-              variant={contentType === 'details' ? "default" : "outline"} 
-              onClick={() => setContentType('details')}
-              size="sm"
-            >
-              Details
-            </Button>
-            <Button 
-              variant={contentType === 'text' ? "default" : "outline"} 
-              onClick={() => setContentType('text')}
-              size="sm"
-            >
-              Text
-            </Button>
-            <Button 
-              variant={contentType === 'chart' ? "default" : "outline"} 
-              onClick={() => setContentType('chart')}
-              size="sm"
-            >
-              Diagramm
-            </Button>
-            <Button 
-              variant={contentType === 'form' ? "default" : "outline"} 
-              onClick={() => setContentType('form')}
-              size="sm"
-            >
-              Formular
-            </Button>
-          </div>
-        )}
+        {/* This section is removed as Tabs are now used */}
         
         {/* Content area */}
         <div className="flex-1 overflow-auto">
