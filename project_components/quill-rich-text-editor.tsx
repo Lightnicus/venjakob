@@ -12,7 +12,7 @@ type EditorSources = 'user' | 'api' | 'silent';
 
 export interface QuillRichTextEditorProps {
   defaultValue?: string | Delta; // Changed from value to defaultValue
-  onTextChange?: (delta: Delta, oldDelta: Delta, source: EditorSources, editor: Quill) => void; // Renamed and signature changed
+  onTextChange?: (delta: Delta, editor: Quill) => void; // Renamed and signature changed
   onSelectionChange?: (range: any, oldRange: any, source: EditorSources, editor: Quill) => void;
   placeholder?: string;
   readOnly?: boolean;
@@ -116,7 +116,7 @@ const QuillRichTextEditor = forwardRef<QuillEditorRef, QuillRichTextEditorProps>
       // Listener for text change
       const handleTextChange = (delta: Delta, oldDelta: Delta, source: EditorSources) => {
         if (onTextChange) {
-          onTextChange(delta, oldDelta, source, quill);
+          onTextChange(quill.getContents(), quill);
         }
       };
 

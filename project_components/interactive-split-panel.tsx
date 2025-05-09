@@ -10,6 +10,7 @@ import { NodeApi, TreeApi } from 'react-arborist';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import QuillRichTextEditor from './quill-rich-text-editor';
+import { Delta } from 'quill';
 
 const InteractiveSplitPanel: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -17,7 +18,7 @@ const InteractiveSplitPanel: React.FC = () => {
   const [treeData, setTreeData] = useState<readonly MyTreeNodeData[]>(initialTreeData);
   const [selectedNode, setSelectedNode] = useState<NodeApi<MyTreeNodeData> | null>(null);
   const [contentType, setContentType] = useState<'details' | 'text' | 'chart' | 'form'>('details');
-  const [formDescriptionHtml, setFormDescriptionHtml] = useState<string>('');
+  const [formDescriptionHtml, setFormDescriptionHtml] = useState<string | null>(null);
   
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
 
@@ -28,7 +29,7 @@ const InteractiveSplitPanel: React.FC = () => {
   const handleClearSelection = () => {
     setSelectedNodeId(undefined);
     setSelectedNode(null);
-    setFormDescriptionHtml('');
+    setFormDescriptionHtml(null);
     if (treeRef.current) {
       treeRef.current.deselectAll();
     }
@@ -40,20 +41,20 @@ const InteractiveSplitPanel: React.FC = () => {
       setSelectedNodeId(node.id);
       setSelectedNode(node);
       setContentType('details');
-      setFormDescriptionHtml(`<p>Beschreibung für ${node.data.name}...</p>`);
+      setFormDescriptionHtml(null);
       console.log(`Node selected: ${node.data.name}`);
     } else {
       setSelectedNodeId(undefined);
       setSelectedNode(null);
-      setFormDescriptionHtml('');
+      setFormDescriptionHtml(null);
     }
   };
 
   useEffect(() => {
     if (selectedNode) {
-      setFormDescriptionHtml(`<p>Beschreibung für ${selectedNode.data.name}...</p>`);
+      setFormDescriptionHtml(null);
     } else {
-      setFormDescriptionHtml('');
+      setFormDescriptionHtml(null);
     }
   }, [selectedNode]);
 
@@ -113,8 +114,12 @@ const InteractiveSplitPanel: React.FC = () => {
                 <label htmlFor="nodeDescriptionEditor" className="text-sm font-medium">Beschreibung</label>
                 <QuillRichTextEditor
                   id="nodeDescriptionEditor"
-                  value={formDescriptionHtml}
-                  onChange={(html) => setFormDescriptionHtml(html)}
+                //   defaultValue={formDescriptionHtml}
+                  onTextChange={(delta, quill) => {
+                    const deltaContent = quill.getContents();
+                    const jsonContent = JSON.stringify(deltaContent);
+                    setFormDescriptionHtml(jsonContent);
+                  }}
                   placeholder="Geben Sie hier eine detaillierte Beschreibung ein..."
                   theme="snow"
                   className="min-h-[200px] border rounded-md"
@@ -343,10 +348,6 @@ const InteractiveSplitPanel: React.FC = () => {
 
       {/* Right Panel - Node Details */}
       <div className="flex-1 bg-gray-50 dark:bg-gray-900 overflow-auto flex flex-col">
-        {/* Buttons for content switching */}
-        {/* This section is removed as Tabs are now used */}
-        
-        {/* Content area */}
         <div className="flex-1 overflow-auto">
           {renderRightPanel()}
         </div>
