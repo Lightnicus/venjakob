@@ -1,0 +1,22 @@
+[
+  { "id": "1", "name": "Ungelesen" },
+  { "id": "2", "name": "Themen" },
+  {
+    "id": "3",
+    "name": "Chaträume",
+    "children": [
+      { "id": "c1", "name": "Allgemein" },
+      { "id": "c2", "name": "Zufällig" },
+      { "id": "c3", "name": "Open Source Projekte" }
+    ]
+  },
+  {
+    "id": "4",
+    "name": "Direktnachrichten",
+    "children": [
+      { "id": "d1", "name": "Alice" },
+      { "id": "d2", "name": "Bob" },
+      { "id": "d3", "name": "Charlie" }
+    ]
+  }
+] 

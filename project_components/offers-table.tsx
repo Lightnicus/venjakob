@@ -12,6 +12,8 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar, Copy, Edit, FileText, Search, Trash, Check, Square } from 'lucide-react';
 import offersData from '@/data/offers.json';
+import { useTabbedInterface } from './tabbed-interface-provider';
+import OffersTreeTab from './offers-tree-tab';
 
 type Offer = {
   id: string;
@@ -41,6 +43,7 @@ export function OffersTable({
   onOpenVersionsDialog 
 }: OffersTableProps) {
   const [offers, setOffers] = useState<Offer[]>(offersData);
+  const { openNewTab } = useTabbedInterface();
 
   const toggleCheckbox = (id: string) => {
     setOffers(
@@ -61,6 +64,16 @@ export function OffersTable({
       
       onOpenVersionsDialog(offerNumber, variantIdentifier);
     }
+  };
+
+  const handleOfferNameClick = (offer: Offer) => {
+    // Open a new tab with OffersTreeTab and pass offer data
+    openNewTab({
+      id: `offer-tree-${offer.id}`,
+      title: `Angebot ${offer.offer}`,
+      content: <OffersTreeTab offerId={offer.id} offerName={offer.offer} />,
+      closable: true,
+    });
   };
 
   return (
@@ -218,7 +231,19 @@ export function OffersTable({
                 )}
               </TableCell>
               <TableCell className="border p-2 text-blue-600 hover:underline">
-                {offer.offer}
+                <span 
+                  onClick={() => handleOfferNameClick(offer)} 
+                  className="cursor-pointer"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      handleOfferNameClick(offer);
+                    }
+                  }}
+                  aria-label={`Baumansicht für ${offer.offer} öffnen`}
+                >
+                  {offer.offer}
+                </span>
               </TableCell>
               {!reducedMode && (
                 <TableCell className="border p-2">{offer.vcStatus}</TableCell>
