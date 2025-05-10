@@ -51,6 +51,7 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title }) => {
           <div className="text-gray-600 text-lg">Versionen-Inhalt folgt…</div>
         </TabsContent>
       </Tabs>
+      <div className="mt-2 text-xs text-gray-500 text-left">Zuletzt geändert am 01.05.2024 von Max Mustermann</div>
     </div>
   );
 };
