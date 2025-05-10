@@ -1,12 +1,13 @@
 import React from 'react';
 import { NodeRendererProps, NodeApi } from 'react-arborist';
-import { ChevronRight, ChevronDown, FileText, Folder } from 'lucide-react'; // Using lucide-react for icons
+import { ChevronRight, ChevronDown, FileText, FileStack, Folder } from 'lucide-react';
 
 // Define a type for your tree data items if not already globally defined
 // This should match the structure in your tree-data.json
 export interface MyTreeNodeData {
   id: string;
   name: string;
+  type?: 'textblock' | 'article';
   children?: MyTreeNodeData[];
 }
 
@@ -39,6 +40,12 @@ export const CustomNode: React.FC<CustomNodeRendererProps> = ({
     }
   };
 
+  // Icon logic for leaf nodes
+  const renderLeafIcon = () => {
+    if (node.data.type === 'article') return <FileStack size={16} className="text-gray-500" />;
+    return <FileText size={16} className="text-gray-500" />;
+  };
+
   return (
     <div
       ref={dragHandle}
@@ -63,7 +70,7 @@ export const CustomNode: React.FC<CustomNodeRendererProps> = ({
             <ChevronRight size={16} className="text-gray-500" />
           )
         ) : (
-          <FileText size={16} className="text-gray-500" /> // Icon for leaf nodes
+          renderLeafIcon()
         )}
       </span>
       {isInternal && <Folder size={16} className="mr-1 text-yellow-500" />}{' '}

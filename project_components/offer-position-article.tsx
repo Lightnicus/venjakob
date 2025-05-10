@@ -1,37 +1,33 @@
-"use client";
-
-import React, { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import QuillRichTextEditor from "./quill-rich-text-editor";
-import { NodeApi } from 'react-arborist';
-import { MyTreeNodeData } from './custom-node';
+import React, { useState } from "react"
+import { Input } from "@/components/ui/input"
+import KalkulationForm from "./kalkulation-form"
+import QuillRichTextEditor from "./quill-rich-text-editor" // adjust if needed
 
 const TABS = [
   { id: "eingabe", label: "Eingabe" },
+  { id: "kalkulation", label: "Kalkulation" },
   { id: "vorschau", label: "Vorschau" },
-];
+]
 
-interface OfferPositionTextProps {
-  selectedNode: NodeApi<MyTreeNodeData> | null;
-  formDescriptionHtml: string | undefined;
-  onDescriptionChange: (html: string | undefined) => void;
+type OfferPositionArticleProps = {
+  selectedNode?: any
+  formDescriptionHtml?: string | undefined
+  onDescriptionChange?: (desc: string | undefined) => void
 }
 
-const OfferPositionText: React.FC<OfferPositionTextProps> = ({ selectedNode, formDescriptionHtml, onDescriptionChange }) => {
-  const [activeTab, setActiveTab] = useState("eingabe");
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState<string>("");
+const OfferPositionArticle: React.FC<OfferPositionArticleProps> = ({ selectedNode, formDescriptionHtml, onDescriptionChange }) => {
+  const [activeTab, setActiveTab] = useState("eingabe")
+  const [title, setTitle] = useState("")
+  const [description, setDescription] = useState<string>("")
 
-  const handleTabClick = (id: string) => setActiveTab(id);
-  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value);
+  const handleTabClick = (id: string) => setActiveTab(id)
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)
   const handleDescriptionChange = (_: any, editor: any) => {
     if (editor && editor.root) {
-      const html = editor.root.innerHTML;
-      setDescription(html === "<p><br></p>" ? "" : html);
+      const html = editor.root.innerHTML
+      setDescription(html === "<p><br></p>" ? "" : html)
     }
-  };
+  }
 
   return (
     <div className="p-6 h-full">
@@ -85,6 +81,13 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = ({ selectedNode, for
           </form>
         )}
       </div>
+      <div id="tabpanel-kalkulation" role="tabpanel" hidden={activeTab !== "kalkulation"} aria-labelledby="tab-kalkulation">
+        {activeTab === "kalkulation" && (
+          <div className="pt-2">
+            <KalkulationForm />
+          </div>
+        )}
+      </div>
       <div id="tabpanel-vorschau" role="tabpanel" hidden={activeTab !== "vorschau"} aria-labelledby="tab-vorschau">
         {activeTab === "vorschau" && (
           <div className="space-y-4">
@@ -94,7 +97,7 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = ({ selectedNode, for
         )}
       </div>
     </div>
-  );
-};
+  )
+}
 
-export default OfferPositionText; 
+export default OfferPositionArticle 

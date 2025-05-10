@@ -22,6 +22,7 @@
     "@radix-ui/react-tabs": "^1.1.11",
     "@tailwindcss/cli": "^4.1.5",
     "@types/quill": "^2.0.14",
+    "add": "^2.0.6",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.508.0",
@@ -30,7 +31,9 @@
     "react": "^19.0.0",
     "react-arborist": "^3.4.3",
     "react-dom": "^19.0.0",
-    "tailwind-merge": "^3.2.0"
+    "shadcn": "^2.5.0",
+    "tailwind-merge": "^3.2.0",
+    "textarea": "^0.3.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

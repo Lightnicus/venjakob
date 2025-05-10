@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { ArboristTree } from './arborist-tree';
 import { CustomNode, MyTreeNodeData } from './custom-node';
-import initialTreeData from '@/data/tree-data.json';
+import initialTreeDataRaw from '@/data/tree-data.json';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { NodeApi, TreeApi } from 'react-arborist';
@@ -12,13 +12,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Delta } from 'quill';
 import OfferPositionText from './offer-position-text';
 import { Calculator } from 'lucide-react';
+import OfferPositionArticle from './offer-position-article';
+
+const initialTreeData: MyTreeNodeData[] = initialTreeDataRaw as MyTreeNodeData[];
 
 const InteractiveSplitPanel: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [treeData, setTreeData] = useState<readonly MyTreeNodeData[]>(initialTreeData);
   const [selectedNode, setSelectedNode] = useState<NodeApi<MyTreeNodeData> | null>(null);
-  const [formDescriptionHtml, setFormDescriptionHtml] = useState<string | null>(null);
+  const [formDescriptionHtml, setFormDescriptionHtml] = useState<string | undefined>(undefined);
+  const [selectedNodeType, setSelectedNodeType] = useState<string | undefined>(undefined);
   
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
 
@@ -29,7 +33,8 @@ const InteractiveSplitPanel: React.FC = () => {
   const handleClearSelection = () => {
     setSelectedNodeId(undefined);
     setSelectedNode(null);
-    setFormDescriptionHtml(null);
+    setSelectedNodeType(undefined);
+    setFormDescriptionHtml(undefined);
     if (treeRef.current) {
       treeRef.current.deselectAll();
     }
@@ -40,32 +45,48 @@ const InteractiveSplitPanel: React.FC = () => {
       const node = nodes[0];
       setSelectedNodeId(node.id);
       setSelectedNode(node);
-      setFormDescriptionHtml(null);
+      setSelectedNodeType(node.data.type);
+      setFormDescriptionHtml(undefined);
       console.log(`Node selected: ${node.data.name}`);
     } else {
       setSelectedNodeId(undefined);
       setSelectedNode(null);
-      setFormDescriptionHtml(null);
+      setSelectedNodeType(undefined);
+      setFormDescriptionHtml(undefined);
     }
   };
 
   useEffect(() => {
     if (selectedNode) {
-      setFormDescriptionHtml(null);
+      setFormDescriptionHtml(undefined);
     } else {
-      setFormDescriptionHtml(null);
+      setFormDescriptionHtml(undefined);
     }
   }, [selectedNode]);
 
   // Render form content
   const renderFormContent = () => {
-    return (
-      <OfferPositionText
-        selectedNode={selectedNode}
-        formDescriptionHtml={formDescriptionHtml}
-        onDescriptionChange={setFormDescriptionHtml} 
-      />
-    );
+    const htmlValue = formDescriptionHtml ?? null;
+    const handleHtmlChange = (html: string | null) => setFormDescriptionHtml(html ?? undefined);
+    if (selectedNodeType === 'article') {
+      return (
+        <OfferPositionArticle
+          selectedNode={selectedNode}
+          formDescriptionHtml={htmlValue}
+          onDescriptionChange={handleHtmlChange}
+        />
+      );
+    }
+    if (selectedNodeType === 'textblock') {
+      return (
+        <OfferPositionText
+          selectedNode={selectedNode}
+          formDescriptionHtml={htmlValue}
+          onDescriptionChange={handleHtmlChange}
+        />
+      );
+    }
+    return null;
   };
 
   // Right panel content based on selected node
