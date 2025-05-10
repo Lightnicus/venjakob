@@ -1,12 +1,17 @@
 "use client";
 
-import React from 'react';
-import { Input } from '@/components/ui/input';
+import React, { useState } from "react";
+import { Input } from "@/components/ui/input";
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import QuillRichTextEditor from './quill-rich-text-editor';
+import QuillRichTextEditor from "./quill-rich-text-editor";
 import { NodeApi } from 'react-arborist';
 import { MyTreeNodeData } from './custom-node';
+
+const TABS = [
+  { id: "eingabe", label: "Eingabe" },
+  { id: "vorschau", label: "Vorschau" },
+];
 
 interface OfferPositionTextProps {
   selectedNode: NodeApi<MyTreeNodeData> | null;
@@ -15,70 +20,79 @@ interface OfferPositionTextProps {
 }
 
 const OfferPositionText: React.FC<OfferPositionTextProps> = ({ selectedNode, formDescriptionHtml, onDescriptionChange }) => {
-  const handleTextChange = (content: any, editor: any) => {
+  const [activeTab, setActiveTab] = useState("eingabe");
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState<string>("");
+
+  const handleTabClick = (id: string) => setActiveTab(id);
+  const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value);
+  const handleDescriptionChange = (_: any, editor: any) => {
     if (editor && editor.root) {
       const html = editor.root.innerHTML;
-      const isEmpty = html === '<p><br></p>' || html === '';
-      onDescriptionChange(isEmpty ? null : html);
+      setDescription(html === "<p><br></p>" ? "" : html);
     }
   };
 
   return (
     <div className="p-6 h-full">
-      <h2 className="text-xl font-medium mb-6">
-        {selectedNode ? `Einstellungen für: ${selectedNode.data.name}` : 'Formular Ansicht'}
-      </h2>
-      <Card>
-        <CardHeader>
-          <CardTitle>Einstellungen</CardTitle>
-          <CardDescription>
-            {selectedNode
-              ? `Konfigurieren Sie die Parameter für "${selectedNode.data.name}"`
-              : 'Konfigurieren Sie die Parameter für den ausgewählten Knoten'}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form className="space-y-4">
+      <div role="tablist" aria-label="Tabs" className="flex mb-6 border-b">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            role="tab"
+            aria-selected={activeTab === tab.id}
+            tabIndex={0}
+            onClick={() => handleTabClick(tab.id)}
+            onKeyDown={(e) => e.key === "Enter" && handleTabClick(tab.id)}
+            className={`px-4 py-2 font-medium border-b-2 focus:outline-none transition-colors ${
+              activeTab === tab.id
+                ? "border-blue-600 text-blue-600"
+                : "border-transparent text-gray-500 hover:text-blue-600"
+            }`}
+            aria-controls={`tabpanel-${tab.id}`}
+            id={`tab-${tab.id}`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div id="tabpanel-eingabe" role="tabpanel" hidden={activeTab !== "eingabe"} aria-labelledby="tab-eingabe">
+        {activeTab === "eingabe" && (
+          <form className="space-y-6">
             <div className="space-y-2">
-              <label htmlFor="nodeNameInput" className="text-sm font-medium">Name</label>
+              <label htmlFor="input-ueberschrift" className="text-sm font-medium">Überschrift</label>
               <Input
-                id="nodeNameInput"
+                id="input-ueberschrift"
                 type="text"
-                placeholder="Knotenname"
-                value={selectedNode?.data.name || ''}
-                onChange={(e) => {
-                  // Name changes are not handled here in this version
-                }}
-                readOnly
+                placeholder="Überschrift eingeben"
+                value={title}
+                onChange={handleTitleChange}
+                className="w-full"
+                aria-label="Überschrift"
               />
             </div>
             <div className="space-y-2">
-              <label htmlFor="nodeDescriptionEditor" className="text-sm font-medium">Beschreibung</label>
+              <label htmlFor="editor-beschreibung" className="text-sm font-medium">Beschreibung</label>
               <QuillRichTextEditor
-                id="nodeDescriptionEditor"
-                defaultValue={formDescriptionHtml || ''}
-                onTextChange={handleTextChange}
+                id="editor-beschreibung"
+                defaultValue={description}
+                onTextChange={handleDescriptionChange}
                 placeholder="Geben Sie hier eine detaillierte Beschreibung ein..."
                 theme="snow"
                 className="min-h-[200px] border rounded-md"
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="nodeCategorySelect" className="text-sm font-medium">Kategorie</label>
-              <select id="nodeCategorySelect" className="w-full p-2 border rounded-md bg-white dark:bg-gray-700 dark:text-white">
-                <option>Allgemein</option>
-                <option>Spezial</option>
-                <option>Andere</option>
-              </select>
-            </div>
-            <div className="pt-4">
-              <Button type="button" onClick={() => alert('Speichern geklickt! Beschreibung:\n' + (formDescriptionHtml || ''))}>
-                Speichern
-              </Button>
-            </div>
           </form>
-        </CardContent>
-      </Card>
+        )}
+      </div>
+      <div id="tabpanel-vorschau" role="tabpanel" hidden={activeTab !== "vorschau"} aria-labelledby="tab-vorschau">
+        {activeTab === "vorschau" && (
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">{title || "(Keine Überschrift)"}</h2>
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: description || "<em>(Keine Beschreibung)</em>" }} />
+          </div>
+        )}
+      </div>
     </div>
   );
 };
