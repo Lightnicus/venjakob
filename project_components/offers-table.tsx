@@ -15,6 +15,7 @@ import offersData from '@/data/offers.json';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import TabbedSplitPanelDemo from '../demo/tabbed-split-panel-demo';
 import InteractiveSplitPanel from './interactive-split-panel';
+import OfferDetail from './offer-detail';
 
 type Offer = {
   id: string;
@@ -68,11 +69,11 @@ export function OffersTable({
   };
 
   const handleOfferNameClick = (offer: Offer) => {
-    // Open a new tab with TabbedSplitPanelDemo
+    // Open a new tab with OfferDetail
     openNewTab({
       id: `split-panel-demo-${offer.id}`,
       title: `Angebot ${offer.offer}`,
-      content: <InteractiveSplitPanel />,
+      content: <OfferDetail title={offer.offer} />,
       closable: true,
     });
   };
