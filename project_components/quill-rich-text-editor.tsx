@@ -1,23 +1,31 @@
-import React, { useEffect, useRef, useImperativeHandle, forwardRef } from 'react';
-import Quill, { type QuillOptions } from 'quill';
-import { Delta, Op } from 'quill'; // Import Delta and Op
-import 'quill/dist/quill.snow.css'; // Default theme
+"use client"
+import React, { useEffect, useRef, useImperativeHandle, forwardRef, useState } from 'react';
+
+// Define types locally to avoid direct Quill import at module scope for SSR
+type QuillOptions = {
+  theme?: string;
+  modules?: any;
+  placeholder?: string;
+  readOnly?: boolean;
+  formats?: string[];
+};
+
+type Delta = {
+  ops?: any[];
+  [key: string]: any;
+};
 
 // Define Sources type explicitly
 type EditorSources = 'user' | 'api' | 'silent';
 
-// isDeltaEqual is no longer needed for an uncontrolled component
-// interface ComparableDeltaOperation { ... }
-// const isDeltaEqual = (...) => { ... };
-
 export interface QuillRichTextEditorProps {
-  defaultValue?: string | Delta; // Changed from value to defaultValue
-  onTextChange?: (delta: Delta, editor: Quill) => void; // Renamed and signature changed
-  onSelectionChange?: (range: any, oldRange: any, source: EditorSources, editor: Quill) => void;
+  defaultValue?: string | Delta; 
+  onTextChange?: (delta: Delta, editor: any) => void;
+  onSelectionChange?: (range: any, oldRange: any, source: EditorSources, editor: any) => void;
   placeholder?: string;
   readOnly?: boolean;
   theme?: 'snow' | 'bubble';
-  modules?: QuillOptions['modules'];
+  modules?: any;
   formats?: string[];
   className?: string;
   style?: React.CSSProperties;
@@ -25,19 +33,22 @@ export interface QuillRichTextEditorProps {
 }
 
 export interface QuillEditorRef {
-  getQuill: () => Quill | null;
+  getQuill: () => any | null;
 }
+
+// Flag to track if we've loaded Quill CSS already
+let cssLoaded = false;
 
 const QuillRichTextEditor = forwardRef<QuillEditorRef, QuillRichTextEditorProps>(
   (
     {
-      defaultValue, // Changed from value
-      onTextChange,   // Changed from onChange
+      defaultValue,
+      onTextChange,
       onSelectionChange,
       placeholder,
       readOnly = false,
       theme = 'snow',
-      modules,
+      modules: customModules,
       formats,
       className,
       style,
@@ -46,96 +57,122 @@ const QuillRichTextEditor = forwardRef<QuillEditorRef, QuillRichTextEditorProps>
     ref
   ) => {
     const editorRef = useRef<HTMLDivElement>(null);
-    const quillRef = useRef<Quill | null>(null);
-    // contentRef is no longer needed for an uncontrolled component
-    // const contentRef = useRef<Delta | undefined>(undefined);
+    const quillRef = useRef<any | null>(null);
+    const [isQuillLoaded, setIsQuillLoaded] = useState(false);
 
-    // Expose Quill instance
     useImperativeHandle(ref, () => ({
       getQuill: () => quillRef.current,
     }));
 
-    // Initialize Quill
+    // Effect for Quill initialization and re-initialization
     useEffect(() => {
-      if (editorRef.current && !quillRef.current) {
-        const defaultModules: QuillOptions['modules'] = {
-          toolbar: [
-            [{ header: [1, 2, 3, false] }],
-            ['bold', 'italic', 'underline', 'strike'],
-            [{ list: 'ordered' }, { list: 'bullet' }],
-            ['link', 'image'],
-            [{ align: [] }],
-            ['clean'],
-          ],
-          history: {
-            delay: 2000,
-            maxStack: 500,
-            userOnly: true
+      let isMounted = true;
+      let currentInstance: any = null; // Store the instance created in this effect run
+
+      const initializeQuill = async () => {
+        if (!editorRef.current) return;
+
+        // CRITICAL: Clear the container DOM before creating a new Quill instance
+        editorRef.current.innerHTML = '';
+
+        try {
+          const QuillModule = await import('quill');
+          const Quill = QuillModule.default;
+          await import('quill/dist/quill.snow.css'); // Assuming build system handles this
+
+          const defaultModulesConfig = {
+            toolbar: [
+              [{ header: [1, 2, 3, false] }],
+              ['bold', 'italic', 'underline', 'strike'],
+              [{ list: 'ordered' }, { list: 'bullet' }],
+              ['link', 'image'],
+              [{ align: [] }],
+              ['clean'],
+            ],
+            history: { delay: 2000, maxStack: 500, userOnly: true },
+          };
+
+          const options: QuillOptions = {
+            theme,
+            modules: customModules ?? defaultModulesConfig,
+            placeholder,
+            readOnly,
+            formats,
+          };
+
+          if (!isMounted || !editorRef.current) return; // Re-check after async operations
+
+          currentInstance = new Quill(editorRef.current, options);
+          quillRef.current = currentInstance;
+
+          if (defaultValue) {
+            const Delta = QuillModule.Delta;
+            if (typeof defaultValue === 'string') {
+              // Quill's clipboard.convert returns a Delta
+              const deltaContent = currentInstance.clipboard.convert(defaultValue);
+              currentInstance.setContents(deltaContent, 'silent');
+            } else {
+              currentInstance.setContents(defaultValue, 'silent');
+            }
           }
-        };
 
-        const options: QuillOptions = {
-          theme,
-          modules: modules ?? defaultModules,
-          placeholder,
-          readOnly,
-          formats,
-        };
-
-        quillRef.current = new Quill(editorRef.current, options);
-        const quill = quillRef.current;
-
-        // Set initial content from defaultValue
-        if (defaultValue) {
-          if (typeof defaultValue === 'string') {
-            const deltaOutput: any = quill.clipboard.convert(defaultValue as any);
-            quill.setContents(deltaOutput instanceof Delta ? deltaOutput : new Delta(deltaOutput?.ops), 'silent');
-          } else { // defaultValue is a Delta instance
-            quill.setContents(defaultValue, 'silent');
+          if (isMounted) {
+            setIsQuillLoaded(true);
+          }
+        } catch (error) {
+          if (isMounted) {
+            console.error('Error initializing Quill:', error);
           }
         }
-        // No need to store initial content in contentRef for uncontrolled component
-      }
-      // Removed dependencies that would re-init for prop changes like defaultValue, making it uncontrolled post-init
-    }, [theme, modules, placeholder, readOnly, formats]); 
+      };
 
-    // useEffect for props.value (now defaultValue) is removed - component is uncontrolled for content after init.
+      initializeQuill();
 
-    // Handle readOnly prop changes
-    useEffect(() => {
-      if (quillRef.current) {
-        quillRef.current.enable(!readOnly);
-      }
-    }, [readOnly]);
+      return () => {
+        isMounted = false;
+        if (currentInstance) {
+          // Basic cleanup for the instance created by this effect run
+          currentInstance.off('text-change');
+          currentInstance.off('selection-change');
+        }
+        // If the shared ref points to the instance we created, nullify it.
+        if (quillRef.current === currentInstance) {
+          quillRef.current = null;
+        }
+        setIsQuillLoaded(false); // Reset loaded state
+      };
+    }, [theme, customModules, placeholder, readOnly, formats]); // defaultValue is not a dep for re-init
 
-    // Event listeners
+    // Effect for managing event listeners based on callback props and Quill load state
     useEffect(() => {
       const quill = quillRef.current;
-      if (!quill) return;
+      if (!quill || !isQuillLoaded) {
+        return () => {}; // No cleanup needed if not ready
+      }
 
-      // Listener for text change
-      const handleTextChange = (delta: Delta, oldDelta: Delta, source: EditorSources) => {
+      const textChangeHandler = (delta: Delta, oldDelta: Delta, source: EditorSources) => {
         if (onTextChange) {
+          // Pass the full Delta from getContents and the editor instance
           onTextChange(quill.getContents(), quill);
         }
       };
 
-      // Listener for selection change
-      const handleSelectionChange = (range: any, oldRange: any, source: EditorSources) => {
+      const selectionChangeHandler = (range: any, oldRange: any, source: EditorSources) => {
         if (onSelectionChange) {
           onSelectionChange(range, oldRange, source, quill);
         }
       };
 
-      quill.on('text-change' as any, handleTextChange);
-      quill.on('selection-change' as any, handleSelectionChange);
+      quill.on('text-change', textChangeHandler);
+      quill.on('selection-change', selectionChangeHandler);
 
       return () => {
-        quill.off('text-change' as any, handleTextChange);
-        quill.off('selection-change' as any, handleSelectionChange);
+        if (quill) {
+          quill.off('text-change', textChangeHandler);
+          quill.off('selection-change', selectionChangeHandler);
+        }
       };
-      // Depend on callbacks so if they change, listeners are updated
-    }, [onTextChange, onSelectionChange]); 
+    }, [onTextChange, onSelectionChange, isQuillLoaded]); // Depends on callbacks and load state
 
     return <div ref={editorRef} className={className} style={style} id={id} />;
   }

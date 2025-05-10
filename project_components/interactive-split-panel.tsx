@@ -9,8 +9,8 @@ import { Button } from '@/components/ui/button';
 import { NodeApi, TreeApi } from 'react-arborist';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import QuillRichTextEditor from './quill-rich-text-editor';
 import { Delta } from 'quill';
+import OfferPositionText from './offer-position-text';
 
 const InteractiveSplitPanel: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -82,66 +82,11 @@ const InteractiveSplitPanel: React.FC = () => {
   // Render form content
   const renderFormContent = () => {
     return (
-      <div className="p-6 h-full">
-        <h2 className="text-xl font-medium mb-6">
-          {selectedNode ? `Einstellungen für: ${selectedNode.data.name}` : 'Formular Ansicht'}
-        </h2>
-        <Card>
-          <CardHeader>
-            <CardTitle>Einstellungen</CardTitle>
-            <CardDescription>
-              {selectedNode 
-                ? `Konfigurieren Sie die Parameter für "${selectedNode.data.name}"`
-                : 'Konfigurieren Sie die Parameter für den ausgewählten Knoten'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="nodeNameInput" className="text-sm font-medium">Name</label>
-                <Input 
-                  id="nodeNameInput"
-                  type="text" 
-                  placeholder="Knotenname"
-                  value={selectedNode?.data.name || ''}
-                  onChange={(e) => {
-                    // Basic example: update local state if you want to edit name here
-                    // For now, assume name changes are handled elsewhere or not directly editable here
-                  }}
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="nodeDescriptionEditor" className="text-sm font-medium">Beschreibung</label>
-                <QuillRichTextEditor
-                  id="nodeDescriptionEditor"
-                //   defaultValue={formDescriptionHtml}
-                  onTextChange={(delta, quill) => {
-                    const deltaContent = quill.getContents();
-                    const jsonContent = JSON.stringify(deltaContent);
-                    setFormDescriptionHtml(jsonContent);
-                  }}
-                  placeholder="Geben Sie hier eine detaillierte Beschreibung ein..."
-                  theme="snow"
-                  className="min-h-[200px] border rounded-md"
-                />
-              </div>
-              <div className="space-y-2">
-                <label htmlFor="nodeCategorySelect" className="text-sm font-medium">Kategorie</label>
-                <select id="nodeCategorySelect" className="w-full p-2 border rounded-md bg-white dark:bg-gray-700 dark:text-white">
-                  <option>Allgemein</option>
-                  <option>Spezial</option>
-                  <option>Andere</option>
-                </select>
-              </div>
-              <div className="pt-4">
-                <Button type="button" onClick={() => alert('Speichern geklickt! Beschreibung:\n' + formDescriptionHtml)}>
-                  Speichern
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+      <OfferPositionText
+        selectedNode={selectedNode}
+        formDescriptionHtml={formDescriptionHtml}
+        onDescriptionChange={setFormDescriptionHtml} 
+      />
     );
   };
 
