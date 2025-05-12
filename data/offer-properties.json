@@ -1,0 +1,25 @@
+{
+  "kunde": {
+    "id": "46654",
+    "name": "Erwin Müller GbR",
+    "adresse": "Hauptstr. 44\n33378 Rheda-Wiedenbrück",
+    "telefon": "05242-566312",
+    "casLink": "#"
+  },
+  "empfaenger": {
+    "anrede": "Herr",
+    "name": "Max",
+    "nachname": "Mustermann",
+    "telefon": "+49 177 123456789",
+    "email": "max@mustermann.de"
+  },
+  "preis": {
+    "showUnitPrices": false,
+    "calcTotal": false,
+    "total": 100000,
+    "discount": 5000,
+    "discountPercent": false,
+    "discountValue": 5
+  },
+  "bemerkung": ""
+} 

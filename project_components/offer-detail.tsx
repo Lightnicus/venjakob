@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import InteractiveSplitPanel from './interactive-split-panel';
+import OfferProperties, { OfferPropertiesProps } from './offer-properties';
+import offerPropertiesData from '../data/offer-properties.json';
 
-interface OfferDetailProps {
-  title: string;
-}
+type OfferDetailProps = { title: string };
 
 const OfferDetail: React.FC<OfferDetailProps> = ({ title }) => {
   const [tab, setTab] = useState('bloecke');
@@ -42,7 +42,7 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title }) => {
           <InteractiveSplitPanel />
         </TabsContent>
         <TabsContent value="eigenschaften" className="flex-1 overflow-auto flex items-center justify-center">
-          <div className="text-gray-600 text-lg">Eigenschaften-Inhalt folgt…</div>
+          <OfferProperties {...(offerPropertiesData as OfferPropertiesProps)} />
         </TabsContent>
         <TabsContent value="vorschau" className="flex-1 overflow-auto flex items-center justify-center">
           <div className="text-gray-600 text-lg">Vorschau-Inhalt folgt…</div>
