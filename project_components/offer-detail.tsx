@@ -4,6 +4,7 @@ import InteractiveSplitPanel from './interactive-split-panel';
 import OfferProperties, { OfferPropertiesProps } from './offer-properties';
 import offerPropertiesData from '../data/offer-properties.json';
 import PdfPreview from './pdf-preview';
+import OfferVersionsTable from './offer-versions-table';
 
 type OfferDetailProps = { title: string };
 
@@ -49,7 +50,7 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title }) => {
           <PdfPreview file="/dummy.pdf" />
         </TabsContent>
         <TabsContent value="versionen" className="flex-1 overflow-auto flex items-center justify-center">
-          <div className="text-gray-600 text-lg">Versionen-Inhalt folgt…</div>
+          <OfferVersionsTable />
         </TabsContent>
       </Tabs>
       <div className="mt-2 text-xs text-gray-500 text-left">Zuletzt geändert am 01.05.2024 von Max Mustermann</div>
