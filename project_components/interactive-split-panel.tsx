@@ -13,6 +13,8 @@ import { Delta } from 'quill';
 import OfferPositionText from './offer-position-text';
 import { Calculator } from 'lucide-react';
 import OfferPositionArticle from './offer-position-article';
+import blocksData from '@/data/blocks.json';
+import AddBlockDialog, { Block } from './add-block-dialog';
 
 const initialTreeData: MyTreeNodeData[] = initialTreeDataRaw as MyTreeNodeData[];
 
@@ -23,6 +25,8 @@ const InteractiveSplitPanel: React.FC = () => {
   const [selectedNode, setSelectedNode] = useState<NodeApi<MyTreeNodeData> | null>(null);
   const [formDescriptionHtml, setFormDescriptionHtml] = useState<string | undefined>(undefined);
   const [selectedNodeType, setSelectedNodeType] = useState<string | undefined>(undefined);
+  const [showAddBlockDialog, setShowAddBlockDialog] = useState(false);
+  const [blocks] = useState<Block[]>(blocksData as Block[]);
   
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
 
@@ -66,8 +70,8 @@ const InteractiveSplitPanel: React.FC = () => {
 
   // Render form content
   const renderFormContent = () => {
-    const htmlValue = formDescriptionHtml ?? null;
-    const handleHtmlChange = (html: string | null) => setFormDescriptionHtml(html ?? undefined);
+    const htmlValue = formDescriptionHtml;
+    const handleHtmlChange = (html: string | undefined) => setFormDescriptionHtml(html);
     if (selectedNodeType === 'article') {
       return (
         <OfferPositionArticle
@@ -109,11 +113,19 @@ const InteractiveSplitPanel: React.FC = () => {
     return renderFormContent();
   };
 
+  // AddBlockDialog handlers
+  const handleOpenAddBlock = () => setShowAddBlockDialog(true);
+  const handleCloseAddBlock = () => setShowAddBlockDialog(false);
+  const handleAddBlock = (block: Block) => {
+    setShowAddBlockDialog(false);
+    // handle block addition logic here
+  };
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between p-4 border-b bg-white dark:bg-gray-800 gap-2">
         <div className="flex gap-2">
-          <Button tabIndex={0} aria-label="Block hinzufügen" onClick={() => {}}>
+          <Button tabIndex={0} aria-label="Block hinzufügen" onClick={handleOpenAddBlock}>
             Block hinzufügen
           </Button>
           <Button tabIndex={0} aria-label="Artikel hinzufügen" onClick={() => {}}>
@@ -187,6 +199,12 @@ const InteractiveSplitPanel: React.FC = () => {
           </div>
         </div>
       </div>
+      <AddBlockDialog
+        open={showAddBlockDialog}
+        onClose={handleCloseAddBlock}
+        onAdd={handleAddBlock}
+        blocks={blocks}
+      />
     </div>
   );
 };

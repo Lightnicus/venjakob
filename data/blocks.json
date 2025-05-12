@@ -1,0 +1,51 @@
+[
+  {
+    "id": 1,
+    "bezeichnung": "Anschreiben",
+    "ueberschrift": "allgemeines Anschreiben",
+    "aenderung": "15.08.2022",
+    "vorschau": "Mit Ab- und Aufwickelvorrichtung, aufgebaut auf Verfahrwagen, zum leichten Handhaben der Papierrollen.\nDie Papierrollen sind seitlich aus der Anlage herausziehbar.\nDas Papier wird durch eine einlaufseitige Andruckrolle an das Haupttransportband gepresst, so dass ein vollständiger Synchronlauf mit den vor- und nachgeschalteten Transporten gewährleistet ist.\n\n---------- Beispiel Platzhalter ---------\nSehr geehrter Herr Mustermann,\ndies ist ein Anschreiben.\nViele Grüße\nMax Mustermann\nHier unser Positionenverzeichnis:\n1. VEN SPRAY SMART SPRITZMASCHINE"
+  },
+  {
+    "id": 2,
+    "bezeichnung": "Anlagenparameter",
+    "ueberschrift": "Vorlage lang",
+    "aenderung": "01.01.2024",
+    "vorschau": "Vorschau für Anlagenparameter - Vorlage lang."
+  },
+  {
+    "id": 3,
+    "bezeichnung": "Anlagenparameter",
+    "ueberschrift": "Vorlage kurz",
+    "aenderung": "02.05.2022",
+    "vorschau": "Vorschau für Anlagenparameter - Vorlage kurz."
+  },
+  {
+    "id": 4,
+    "bezeichnung": "Zahlungskondition",
+    "ueberschrift": "30-60-10",
+    "aenderung": "18.05.2023",
+    "vorschau": "Vorschau für Zahlungskondition 30-60-10."
+  },
+  {
+    "id": 5,
+    "bezeichnung": "Zahlungskondition",
+    "ueberschrift": "20-30-30-10",
+    "aenderung": "12.01.2034",
+    "vorschau": "Vorschau für Zahlungskondition 20-30-30-10."
+  },
+  {
+    "id": 6,
+    "bezeichnung": "Angebotskonditionen",
+    "ueberschrift": "allgemein",
+    "aenderung": "25.01.2022",
+    "vorschau": "Vorschau für Angebotskonditionen allgemein."
+  },
+  {
+    "id": 7,
+    "bezeichnung": "Unterschrift",
+    "ueberschrift": "mit zwei Feldern",
+    "aenderung": "14.06.2024",
+    "vorschau": "Vorschau für Unterschrift mit zwei Feldern."
+  }
+] 
