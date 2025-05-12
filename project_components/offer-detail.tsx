@@ -3,6 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import InteractiveSplitPanel from './interactive-split-panel';
 import OfferProperties, { OfferPropertiesProps } from './offer-properties';
 import offerPropertiesData from '../data/offer-properties.json';
+import PdfPreview from './pdf-preview';
 
 type OfferDetailProps = { title: string };
 
@@ -45,7 +46,7 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title }) => {
           <OfferProperties {...(offerPropertiesData as OfferPropertiesProps)} />
         </TabsContent>
         <TabsContent value="vorschau" className="flex-1 overflow-auto flex items-center justify-center">
-          <div className="text-gray-600 text-lg">Vorschau-Inhalt folgt…</div>
+          <PdfPreview file="/dummy.pdf" />
         </TabsContent>
         <TabsContent value="versionen" className="flex-1 overflow-auto flex items-center justify-center">
           <div className="text-gray-600 text-lg">Versionen-Inhalt folgt…</div>
