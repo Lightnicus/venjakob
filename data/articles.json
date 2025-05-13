@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "nummer": "TB-10-111000",
+    "ueberschrift": "Papierband System",
+    "aenderung": "15.08.2022",
+    "vorschau": "Das Transportbandunterteil wird in einer stabilen Stahlblechkonstruktion gefertigt. Die Antriebs- und Spannwalze ist beidseitig in Flanschlagern gelagert. Die Umlenkungen sind alle mit Messerkante ausgeführt. Als Tragelement für den Fördergurt (Deutsches Markenfabrikat) dient eine beschichtete Isolierunterlageplatte mit gleitfreudiger Oberfläche.\nDas Gurtband ist temperaturbeständig bis 90°C Lufttemperatur.\nDer Antrieb erfolgt über einen Stirnrand-Getriebemotor vorbereitet für FU-Ansteuerung."
+  },
+  {
+    "id": 2,
+    "nummer": "TB-20-111000",
+    "ueberschrift": "Gurttransportband",
+    "aenderung": "01.01.2024",
+    "vorschau": "Das Transportbandunterteil wird in einer stabilen Stahlblechkonstruktion gefertigt. Die Antriebs- und Spannwalze ist beidseitig in Flanschlagern gelagert. Die Umlenkungen sind alle mit Messerkante ausgeführt. Als Tragelement für den Fördergurt (Deutsches Markenfabrikat) dient eine beschichtete Isolierunterlageplatte mit gleitfreudiger Oberfläche.\nDas Gurtband ist temperaturbeständig bis 90°C Lufttemperatur.\nDer Antrieb erfolgt über einen Stirnrand-Getriebemotor vorbereitet für FU-Ansteuerung."
+  },
+  {
+    "id": 3,
+    "nummer": "TB-30-111000",
+    "ueberschrift": "Maschine2",
+    "aenderung": "02.05.2024",
+    "vorschau": "Maschine2 Vorschau..."
+  },
+  {
+    "id": 4,
+    "nummer": "TB-40-111000",
+    "ueberschrift": "VEN SPRAY",
+    "aenderung": "18.05.2023",
+    "vorschau": "VEN SPRAY Vorschau..."
+  }
+] 

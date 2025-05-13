@@ -15,6 +15,8 @@ import { Calculator } from 'lucide-react';
 import OfferPositionArticle from './offer-position-article';
 import blocksData from '@/data/blocks.json';
 import AddBlockDialog, { Block } from './add-block-dialog';
+import AddArticleDialog, { Article } from './add-article-dialog';
+import articlesData from '@/data/articles.json';
 
 const initialTreeData: MyTreeNodeData[] = initialTreeDataRaw as MyTreeNodeData[];
 
@@ -27,6 +29,7 @@ const InteractiveSplitPanel: React.FC = () => {
   const [selectedNodeType, setSelectedNodeType] = useState<string | undefined>(undefined);
   const [showAddBlockDialog, setShowAddBlockDialog] = useState(false);
   const [blocks] = useState<Block[]>(blocksData as Block[]);
+  const [showAddArticleDialog, setShowAddArticleDialog] = useState(false);
   
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
 
@@ -121,6 +124,14 @@ const InteractiveSplitPanel: React.FC = () => {
     // handle block addition logic here
   };
 
+  // AddArticleDialog handlers
+  const handleOpenAddArticle = () => setShowAddArticleDialog(true);
+  const handleCloseAddArticle = () => setShowAddArticleDialog(false);
+  const handleAddArticle = (article: Article) => {
+    setShowAddArticleDialog(false);
+    // handle article addition logic here
+  };
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between p-4 border-b bg-white dark:bg-gray-800 gap-2">
@@ -128,7 +139,7 @@ const InteractiveSplitPanel: React.FC = () => {
           <Button tabIndex={0} aria-label="Block hinzufügen" onClick={handleOpenAddBlock}>
             Block hinzufügen
           </Button>
-          <Button tabIndex={0} aria-label="Artikel hinzufügen" onClick={() => {}}>
+          <Button tabIndex={0} aria-label="Artikel hinzufügen" onClick={handleOpenAddArticle}>
             Artikel hinzufügen
           </Button>
           <Button tabIndex={0} aria-label="Element löschen" onClick={() => {}}>
@@ -204,6 +215,12 @@ const InteractiveSplitPanel: React.FC = () => {
         onClose={handleCloseAddBlock}
         onAdd={handleAddBlock}
         blocks={blocks}
+      />
+      <AddArticleDialog
+        open={showAddArticleDialog}
+        onClose={handleCloseAddArticle}
+        onAdd={handleAddArticle}
+        articles={articlesData as Article[]}
       />
     </div>
   );
