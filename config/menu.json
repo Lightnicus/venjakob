@@ -8,7 +8,7 @@
     "children": [
       { "label": "Blockverwaltung", "href": "/stammdaten/blockverwaltung" },
       { "label": "Positionsverwaltung", "href": "/stammdaten/positionsverwaltung" },
-      { "label": "Artikelverwaltung", "href": "/artikelverwaltung" }
+      { "label": "Artikelverwaltung", "href": "/stammdaten/artikelverwaltung" }
     ]
   },
   { "label": "Einstellungen", "href": "/einstellungen" }
