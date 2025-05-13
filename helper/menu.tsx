@@ -12,6 +12,8 @@ import orderConfirmationsData from '@/data/order-confirmations.json';
 import StammdatenPlaceholder from '@/project_components/stammdaten-placeholder';
 import EinstellungenPlaceholder from '@/project_components/einstellungen-placeholder';
 import { SalesOpportunityDetail } from '@/project_components/sales-opportunity-detail';
+import BlockListTable from '@/project_components/block-list-table';
+import blockListData from '@/data/block-list.json';
 
 export interface TabDefinition extends Omit<Tab, 'content'> {
   content: () => ReactNode; // Use a function to render content to avoid immediate rendering
@@ -69,7 +71,10 @@ export const tabMappings: Record<string, TabDefinition> = {
     id: 'stammdaten-blockverwaltung',
     title: 'Blockverwaltung',
     content: () => (
-      <div className="p-4"><h2 className="text-2xl font-bold mb-2">Blockverwaltung</h2><p>Hier können Sie Blöcke verwalten.</p></div>
+      <div className="p-4">
+        <h2 className="text-2xl font-bold mb-2">Blockverwaltung</h2>
+        <BlockListTable data={blockListData} />
+      </div>
     ),
     closable: true,
   },
