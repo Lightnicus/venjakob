@@ -86,4 +86,24 @@ export const tabMappings: Record<string, TabDefinition> = {
     ),
     closable: true,
   },
+  '/stammdaten/artikelverwaltung': {
+    id: 'artikelverwaltung',
+    title: 'Artikelverwaltung',
+    content: () => {
+      const data = [
+        { nr: 'TB-10-11100', title: 'Papierband System', languages: 'DE;EN', date: '15.08.2022' },
+        { nr: 'TB-20-11100', title: 'Gurttransportband', languages: 'DE', date: '01.01.2024' },
+        { nr: 'TB-30-11100', title: '', languages: 'EN', date: '02.05.2024' },
+        { nr: 'TB-40-11100', title: 'VEN SPRAY SMART SPRITZMASCHINE', languages: 'DE', date: '18.05.2023' },
+      ];
+      const ArticleListTable = require('@/project_components/article-list-table').default;
+      return (
+        <div className="p-4">
+          <h2 className="text-2xl font-bold mb-2">Artikelverwaltung</h2>
+          <ArticleListTable data={data} />
+        </div>
+      );
+    },
+    closable: true,
+  },
 };
