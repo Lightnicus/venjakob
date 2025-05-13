@@ -78,7 +78,6 @@ const QuillRichTextEditor = forwardRef<QuillEditorRef, QuillRichTextEditorProps>
         try {
           const QuillModule = await import('quill');
           const Quill = QuillModule.default;
-          await import('quill/dist/quill.snow.css'); // Assuming build system handles this
 
           const defaultModulesConfig = {
             toolbar: [

@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ArboristTree } from './arborist-tree';
@@ -13,12 +13,19 @@ interface OffersTreeTabProps {
   offerName?: string;
 }
 
-const OffersTreeTab: React.FC<OffersTreeTabProps> = ({ offerId, offerName }) => {
+const OffersTreeTab: React.FC<OffersTreeTabProps> = ({
+  offerId,
+  offerName,
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
-  const [treeData, setTreeData] = useState<readonly MyTreeNodeData[]>(initialTreeData);
+  const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(
+    undefined,
+  );
+  const [treeData, setTreeData] = useState<readonly MyTreeNodeData[]>(
+    initialTreeData as readonly MyTreeNodeData[],
+  );
   const [selectedNodeInfo, setSelectedNodeInfo] = useState<string | null>(null);
-  
+
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
 
   // Effect to potentially load specific tree data when offerId changes
@@ -46,10 +53,12 @@ const OffersTreeTab: React.FC<OffersTreeTabProps> = ({ offerId, offerName }) => 
     if (nodes.length > 0) {
       const selectedNode = nodes[0];
       setSelectedNodeId(selectedNode.id);
-      
+
       // Display some information about the selected node
-      setSelectedNodeInfo(`Ausgewählt: ${selectedNode.data.name} (ID: ${selectedNode.id})`);
-      
+      setSelectedNodeInfo(
+        `Ausgewählt: ${selectedNode.data.name} (ID: ${selectedNode.id})`,
+      );
+
       // You could fetch additional data related to this node if needed
       console.log(`Node selected: ${selectedNode.data.name}`);
     } else {
@@ -74,10 +83,15 @@ const OffersTreeTab: React.FC<OffersTreeTabProps> = ({ offerId, offerName }) => 
           onChange={handleSearchChange}
           className="flex-grow"
         />
-        <Button onClick={handleClearSelection} variant="outline">Auswahl aufheben</Button>
+        <Button onClick={handleClearSelection} variant="outline">
+          Auswahl aufheben
+        </Button>
       </div>
 
-      <div className="border rounded-lg shadow-sm overflow-hidden bg-white dark:bg-gray-800" style={{ height: 'calc(100vh - 220px)' }}>
+      <div
+        className="border rounded-lg shadow-sm overflow-hidden bg-white dark:bg-gray-800"
+        style={{ height: 'calc(100vh - 220px)' }}
+      >
         <ArboristTree<MyTreeNodeData>
           ref={treeRef}
           initialData={treeData}
@@ -99,10 +113,12 @@ const OffersTreeTab: React.FC<OffersTreeTabProps> = ({ offerId, offerName }) => 
 
       <div className="text-sm text-gray-500">
         {offerId && <p>Angebots-ID: {offerId}</p>}
-        {selectedNodeInfo && <p className="mt-2 font-medium text-blue-600">{selectedNodeInfo}</p>}
+        {selectedNodeInfo && (
+          <p className="mt-2 font-medium text-blue-600">{selectedNodeInfo}</p>
+        )}
       </div>
     </div>
   );
 };
 
-export default OffersTreeTab; 
+export default OffersTreeTab;

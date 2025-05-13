@@ -11,7 +11,7 @@ import { TreeApi } from 'react-arborist';
 const ArboristTreeDemo: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
-  const [treeData, setTreeData] = useState<readonly MyTreeNodeData[]>(initialTreeData);
+  const [treeData, setTreeData] = useState<readonly MyTreeNodeData[]>(initialTreeData as readonly MyTreeNodeData[]);
   
   // Ref for accessing TreeApi methods
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
