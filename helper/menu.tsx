@@ -65,4 +65,20 @@ export const tabMappings: Record<string, TabDefinition> = {
     content: () => <EinstellungenPlaceholder />,
     closable: true,
   },
+  '/stammdaten/blockverwaltung': {
+    id: 'stammdaten-blockverwaltung',
+    title: 'Blockverwaltung',
+    content: () => (
+      <div className="p-4"><h2 className="text-2xl font-bold mb-2">Blockverwaltung</h2><p>Hier können Sie Blöcke verwalten.</p></div>
+    ),
+    closable: true,
+  },
+  '/stammdaten/positionsverwaltung': {
+    id: 'stammdaten-positionsverwaltung',
+    title: 'Positionsverwaltung',
+    content: () => (
+      <div className="p-4"><h2 className="text-2xl font-bold mb-2">Positionsverwaltung</h2><p>Hier können Sie Positionen verwalten.</p></div>
+    ),
+    closable: true,
+  },
 };

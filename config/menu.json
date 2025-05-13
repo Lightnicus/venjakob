@@ -2,6 +2,13 @@
   { "label": "Angebote", "href": "/angebote" },
   { "label": "Verkaufschancen", "href": "/verkaufschancen" },
   { "label": "Auftragsbestätigungen", "href": "/auftragsbestaetigungen" },
-  { "label": "Stammdaten", "href": "/stammdaten" },
+  {
+    "label": "Stammdaten",
+    "href": "/stammdaten",
+    "children": [
+      { "label": "Blockverwaltung", "href": "/stammdaten/blockverwaltung" },
+      { "label": "Positionsverwaltung", "href": "/stammdaten/positionsverwaltung" }
+    ]
+  },
   { "label": "Einstellungen", "href": "/einstellungen" }
 ] 

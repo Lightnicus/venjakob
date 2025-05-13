@@ -9,6 +9,8 @@ import {
   NavigationMenuItem,
   NavigationMenuLink,
   navigationMenuTriggerStyle,
+  NavigationMenuTrigger,
+  NavigationMenuContent,
 } from '@/components/ui/navigation-menu';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
@@ -18,7 +20,8 @@ import { tabMappings } from '@/helper/menu';
 
 type MenuConfigItem = {
   label: string;
-  href: string; // href from menu.json might be used as a unique key or part of tab ID
+  href: string;
+  children?: MenuConfigItem[];
 };
 
 const TopNavigation: FC = () => {
@@ -30,7 +33,7 @@ const TopNavigation: FC = () => {
       openNewTab({
         id: tabDef.id,
         title: tabDef.title,
-        content: tabDef.content(), // Execute the function to get the ReactNode
+        content: tabDef.content(),
         closable: tabDef.closable,
       });
     }
@@ -45,36 +48,70 @@ const TopNavigation: FC = () => {
         >
           {sitewide.siteName}
         </span>
-        <NavigationMenu
-          className="flex-1 justify-end"
-          aria-label="Hauptnavigation"
-        >
+        <NavigationMenu className="flex-1 justify-end" aria-label="Hauptnavigation">
           <NavigationMenuList>
-            {(menuConfig as MenuConfigItem[]).map(({ label, href }) => (
-              <NavigationMenuItem key={href}>
-                {/* Use a button-like behavior for NavigationMenuLink if it supports onClick well,
-                    otherwise, might need a custom component or simple button styled appropriately. 
-                    Setting href='#' and relying on onClick is a common pattern. */}
-                <NavigationMenuLink
-                  href="#" // Prevent actual navigation
-                  className={navigationMenuTriggerStyle() + ' cursor-pointer'}
-                  aria-label={label}
-                  onClick={e => {
-                    e.preventDefault(); // Prevent default link behavior
-                    handleMenuClick(href);
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleMenuClick(href);
-                    }
-                  }}
-                  tabIndex={0} // Ensure it's focusable
-                >
-                  {label}
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-            ))}
+            {(menuConfig as MenuConfigItem[]).map(({ label, href, children }) =>
+              children && children.length > 0 ? (
+                <NavigationMenuItem key={href}>
+                  <NavigationMenuTrigger
+                    className={navigationMenuTriggerStyle() + ' cursor-pointer'}
+                    aria-label={label}
+                    tabIndex={0}
+                  >
+                    {label}
+                  </NavigationMenuTrigger>
+                  <NavigationMenuContent className="w-full min-w-full p-0">
+                    <ul className="w-full min-w-full">
+                      {children.map(child => (
+                        <li key={child.href}>
+                          <NavigationMenuLink asChild>
+                            <button
+                              className="cursor-pointer w-full text-left px-3 py-2 rounded hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              aria-label={child.label}
+                              tabIndex={0}
+                              onClick={e => {
+                                e.preventDefault();
+                                handleMenuClick(child.href);
+                              }}
+                              onKeyDown={e => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                  e.preventDefault();
+                                  handleMenuClick(child.href);
+                                }
+                              }}
+                            >
+                              {child.label}
+                            </button>
+                          </NavigationMenuLink>
+                        </li>
+                      ))}
+                    </ul>
+                  </NavigationMenuContent>
+                </NavigationMenuItem>
+              ) : (
+                <NavigationMenuItem key={href}>
+                  <NavigationMenuLink asChild>
+                    <button
+                      className={navigationMenuTriggerStyle() + ' cursor-pointer'}
+                      aria-label={label}
+                      tabIndex={0}
+                      onClick={e => {
+                        e.preventDefault();
+                        handleMenuClick(href);
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleMenuClick(href);
+                        }
+                      }}
+                    >
+                      {label}
+                    </button>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+              )
+            )}
           </NavigationMenuList>
         </NavigationMenu>
         <div className="flex items-center gap-2 ml-4">
