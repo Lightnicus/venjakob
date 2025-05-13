@@ -1,22 +1,33 @@
 [
-  { "id": "1", "name": "Ungelesen", "type": "textblock" },
-  { "id": "2", "name": "Themen", "type": "textblock" },
+  { "id": "1", "name": "Anschreiben", "type": "textblock" },
+  { "id": "2", "name": "Positionenverzeichnis", "type": "textblock" },
+  { "id": "3", "name": "Anlagenparameter", "type": "textblock" },
   {
-    "id": "3",
-    "name": "Chaträume",
+    "id": "4",
+    "name": "Positionen",
     "children": [
-      { "id": "c1", "name": "Allgemein", "type": "textblock" },
-      { "id": "c2", "name": "Zufällig", "type": "article" },
-      { "id": "c3", "name": "Open Source Projekte", "type": "textblock" }
+      { "id": "p1", "name": "VEN SPRAY SMART SPRITZMASCHINE", "type": "article",
+        "children": [
+          { "id": "p11", "name": "Papierband System", "type": "article" },
+          { "id": "p12", "name": "Gurtband Rakel und Reinigungssystem R1", "type": "article" }
+        ]
+      },
+      { "id": "p2", "name": "Maschine 2", "type": "article" },
+      { "id": "p3", "name": "Optionen", "children": [
+          { "id": "p31", "name": "Glaserkennung", "type": "article" }
+        ]
+      }
     ]
   },
   {
-    "id": "4",
-    "name": "Direktnachrichten",
+    "id": "5",
+    "name": "Zeichnung",
     "children": [
-      { "id": "d1", "name": "Alice", "type": "article" },
-      { "id": "d2", "name": "Bob", "type": "textblock" },
-      { "id": "d3", "name": "Charlie", "type": "article" }
+      { "id": "d1", "name": "Zeichnung 1", "type": "textblock" },
+      { "id": "d2", "name": "Zeichnung 2", "type": "textblock" }
     ]
-  }
-] 
+  },
+  { "id": "6", "name": "Zahlungskonditionen", "type": "textblock" },
+  { "id": "7", "name": "Angebotskondition", "type": "textblock" },
+  { "id": "8", "name": "Unterschrift", "type": "textblock" }
+]
