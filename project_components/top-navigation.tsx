@@ -15,6 +15,8 @@ import {
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
 import { tabMappings } from '@/helper/menu';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 // Import tab content components - no longer needed here as they are imported in menu.tsx
 
@@ -26,6 +28,9 @@ type MenuConfigItem = {
 
 const TopNavigation: FC = () => {
   const { openNewTab } = useTabbedInterface();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   const handleMenuClick = (menuItemHref: string) => {
     const tabDef = tabMappings[menuItemHref];
@@ -38,6 +43,30 @@ const TopNavigation: FC = () => {
       });
     }
   };
+
+  const handleAvatarClick = () => setIsDropdownOpen(v => !v);
+  const handleAvatarKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      setIsDropdownOpen(v => !v);
+    }
+    if (e.key === 'Escape') setIsDropdownOpen(false);
+  };
+  const handleLogout = () => router.push('/');
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    if (isDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isDropdownOpen]);
 
   return (
     <div className="w-full bg-white shadow-md">
@@ -66,7 +95,7 @@ const TopNavigation: FC = () => {
                         <li key={child.href}>
                           <NavigationMenuLink asChild>
                             <button
-                              className="cursor-pointer w-full text-left px-3 py-2 rounded hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
+                              className="w-full text-left px-3 py-2 rounded hover:bg-gray-100 focus:bg-gray-100 focus:outline-none cursor-pointer"
                               aria-label={child.label}
                               tabIndex={0}
                               onClick={e => {
@@ -115,13 +144,44 @@ const TopNavigation: FC = () => {
           </NavigationMenuList>
         </NavigationMenu>
         <div className="flex items-center gap-2 ml-4">
-          <Avatar>
-            <AvatarImage src="/avatar.png" alt="Benutzeravatar" />
-            <AvatarFallback>MM</AvatarFallback>
-          </Avatar>
-          <span className="text-sm font-medium text-gray-700">
-            Max Mustermann
-          </span>
+          <div className="relative" ref={dropdownRef}>
+            <button
+              className="flex items-center gap-2 focus:outline-none rounded px-1 cursor-pointer"
+              aria-label="Benutzermenü öffnen"
+              aria-haspopup="menu"
+              aria-expanded={isDropdownOpen}
+              tabIndex={0}
+              onClick={handleAvatarClick}
+              onKeyDown={handleAvatarKeyDown}
+              type="button"
+            >
+              <Avatar>
+                <AvatarImage src="/avatar.png" alt="Benutzeravatar" />
+                <AvatarFallback>MM</AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium text-gray-700">Max Mustermann</span>
+            </button>
+            {isDropdownOpen && (
+              <div
+                className="absolute top-full right-0 w-40 bg-white border border-gray-200 rounded shadow-lg z-50 animate-fade-in mt-2"
+                role="menu"
+                aria-label="Benutzermenü"
+              >
+                <button
+                  className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none rounded cursor-pointer"
+                  onClick={handleLogout}
+                  tabIndex={0}
+                  role="menuitem"
+                  aria-label="Abmelden"
+                  onKeyDown={e => {
+                    if (e.key === 'Escape') setIsDropdownOpen(false);
+                  }}
+                >
+                  Abmelden
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
