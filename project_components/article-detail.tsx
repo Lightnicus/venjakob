@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import QuillRichTextEditor, { QuillEditorRef } from './quill-rich-text-editor';
 import { Trash2, Edit3, PlusCircle, Save } from 'lucide-react';
+import ArticleProperties from './article-properties';
 
 interface LocalizedContent {
   ueberschrift: string;
@@ -232,9 +233,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
         </TabsContent>
 
         <TabsContent value="eigenschaften" className="mt-4">
-          <div className="p-6 border rounded-lg bg-gray-50 text-center">
-            <p className="text-gray-600">Eigenschaften werden hier angezeigt.</p>
-          </div>
+          <ArticleProperties isEditing={isEditing} />
         </TabsContent>
 
         <TabsContent value="vorschau" className="mt-4">
