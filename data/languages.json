@@ -1,5 +1,6 @@
 [
   { "value": "de", "label": "Deutsch" },
   { "value": "en", "label": "Englisch" },
-  { "value": "fr", "label": "Französisch" }
+  { "value": "fr", "label": "Französisch" },
+  { "value": "es", "label": "Spanisch" }
 ] 

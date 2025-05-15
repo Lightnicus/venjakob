@@ -1,0 +1,49 @@
+[
+  {
+    "nr": "TB-20-11100",
+    "title": "Gurttransportband",
+    "languageKeys": ["de", "en"],
+    "date": "01.05.2024",
+    "lastChangedBy": "Max Mustermann",
+    "localizedContent": {
+      "de": {
+        "ueberschrift": "Gurttransportband (Deutsch)",
+        "beschreibung": "<p>Das Transportbandunterteil wird in einer stabilen Stahlblechkonstruktion gefertigt. Die Antriebes- und Spannwalze ist beidseitig in Flanschlagern gelagert. Die Umlenkungen sind alle mit Messerkante ausgeführt. Als Tragelement für den Fördergurt (Deutsches Markenfabrikat) dient eine beschichtete Isolierunterlageplatte mit gleitfreudiger Oberfläche.</p><p>Das Gurtband ist temperaturbeständig bis 90°C Lufttemperatur.</p><p>Der Antrieb erfolgt über einen Stirnrad-Getriebemotor vorbereitet für FU-Ansteuerung.</p>"
+      },
+      "en": {
+        "ueberschrift": "Conveyor Belt (English)",
+        "beschreibung": "<p>The lower part of the conveyor belt is manufactured in a sturdy sheet steel construction. The drive and tensioning roller is mounted in flange bearings on both sides. The deflections are all designed with a knife edge. A coated insulating base plate with a non-slip surface serves as a support element for the conveyor belt (German brand).</p><p>The belt is temperature-resistant up to 90°C air temperature.</p><p>The belt is driven by a front edge geared motor prepared for frequency converter control.</p>"
+      }
+    }
+  },
+  {
+    "nr": "AV-10-5020",
+    "title": "Automatisches Ventilsystem",
+    "languageKeys": ["de"],
+    "date": "15.04.2024",
+    "lastChangedBy": "Petra Schneider",
+    "localizedContent": {
+      "de": {
+        "ueberschrift": "Automatisches Ventilsystem (Deutsch)",
+        "beschreibung": "<p>Ein fortschrittliches System zur automatischen Steuerung von Flüssigkeitsströmen in industriellen Anwendungen. Präzise und zuverlässig.</p>"
+      }
+    }
+  },
+  {
+    "nr": "FS-05-3000",
+    "title": "Flexibles Schlauchsystem",
+    "languageKeys": ["en", "es"],
+    "date": "20.03.2024",
+    "lastChangedBy": "John Doe",
+    "localizedContent": {
+      "en": {
+        "ueberschrift": "Flexible Hose System (English)",
+        "beschreibung": "<p>A highly adaptable hose system for various industrial applications. Durable and easy to install.</p>"
+      },
+      "es": {
+        "ueberschrift": "Sistema de Manguera Flexible (Español)",
+        "beschreibung": "<p>Un sistema de manguera altamente adaptable para diversas aplicaciones industriales. Duradero y fácil de instalar.</p>"
+      }
+    }
+  }
+] 
