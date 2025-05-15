@@ -1,6 +1,7 @@
 import { FC, useState } from 'react';
 import QuillRichTextEditor from './quill-rich-text-editor';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import BlockDetailProperties from './block-detail-properties';
 
 type BlockDetailProps = {
   data: Record<string, {
@@ -68,7 +69,7 @@ const BlockDetail: FC<BlockDetailProps> = ({ data, languages }) => {
           <button className="border rounded px-3 py-1 text-sm mt-2" tabIndex={0} aria-label="Sprache hinzufügen">+ Sprache hinzufügen</button>
         </TabsContent>
         <TabsContent value="eigenschaften">
-          <div className="text-gray-500 text-center py-8">Eigenschaften-Tab (Platzhalter)</div>
+          <BlockDetailProperties />
         </TabsContent>
         <TabsContent value="vorschau">
           <div className="text-gray-500 text-center py-8">Vorschau-Tab (Platzhalter)</div>
