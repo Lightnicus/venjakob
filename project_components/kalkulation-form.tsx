@@ -57,39 +57,35 @@ const KalkulationForm = () => {
   return (
     <form className="w-full max-w-5xl border rounded p-6 bg-white mx-auto mt-4">
       <div className="text-2xl font-bold mb-6">TB-10-11100</div>
-      <div className="grid grid-cols-1 md:grid-cols-[minmax(200px,auto)_auto_1fr] gap-6 items-start">
-        {/* Left: Labels & Inputs */}
-        <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-6 items-start">
+        {/* Left: Labels, Inputs & Standardwerte */}
+        <div className="space-y-0">
           {labels.map(({ key, label }) => (
-            <label
-              key={key}
-              className="flex flex-col gap-1 text-sm font-medium"
-              htmlFor={key}
-            >
-              {label}
-              <Input
-                id={key}
-                type="number"
-                value={values[key as keyof KalkulationState] as number}
-                onChange={handleChange(key as keyof KalkulationState)}
-                className="w-full"
-                aria-label={label}
-                tabIndex={0}
-                min={0}
-              />
-            </label>
-          ))}
-        </div>
-        {/* Middle: Standardwerte */}
-        <div className="space-y-4 pt-7">
-          {labels.map(({ key }) => (
-            <div key={key} className="text-left text-sm text-gray-700 pt-2">
-              {standardwerte[key as keyof typeof standardwerte]}
+            <div key={key} className="grid grid-cols-[minmax(200px,auto)_120px] gap-4 items-center mb-4">
+              <label
+                className="flex flex-col gap-1 text-sm font-medium"
+                htmlFor={key}
+              >
+                {label}
+                <Input
+                  id={key}
+                  type="number"
+                  value={values[key as keyof KalkulationState] as number}
+                  onChange={handleChange(key as keyof KalkulationState)}
+                  className="w-full"
+                  aria-label={label}
+                  tabIndex={0}
+                  min={0}
+                />
+              </label>
+              <div className="text-left text-sm text-gray-700 pt-6">
+                {standardwerte[key as keyof typeof standardwerte]}
+              </div>
             </div>
           ))}
         </div>
         {/* Right: Bemerkung */}
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2 h-full">
           <label htmlFor="bemerkung" className="text-sm font-medium">
             Bemerkung
           </label>
@@ -97,7 +93,7 @@ const KalkulationForm = () => {
             id="bemerkung"
             value={values.bemerkung}
             onChange={handleChange('bemerkung')}
-            className="min-h-[180px] resize-y"
+            className="min-h-[180px] resize-y h-full"
             aria-label="Bemerkung"
             tabIndex={0}
           />

@@ -49,7 +49,7 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
           onClick={onClose}
           aria-label="Schließen"
           tabIndex={0}
-          className="absolute top-4 right-4 text-2xl text-gray-500 hover:text-black focus:outline-none"
+          className="cursor-pointer absolute top-4 right-4 text-2xl text-gray-500 hover:text-black focus:outline-none"
         >
           ×
         </button>
