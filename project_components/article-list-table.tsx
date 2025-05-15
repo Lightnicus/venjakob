@@ -25,7 +25,7 @@ interface ArticleEntry {
   languageKeys: string[];
   date: string;
   lastChangedBy: string;
-  localizedContent: Record<string, LocalizedContentDetail>;
+  localizedContent: Partial<Record<string, LocalizedContentDetail>>;
 }
 
 interface LanguageOption {
