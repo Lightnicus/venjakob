@@ -2,6 +2,8 @@ import { FC, useState } from 'react';
 import QuillRichTextEditor from './quill-rich-text-editor';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import BlockDetailProperties from './block-detail-properties';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
 
 type BlockDetailProps = {
   data: Record<string, {
@@ -16,6 +18,13 @@ type BlockDetailProps = {
 const BlockDetail: FC<BlockDetailProps> = ({ data, languages }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [tab, setTab] = useState('beschreibungen');
+  const [selectedPreviewLanguage, setSelectedPreviewLanguage] = useState(languages[0]?.value || '');
+
+  const handlePreviewLanguageChange = (value: string) => {
+    setSelectedPreviewLanguage(value);
+  };
+
+  const currentPreviewData = data[selectedPreviewLanguage];
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
@@ -72,7 +81,47 @@ const BlockDetail: FC<BlockDetailProps> = ({ data, languages }) => {
           <BlockDetailProperties />
         </TabsContent>
         <TabsContent value="vorschau">
-          <div className="text-gray-500 text-center py-8">Vorschau-Tab (Platzhalter)</div>
+          {languages.length > 0 ? (
+            <>
+              <div className="mb-4 max-w-xs">
+                <Label htmlFor="preview-language-select" className="block text-sm font-medium text-gray-700 mb-1">
+                  Vorschau Sprache
+                </Label>
+                <Select value={selectedPreviewLanguage} onValueChange={handlePreviewLanguageChange}>
+                  <SelectTrigger id="preview-language-select" aria-label="Sprache für Vorschau auswählen">
+                    <SelectValue placeholder="Sprache wählen" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {languages.map(lang => (
+                      <SelectItem key={lang.value} value={lang.value}>
+                        {lang.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {currentPreviewData ? (
+                <div className="p-4 border rounded-md bg-gray-50 min-h-[200px]">
+                  <h3 className="text-xl font-semibold mb-2 break-words">
+                    {currentPreviewData.ueberschrift || "(Keine Überschrift)"}
+                  </h3>
+                  <div
+                    className="prose max-w-none prose-sm sm:prose lg:prose-lg xl:prose-xl"
+                    dangerouslySetInnerHTML={{ __html: currentPreviewData.beschreibung || "<em>(Keine Beschreibung)</em>" }}
+                  />
+                </div>
+              ) : (
+                <div className="text-gray-500 text-center py-8">
+                  Für die ausgewählte Sprache sind keine Inhalte vorhanden oder die Sprache ist ungültig.
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-gray-500 text-center py-8">
+              Keine Sprachen für die Vorschau verfügbar. Bitte fügen Sie zuerst Beschreibungen in verschiedenen Sprachen hinzu.
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
