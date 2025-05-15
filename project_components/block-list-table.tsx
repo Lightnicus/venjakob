@@ -9,6 +9,10 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Pencil, Copy, Trash2 } from 'lucide-react';
+import { useTabbedInterface } from './tabbed-interface-provider';
+import BlockDetail from './block-detail';
+import blockDetailData from '@/data/block-detail.json';
+import languages from '@/data/languages.json';
 
 type Block = {
   bezeichnung: string;
@@ -27,6 +31,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
   const [searchBezeichnung, setSearchBezeichnung] = useState('');
   const [searchUeberschrift, setSearchUeberschrift] = useState('');
   const [selectedRow, setSelectedRow] = useState<number | null>(null);
+  const { openNewTab } = useTabbedInterface();
 
   const handleSearchBezeichnung = (e: ChangeEvent<HTMLInputElement>) => setSearchBezeichnung(e.target.value);
   const handleSearchUeberschrift = (e: ChangeEvent<HTMLInputElement>) => setSearchUeberschrift(e.target.value);
@@ -36,6 +41,15 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
       b.bezeichnung.toLowerCase().includes(searchBezeichnung.toLowerCase()) &&
       b.ueberschrift.toLowerCase().includes(searchUeberschrift.toLowerCase())
   );
+
+  const handleOpenBlockDetail = (block: Block) => {
+    openNewTab({
+      id: `block-detail-${block.bezeichnung}`,
+      title: `Block: ${block.bezeichnung}`,
+      content: <BlockDetail data={blockDetailData} languages={languages as any} />,
+      closable: true,
+    });
+  };
 
   return (
     <div className="w-full bg-white rounded shadow p-4">
@@ -90,7 +104,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
                   if (e.key === 'Enter' || e.key === ' ') setSelectedRow(idx);
                 }}
               >
-                <TableCell className="text-blue-700 underline cursor-pointer">{block.bezeichnung}</TableCell>
+                <TableCell className="text-blue-700 underline cursor-pointer" onClick={e => { e.stopPropagation(); handleOpenBlockDetail(block); }} tabIndex={0} aria-label={`Block ${block.bezeichnung} öffnen`} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleOpenBlockDetail(block); }}}>{block.bezeichnung}</TableCell>
                 <TableCell>{block.ueberschrift}</TableCell>
                 <TableCell>{block.sprachen}</TableCell>
                 <TableCell>{block.geaendertAm}</TableCell>
