@@ -9,19 +9,21 @@ import OfferVersionsTable from './offer-versions-table';
 type OfferDetailProps = { 
   title: string;
   variantId?: string;
+  language?: string;
 };
 
-const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId }) => {
+const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language }) => {
   const [tab, setTab] = useState('bloecke');
   const [dropdownValue, setDropdownValue] = useState('Kalkulation öffnen');
   
-  // You can use variantId here to fetch specific offer variant data if needed
+  // You can use variantId and language here to fetch specific offer data if needed
   
   return (
     <div className="w-full h-full flex flex-col">
       <div className="border-b bg-white dark:bg-gray-800 p-4">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2" tabIndex={0} aria-label="Angebotstitel">{title}</h2>
         {variantId && <p className="text-sm text-gray-500 mb-2">Varianten-ID: {variantId}</p>}
+        {language && <p className="text-sm text-gray-500 mb-2">Sprache: {language}</p>}
         <div className="flex flex-wrap gap-2 items-center mb-2">
           <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded text-gray-800 dark:text-gray-100 font-medium focus:outline-none" tabIndex={0} aria-label="Bearbeiten">Bearbeiten</button>
           <button className="px-4 py-2 bg-blue-200 dark:bg-blue-700 rounded text-blue-800 dark:text-blue-100 font-medium focus:outline-none" tabIndex={0} aria-label="Veröffentlichen">Veröffentlichen</button>

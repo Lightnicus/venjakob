@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
 import { FC, useState } from 'react';
 import languages from '@/data/languages.json';
+import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
+import OfferDetail from '@/project_components/offer-detail';
 
 interface ChooseOfferLanguageDialogProps {
   open: boolean;
@@ -19,6 +21,33 @@ type Language = {
 
 const ChooseOfferLanguageDialog: FC<ChooseOfferLanguageDialogProps> = ({ open, onOpenChange, onAbbrechen, onZurueck, onErstellen }) => {
   const [language, setLanguage] = useState(languages[0]?.value || '');
+  const { openNewTab } = useTabbedInterface();
+
+  const handleErstellen = () => {
+    // Call the original onErstellen callback if provided
+    if (onErstellen) {
+      onErstellen();
+    }
+    
+    // Get the selected language label
+    const selectedLanguage = languages.find(l => l.value === language);
+    const languageLabel = selectedLanguage?.label || 'Deutsch';
+    
+    // Open a new tab with OfferDetail
+    const tabId = `offer-${Date.now()}`;
+    openNewTab({
+      id: tabId,
+      title: `Neues Angebot (${languageLabel})`,
+      content: <OfferDetail 
+        title={`Neues Angebot in ${languageLabel}`} 
+        language={languageLabel} 
+      />,
+      closable: true
+    });
+    
+    // Close the dialog
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -47,7 +76,7 @@ const ChooseOfferLanguageDialog: FC<ChooseOfferLanguageDialogProps> = ({ open, o
             <Button type="button" variant="outline" aria-label="Zurück" onClick={onZurueck || (() => onOpenChange(false))}>
               Zurück
             </Button>
-            <Button type="button" aria-label="Erstellen" onClick={onErstellen || (() => onOpenChange(false))}>
+            <Button type="button" aria-label="Erstellen" onClick={handleErstellen}>
               Erstellen
             </Button>
           </div>

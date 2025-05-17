@@ -103,6 +103,11 @@ const Offers = () => {
     setChooseOfferVariantDialogOpen(true);
   };
 
+  const handleChooseOfferLanguageZurueck = () => {
+    setChooseOfferLanguageDialogOpen(false);
+    setOfferAsNewVariantDialogOpen(true);
+  };
+
   const handleChooseOfferVariantCancel = () => {
     setChooseOfferVariantDialogOpen(false);
   };
@@ -200,6 +205,7 @@ const Offers = () => {
       <ChooseOfferLanguageDialog
         open={chooseOfferLanguageDialogOpen}
         onOpenChange={setChooseOfferLanguageDialogOpen}
+        onZurueck={handleChooseOfferLanguageZurueck}
       />
       <ChooseOfferVariantDialog
         open={chooseOfferVariantDialogOpen}
