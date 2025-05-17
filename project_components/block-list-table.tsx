@@ -42,6 +42,16 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
     });
   };
 
+  const handleAddNewBlock = () => {
+    const newBlockId = `new-block-${Date.now()}`;
+    openNewTab({
+      id: newBlockId,
+      title: 'Neuer Block',
+      content: <BlockDetail data={{}} languages={languages as any} />,
+      closable: true,
+    });
+  };
+
   const handleCopyBlock = (block: Block) => {
     console.log('Kopiere Block:', block.bezeichnung);
     toast('Block wurde kopiert');
@@ -154,7 +164,14 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
   return (
     <div className="w-full bg-white rounded shadow p-4">
       <div className="flex items-center gap-2 mb-2">
-        <Button aria-label="Block hinzufügen" tabIndex={0} className="h-8 px-3 text-sm">+ Block hinzufügen</Button>
+        <Button 
+          aria-label="Block hinzufügen" 
+          tabIndex={0} 
+          className="h-8 px-3 text-sm"
+          onClick={handleAddNewBlock}
+        >
+          + Block hinzufügen
+        </Button>
       </div>
       <FilterableTable
         data={tableData}
