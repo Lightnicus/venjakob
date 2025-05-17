@@ -165,9 +165,11 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
     <div className="w-full bg-white rounded shadow p-4">
       <div className="flex items-center gap-2 mb-2">
         <Button 
+          variant="outline"
+          size="sm"
+          className="flex items-center gap-1"
           aria-label="Block hinzufügen" 
           tabIndex={0} 
-          className="h-8 px-3 text-sm"
           onClick={handleAddNewBlock}
         >
           + Block hinzufügen

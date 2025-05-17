@@ -7,11 +7,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
 import { Pencil, Copy, Trash2 } from 'lucide-react';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import ArticleDetail from './article-detail';
 import articlesData from '@/data/articles-list-tables.json'; // Import article data
 import allSystemLanguages from '@/data/languages.json'; // Import all available languages
+import { FilterableTable, DateFilterConfig } from './filterable-table';
+import type { ColumnDef, Row } from '@tanstack/react-table';
+import { toast } from 'sonner';
+import { DeleteConfirmationDialog } from './delete-confirmation-dialog'; // Import DeleteConfirmationDialog
 
 // Define types based on the JSON structure
 interface LocalizedContentDetail {
@@ -44,29 +49,36 @@ const icons = {
   delete: Trash2,
 };
 
-export const ArticleListTable = (/*{ data }: Props*/) => { // data prop removed, using imported articlesData
-  const [searchNr, setSearchNr] = useState('');
-  const [searchTitle, setSearchTitle] = useState('');
+export const ArticleListTable = () => {
   const [selected, setSelected] = useState<string | null>(null);
   const { openNewTab } = useTabbedInterface();
+  const [articleToDelete, setArticleToDelete] = useState<ArticleEntry | null>(null); // State for article to delete
+  const [articles, setArticles] = useState<ArticleEntry[]>(articlesData as ArticleEntry[]); // State for articles
 
   // Cast imported JSON to our defined types
-  const typedArticlesData: ArticleEntry[] = articlesData as ArticleEntry[];
+  // const typedArticlesData: ArticleEntry[] = articlesData as ArticleEntry[]; // We'll use the 'articles' state now
   const typedAllSystemLanguages: LanguageOption[] = allSystemLanguages as LanguageOption[];
-
-  const handleSearchNr = (e: ChangeEvent<HTMLInputElement>) => setSearchNr(e.target.value);
-  const handleSearchTitle = (e: ChangeEvent<HTMLInputElement>) => setSearchTitle(e.target.value);
-
-  const filteredArticles = typedArticlesData.filter(
-    (a) =>
-      a.nr.toLowerCase().includes(searchNr.toLowerCase()) &&
-      a.title.toLowerCase().includes(searchTitle.toLowerCase())
-  );
 
   const getLanguageLabels = (languageKeys: string[]): string => {
     return languageKeys
       .map(key => typedAllSystemLanguages.find(lang => lang.value === key)?.label || key)
       .join(', ');
+  };
+
+  const handleCopyBlock = (article: ArticleEntry) => {
+    console.log('Kopiere Block:', article.title);
+    toast('Artikel wurde kopiert');
+  };
+
+  const handleInitiateDelete = (article: ArticleEntry) => {
+    setArticleToDelete(article);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!articleToDelete) return;
+    setArticles(prevArticles => prevArticles.filter(a => a.nr !== articleToDelete.nr));
+    toast.success(`Artikel "${articleToDelete.nr}" wurde gelöscht`);
+    setArticleToDelete(null);
   };
 
   const handleOpenArticleDetailTab = (article: ArticleEntry) => {
@@ -75,8 +87,6 @@ export const ArticleListTable = (/*{ data }: Props*/) => { // data prop removed,
     
     const lastChangeInfo = `Zuletzt geändert am ${article.date} von ${article.lastChangedBy}`;
 
-    // Prepare the initialData for ArticleDetail by filtering based on article.languageKeys
-    // to only pass content for languages actually present in the article.
     const articleSpecificInitialData: Record<string, LocalizedContentDetail> = {};
     article.languageKeys.forEach(key => {
       if (article.localizedContent[key]) {
@@ -90,14 +100,12 @@ export const ArticleListTable = (/*{ data }: Props*/) => { // data prop removed,
       content: (
         <ArticleDetail
           articleId={article.nr}
-          initialData={articleSpecificInitialData} // Pass the article's specific localized content
-          availableLanguages={typedAllSystemLanguages} // Pass all system languages for the dropdowns
+          initialData={articleSpecificInitialData}
+          availableLanguages={typedAllSystemLanguages}
           lastChangeInfo={lastChangeInfo}
           onSaveChanges={(updatedData) => {
             console.log(`Änderungen für ${article.nr} speichern:`, updatedData);
-            // Here you would typically update your backend or global state
-            // For now, just logging. To reflect changes in UI immediately without backend,
-            // you might need to update the state within ArticleListTable or a higher-level state manager.
+            // Backend/state update logic
           }}
         />
       ),
@@ -105,113 +113,191 @@ export const ArticleListTable = (/*{ data }: Props*/) => { // data prop removed,
     });
   };
 
-  const handleRowKeyDown = (e: KeyboardEvent<HTMLTableRowElement>, article: ArticleEntry) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleOpenArticleDetailTab(article);
-    }
+  const columns: ColumnDef<ArticleEntry, any>[] = [
+    {
+      accessorKey: 'nr',
+      header: ({ column }) => (
+        <div className="w-32"> {/* Maintain width for consistency */}
+          <input
+            className="w-full border rounded px-2 py-1 text-xs"
+            placeholder="Nr. suchen"
+            value={(column.getFilterValue() as string) ?? ''}
+            onChange={(e) => column.setFilterValue(e.target.value)}
+            onClick={(e) => e.stopPropagation()} // Prevent sorting when clicking input
+            aria-label="Suche Artikelnummer"
+          />
+        </div>
+      ),
+      cell: ({ row }) => (
+        <span
+          className="text-blue-700 underline hover:text-blue-900 font-medium cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleOpenArticleDetailTab(row.original);
+          }}
+          onKeyDown={(e: KeyboardEvent<HTMLSpanElement>) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              e.stopPropagation();
+              handleOpenArticleDetailTab(row.original);
+            }
+          }}
+          tabIndex={0}
+          role="button"
+          aria-label={`Artikel ${row.original.nr} öffnen`}
+        >
+          {row.original.nr}
+        </span>
+      ),
+      enableSorting: true,
+      enableColumnFilter: true,
+    },
+    {
+      accessorKey: 'title',
+      header: ({ column }) => (
+        <input
+          className="w-full border rounded px-2 py-1 text-xs" // Full width of header cell
+          placeholder="Überschrift suchen"
+          value={(column.getFilterValue() as string) ?? ''}
+          onChange={(e) => column.setFilterValue(e.target.value)}
+          onClick={(e) => e.stopPropagation()}
+          aria-label="Suche Überschrift"
+        />
+      ),
+      cell: ({ row }) => row.original.title,
+      enableSorting: true,
+      enableColumnFilter: true,
+    },
+    {
+      accessorKey: 'languageKeys',
+      header: 'Sprachen',
+      cell: ({ row }) => getLanguageLabels(row.original.languageKeys),
+      enableSorting: false,
+      enableColumnFilter: false, // No simple text filter for this
+      meta: {
+        headerClassName: "w-40", // Apply original width
+      }
+    },
+    {
+      accessorKey: 'date',
+      header: 'Datum', // FilterableTable's DateFilterHeader will use this
+      cell: ({ row }) => row.original.date,
+      enableSorting: true,
+      // Column filtering is handled by dateFilterColumns prop
+      meta: {
+        headerClassName: "w-32", // Apply original width
+      }
+    },
+    {
+      id: 'actions',
+      header: 'Aktion',
+      cell: ({ row }) => (
+        <div className="flex gap-2">
+          <button
+            tabIndex={0}
+            aria-label={`Bearbeiten Artikel ${row.original.nr}`}
+            className="cursor-pointer hover:text-blue-600 p-1"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleOpenArticleDetailTab(row.original);
+            }}
+          >
+            <icons.edit size={16} />
+          </button>
+          <button
+            tabIndex={0}
+            aria-label={`Kopieren Artikel ${row.original.nr}`}
+            className="cursor-pointer hover:text-blue-600 p-1"
+            onClick={(e) => { e.stopPropagation(); handleCopyBlock(row.original); }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleCopyBlock(row.original); }}}
+          >
+            <icons.copy size={16} />
+          </button>
+          <button
+            tabIndex={0}
+            aria-label={`Löschen Artikel ${row.original.nr}`}
+            className="cursor-pointer hover:text-red-600 p-1"
+            onClick={(e) => { e.stopPropagation(); handleInitiateDelete(row.original); }} // Updated onClick
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleInitiateDelete(row.original); }}} // Added onKeyDown for accessibility
+          >
+            <icons.delete size={16} />
+          </button>
+        </div>
+      ),
+      enableSorting: false,
+      enableColumnFilter: false,
+      meta: {
+        headerClassName: "w-32", // Apply original width
+      }
+    },
+  ];
+
+  const dateFilterConfigForDatum: DateFilterConfig = {
+    dateFieldPath: 'date',
   };
+
+  const getRowClassName = (row: Row<ArticleEntry>) => {
+    let className = `cursor-pointer hover:bg-blue-100`;
+    if (selected === row.original.nr) {
+      className += ' bg-blue-200';
+    } else {
+      className += row.index % 2 === 0 ? ' bg-white' : ' bg-gray-100';
+    }
+    return className;
+  };
+  
+  if (articles.length === 0) {
+    return (
+      <div className="w-full">
+        <div className="flex items-center gap-2 mb-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="cursor-pointer flex items-center gap-1"
+            tabIndex={0}
+            aria-label="Artikel hinzufügen"
+          >
+            + Artikel hinzufügen
+          </Button>
+        </div>
+        <div className="rounded-md border p-4 text-center">
+          <p className="py-8">Keine Artikel vorhanden.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">
       <div className="flex items-center gap-2 mb-2">
-        <button
-          className="border rounded px-3 py-1 bg-white hover:bg-gray-100 text-sm font-medium"
+        <Button
+          variant="outline"
+          size="sm"
+          className="cursor-pointer flex items-center gap-1"
           tabIndex={0}
           aria-label="Artikel hinzufügen"
-          // onClick for this button would likely also use openNewTab to open a blank ArticleDetail or a creation form
         >
           + Artikel hinzufügen
-        </button>
+        </Button>
       </div>
       <div className="rounded-md border overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-32">
-                <input
-                  className="w-full border rounded px-2 py-1 text-xs"
-                  placeholder="Nr. suchen"
-                  value={searchNr}
-                  onChange={handleSearchNr}
-                  aria-label="Suche Artikelnummer"
-                />
-              </TableHead>
-              <TableHead>
-                <input
-                  className="w-full border rounded px-2 py-1 text-xs"
-                  placeholder="Überschrift suchen"
-                  value={searchTitle}
-                  onChange={handleSearchTitle}
-                  aria-label="Suche Überschrift"
-                />
-              </TableHead>
-              <TableHead className="w-40">Sprachen</TableHead>
-              <TableHead className="w-32">Datum</TableHead>
-              <TableHead className="w-32">Aktion</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredArticles.length ? (
-              filteredArticles.map((article, i) => (
-                <TableRow
-                  key={article.nr}
-                  tabIndex={0}
-                  aria-label={`Artikel ${article.nr} ${article.title}`}
-                  onClick={() => handleOpenArticleDetailTab(article)}
-                  onKeyDown={(e) => handleRowKeyDown(e, article)}
-                  className={
-                    `cursor-pointer ${selected === article.nr ? 'bg-blue-200' : i % 2 === 0 ? 'bg-white' : 'bg-gray-100'} hover:bg-blue-100`
-                  }
-                  data-state={selected === article.nr ? 'selected' : undefined}
-                >
-                  <TableCell 
-                    className="text-blue-700 underline hover:text-blue-900 font-medium"
-                  >
-                    {article.nr}
-                  </TableCell>
-                  <TableCell>{article.title}</TableCell>
-                  <TableCell>{getLanguageLabels(article.languageKeys)}</TableCell>
-                  <TableCell>{article.date}</TableCell>
-                  <TableCell className="flex gap-2">
-                    <button
-                      tabIndex={0}
-                      aria-label={`Bearbeiten Artikel ${article.nr}`}
-                      className="hover:text-blue-600 p-1"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleOpenArticleDetailTab(article);
-                      }}
-                    >
-                      <icons.edit size={16} />
-                    </button>
-                    <button
-                      tabIndex={0}
-                      aria-label={`Kopieren Artikel ${article.nr}`}
-                      className="hover:text-blue-600 p-1"
-                      onClick={(e) => e.stopPropagation()} 
-                    >
-                      <icons.copy size={16} />
-                    </button>
-                    <button
-                      tabIndex={0}
-                      aria-label={`Löschen Artikel ${article.nr}`}
-                      className="hover:text-red-600 p-1"
-                       onClick={(e) => e.stopPropagation()} 
-                    >
-                      <icons.delete size={16} />
-                    </button>
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">Keine Ergebnisse für die aktuelle Suche.</TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+        <FilterableTable
+            data={articles}
+            columns={columns}
+            onRowClick={(row) => handleOpenArticleDetailTab(row.original)}
+            getRowClassName={getRowClassName}
+            dateFilterColumns={{ date: dateFilterConfigForDatum }} // 'date' is accessorKey
+            defaultSorting={[{ id: 'nr', desc: false }]} // Default sort by Nr Asc
+            tableClassName="w-full" 
+        />
       </div>
+      <DeleteConfirmationDialog
+        open={!!articleToDelete}
+        onOpenChange={(open) => !open && setArticleToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Artikel löschen"
+        description={`Möchten Sie den Artikel "${articleToDelete?.nr || ''}" (${articleToDelete?.title || ''}) wirklich löschen?`}
+      />
     </div>
   );
 };

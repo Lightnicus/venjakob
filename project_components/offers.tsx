@@ -90,7 +90,7 @@ const OffersContent: FC = () => {
           size="sm"
           onClick={() => openDialog(DIALOGS.NEW_OFFER)}
         >
-          Erstellen
+          + Erstellen
         </Button>
         <Select defaultValue="Offen">
           <SelectTrigger
