@@ -8,6 +8,8 @@ import Link from 'next/link';
 import { FilterableTable, type DateFilterConfig } from './filterable-table';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import OfferVersionsTable from './offer-versions-table';
+import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
+import { toast } from 'sonner';
 
 export type OrderConfirmation = {
   abNumber: string;
@@ -25,12 +27,22 @@ export type OrderConfirmation = {
 
 type Props = {
   data: OrderConfirmation[];
+  // It would be good to have an onDelete callback if data is managed by parent
+  // onDeleteConfirmation?: (abNumber: string) => void; 
 };
 
-const OrderConfirmations = ({ data }: Props) => {
+const OrderConfirmations = ({ data /*, onDeleteConfirmation */ }: Props) => {
+  const [tableData, setTableData] = React.useState<OrderConfirmation[]>(data); // Manage local state for data
+  const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null); // State for dialog
+
+  // Update local state if prop data changes
+  React.useEffect(() => {
+    setTableData(data);
+  }, [data]);
+  
   // Dropdown options
-  const responsibleOptions = React.useMemo(() => Array.from(new Set(data.map(d => d.responsible))).sort(), [data]);
-  const modifiedByOptions = React.useMemo(() => Array.from(new Set(data.map(d => d.modifiedBy))).sort(), [data]);
+  const responsibleOptions = React.useMemo(() => Array.from(new Set(tableData.map(d => d.responsible))).sort(), [tableData]);
+  const modifiedByOptions = React.useMemo(() => Array.from(new Set(tableData.map(d => d.modifiedBy))).sort(), [tableData]);
 
   const [showHistoryDialog, setShowHistoryDialog] = React.useState(false);
 
@@ -38,10 +50,19 @@ const OrderConfirmations = ({ data }: Props) => {
     setShowHistoryDialog(true);
   };
 
+  const handleDeleteOrderConfirmation = (abNumber: string) => {
+    setTableData(prevData => prevData.filter(item => item.abNumber !== abNumber));
+    setConfirmDeleteId(null);
+    toast.success('Auftragsbestätigung gelöscht');
+    // if (onDeleteConfirmation) {
+    //   onDeleteConfirmation(abNumber);
+    // }
+  };
+
   // Function to get valid dates for the 'modifiedOn' filter
-  const getValidDatesForModifiedOn = React.useCallback((tableData: OrderConfirmation[]): Date[] => {
+  const getValidDatesForModifiedOn = React.useCallback((currentTableData: OrderConfirmation[]): Date[] => {
     const dateStrings = new Set<string>();
-    tableData.forEach(d => {
+    currentTableData.forEach(d => {
       if (d.modifiedOn && typeof d.modifiedOn === 'string') {
         dateStrings.add(d.modifiedOn);
       }
@@ -149,7 +170,12 @@ const OrderConfirmations = ({ data }: Props) => {
           >
             <History className="h-4 w-4" />
           </button>
-          <button aria-label="Löschen" tabIndex={0} className="cursor-pointer rounded p-1 hover:bg-gray-100">
+          <button 
+            aria-label="Löschen" 
+            tabIndex={0} 
+            className="cursor-pointer rounded p-1 hover:bg-gray-100"
+            onClick={() => setConfirmDeleteId(row.original.abNumber)}
+          >
             <Trash className="h-4 w-4" />
           </button>
         </div>
@@ -167,7 +193,7 @@ const OrderConfirmations = ({ data }: Props) => {
   return (
     <>
       <FilterableTable<OrderConfirmation>
-        data={data}
+        data={tableData}
         columns={columns}
         dateFilterColumns={{ modifiedOn: dateFilterConfigForModifiedOn }}
       />
@@ -179,6 +205,17 @@ const OrderConfirmations = ({ data }: Props) => {
           <OfferVersionsTable />
         </DialogContent>
       </Dialog>
+      <DeleteConfirmationDialog
+        open={!!confirmDeleteId}
+        onOpenChange={open => !open && setConfirmDeleteId(null)}
+        onConfirm={() => {
+          if (confirmDeleteId) {
+            handleDeleteOrderConfirmation(confirmDeleteId);
+          }
+        }}
+        title="Auftragsbestätigung löschen"
+        description="Möchten Sie diese Auftragsbestätigung wirklich löschen?"
+      />
     </>
   );
 };

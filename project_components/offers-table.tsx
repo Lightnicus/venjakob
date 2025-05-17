@@ -15,17 +15,7 @@ import OfferDetail from './offer-detail';
 import { FilterableTable, DateFilterConfig } from './filterable-table';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogFooter,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogAction,
-  AlertDialogCancel,
-} from '@/components/ui/alert-dialog';
+import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 
 type Offer = {
   id: string;
@@ -408,20 +398,12 @@ export function OffersTable({
         dateFilterColumns={dateFilterConfigs}
         onRowClick={handleRowClick}
       />
-      <AlertDialog open={!!confirmDeleteId} onOpenChange={open => !open && setConfirmDeleteId(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Sind Sie sicher?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Möchten Sie das Angebot wirklich löschen? 
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setConfirmDeleteId(null)}>Abbrechen</AlertDialogCancel>
-            <AlertDialogAction onClick={() => handleDeleteOffer(confirmDeleteId!)}>Löschen</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <DeleteConfirmationDialog
+        open={!!confirmDeleteId}
+        onOpenChange={open => !open && setConfirmDeleteId(null)}
+        onConfirm={() => handleDeleteOffer(confirmDeleteId!)}
+        description="Möchten Sie das Angebot wirklich löschen?"
+      />
     </RadioGroup>
   );
 }
