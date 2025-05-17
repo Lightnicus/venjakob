@@ -17,7 +17,7 @@ type OfferDetailProps = {
 
 const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language }) => {
   const [tab, setTab] = useState('bloecke');
-  const [dropdownValue, setDropdownValue] = useState('Kalkulation öffnen');
+  const [dropdownValue, setDropdownValue] = useState('Kalkulation');
   const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false);
   
   // You can use variantId and language here to fetch specific offer data if needed
@@ -56,9 +56,10 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
               aria-label="Kalkulation Aktionen"
               tabIndex={0}
             >
-              <SelectValue placeholder="Kalkulation öffnen" />
+              <SelectValue placeholder="Kalkulation" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="Kalkulation">Kalkulation</SelectItem>
               <SelectItem value="Kalkulation öffnen">Kalkulation öffnen</SelectItem>
               <SelectItem value="Kalkulation aktualisieren">Kalkulation aktualisieren</SelectItem>
               <SelectItem value="Kalkulation neu erstellen">Kalkulation neu erstellen</SelectItem>

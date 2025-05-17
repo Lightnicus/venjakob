@@ -21,8 +21,7 @@ import {
   DialogRenderer,
   useDialogManager,
 } from './dialog-manager';
-import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
-import OfferDetail from '@/project_components/offer-detail';
+import saleChancesData from '@/data/sale-chances.json';
 
 // Dialog IDs
 const DIALOGS = {
@@ -35,31 +34,6 @@ const DIALOGS = {
   CONFIRM_OVERWRITE_VARIANT: 'confirm-overwrite-variant',
   VERSIONS_FOR_OFFER_VARIANT: 'versions-for-offer-variant',
 };
-
-const dummySalesOpportunities: SaleChance[] = [
-  {
-    titel: 'Beispielchance 1',
-    kunde: 'Kunde A',
-    verantwortlicher: 'Max Mustermann',
-    status: 'Offen',
-    gb: 'GB1',
-    volumen: '10000',
-    liefertermin: '01.01.2025',
-    geaendertAm: '01.06.2024',
-    angebote: 2,
-  },
-  {
-    titel: 'Beispielchance 2',
-    kunde: 'Kunde B',
-    verantwortlicher: 'Erika Musterfrau',
-    status: 'In Bearbeitung',
-    gb: 'GB2',
-    volumen: '20000',
-    liefertermin: '15.02.2025',
-    geaendertAm: '02.06.2024',
-    angebote: 1,
-  },
-];
 
 // Offers component that uses DialogManager
 const OffersContent: FC = () => {
@@ -144,7 +118,7 @@ const ChooseSalesOpportunityDialogComponent: FC = () => {
 
   return (
     <ChooseSalesOpportunityDialog
-      data={dummySalesOpportunities}
+      data={saleChancesData}
       onWeiter={handleWeiter}
     />
   );
