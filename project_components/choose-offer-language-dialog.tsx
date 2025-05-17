@@ -1,27 +1,30 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/select';
 import { FC, useState } from 'react';
-import languages from '@/data/languages.json';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
+import { ManagedDialog } from '@/project_components/managed-dialog';
+import { useDialogManager } from '@/project_components/dialog-manager';
 import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
 import OfferDetail from '@/project_components/offer-detail';
-
-interface ChooseOfferLanguageDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onAbbrechen?: () => void;
-  onZurueck?: () => void;
-  onErstellen?: () => void;
-}
 
 type Language = {
   value: string;
   label: string;
 };
 
-const ChooseOfferLanguageDialog: FC<ChooseOfferLanguageDialogProps> = ({ open, onOpenChange, onAbbrechen, onZurueck, onErstellen }) => {
+const languages: Language[] = [
+  { value: 'de', label: 'Deutsch' },
+  { value: 'en', label: 'Englisch' },
+  { value: 'fr', label: 'Französisch' },
+];
+
+type ChooseOfferLanguageDialogProps = {
+  onErstellen?: () => void;
+};
+
+const ChooseOfferLanguageDialog: FC<ChooseOfferLanguageDialogProps> = ({ onErstellen }) => {
   const [language, setLanguage] = useState(languages[0]?.value || '');
   const { openNewTab } = useTabbedInterface();
+  const { closeDialog } = useDialogManager();
 
   const handleErstellen = () => {
     // Call the original onErstellen callback if provided
@@ -46,43 +49,40 @@ const ChooseOfferLanguageDialog: FC<ChooseOfferLanguageDialogProps> = ({ open, o
     });
     
     // Close the dialog
-    onOpenChange(false);
+    closeDialog();
   };
 
+  const footer = (
+    <Button 
+      type="button" 
+      aria-label="Erstellen" 
+      onClick={handleErstellen}
+    >
+      Erstellen
+    </Button>
+  );
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-label="Sprache für Angebot wählen">
-        <DialogHeader>
-          <DialogTitle>Sprache für Angebot</DialogTitle>
-        </DialogHeader>
-        <div className="py-4 text-base flex flex-col gap-4">
-          <span>In welcher Sprache soll das Angebot erstellt werden?</span>
-          <Select value={language} onValueChange={setLanguage}>
-            <SelectTrigger className="w-64" aria-label="Sprache wählen">
-              {languages.find(l => l.value === language)?.label || ''}
-            </SelectTrigger>
-            <SelectContent>
-              {languages.map((lang: Language) => (
-                <SelectItem key={lang.value} value={lang.value}>{lang.label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <DialogFooter>
-          <div className="flex gap-2 justify-end w-full">
-            <Button type="button" variant="outline" aria-label="Abbrechen" onClick={onAbbrechen || (() => onOpenChange(false))}>
-              Abbrechen
-            </Button>
-            <Button type="button" variant="outline" aria-label="Zurück" onClick={onZurueck || (() => onOpenChange(false))}>
-              Zurück
-            </Button>
-            <Button type="button" aria-label="Erstellen" onClick={handleErstellen}>
-              Erstellen
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <ManagedDialog
+      title="Sprache für Angebot"
+      footer={footer}
+      showBackButton={true}
+      showCloseButton={true}
+    >
+      <div className="flex flex-col gap-4">
+        <span>In welcher Sprache soll das Angebot erstellt werden?</span>
+        <Select value={language} onValueChange={setLanguage}>
+          <SelectTrigger className="w-64" aria-label="Sprache wählen">
+            {languages.find(l => l.value === language)?.label || ''}
+          </SelectTrigger>
+          <SelectContent>
+            {languages.map((lang: Language) => (
+              <SelectItem key={lang.value} value={lang.value}>{lang.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </ManagedDialog>
   );
 };
 

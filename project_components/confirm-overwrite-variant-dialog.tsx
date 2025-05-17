@@ -1,78 +1,56 @@
 'use client';
 
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { ManagedDialog } from '@/project_components/managed-dialog';
+import { useDialogManager } from '@/project_components/dialog-manager';
+import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
+import OfferDetail from '@/project_components/offer-detail';
 
-interface ConfirmOverwriteVariantProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
+type ConfirmOverwriteVariantProps = {
   offerNumber: string;
   variantIdentifier: string;
-  onCancel: () => void;
-  onBack: () => void;
   onConfirm: () => void;
-}
+};
 
 export function ConfirmOverwriteVariantDialog({
-  open,
-  onOpenChange,
   offerNumber,
   variantIdentifier,
-  onCancel,
-  onBack,
   onConfirm,
 }: ConfirmOverwriteVariantProps) {
-  const handleCancel = () => {
-    onCancel();
-    onOpenChange(false);
+  const { openNewTab } = useTabbedInterface();
+
+  const handleConfirm = () => {
+    // Open a new tab with OfferDetail
+    const tabId = `offer-${Date.now()}`;
+    openNewTab({
+      id: tabId,
+      title: 'Neues Angebot',
+      content: (
+        <OfferDetail title="Neues Angebot" variantId={variantIdentifier} />
+      ),
+      closable: true,
+    });
+
+    onConfirm();
   };
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent aria-label="Bestätigung zum Überschreiben einer Angebotsvariante">
-        <DialogHeader>
-          <DialogTitle>Angebotsvariante überschreiben?</DialogTitle>
-        </DialogHeader>
-        
-        <div className="py-4 text-base">
-          Ihre aktuellen Bearbeitungen in Angebotsvariante {offerNumber}-{variantIdentifier} werden überschrieben. 
-          Wollen Sie fortfahren?
-        </div>
-        
-        <DialogFooter>
-          <div className="flex justify-end gap-2 w-full">
-            <Button 
-              variant="outline" 
-              onClick={handleCancel}
-              aria-label="Abbrechen"
-              tabIndex={0}
-            >
-              Abbrechen
-            </Button>
-            <Button 
-              variant="outline" 
-              onClick={onBack}
-              aria-label="Zurück"
-              tabIndex={0}
-            >
-              Zurück
-            </Button>
-            <Button 
-              onClick={onConfirm}
-              aria-label="Ja"
-              tabIndex={0}
-            >
-              Ja
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+  const footer = (
+    <Button onClick={handleConfirm} aria-label="Ja" tabIndex={0}>
+      Ja
+    </Button>
   );
-} 
+
+  return (
+    <ManagedDialog
+      title="Angebotsvariante überschreiben?"
+      footer={footer}
+      showBackButton={true}
+      showCloseButton={true}
+    >
+      <div className="text-base">
+        Ihre aktuellen Bearbeitungen in Angebotsvariante {offerNumber}-
+        {variantIdentifier} werden überschrieben. Wollen Sie fortfahren?
+      </div>
+    </ManagedDialog>
+  );
+}

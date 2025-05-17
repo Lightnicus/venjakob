@@ -16,7 +16,13 @@ import ChooseOfferLanguageDialog from '@/project_components/choose-offer-languag
 import { ChooseOfferVariantDialog } from '@/project_components/choose-offer-variant-dialog';
 import { ConfirmOverwriteVariantDialog } from '@/project_components/confirm-overwrite-variant-dialog';
 import { VersionsForOfferVariantDialog } from '@/project_components/versions-for-offer-variant-dialog';
-import { DialogManagerProvider, DialogRenderer, useDialogManager } from './dialog-manager';
+import {
+  DialogManagerProvider,
+  DialogRenderer,
+  useDialogManager,
+} from './dialog-manager';
+import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
+import OfferDetail from '@/project_components/offer-detail';
 
 // Dialog IDs
 const DIALOGS = {
@@ -58,10 +64,15 @@ const dummySalesOpportunities: SaleChance[] = [
 // Offers component that uses DialogManager
 const OffersContent: FC = () => {
   const { openDialog } = useDialogManager();
-  const [selectedOfferNumber, setSelectedOfferNumber] = useState('ANG-2023-0001');
-  const [selectedVariantIdentifier, setSelectedVariantIdentifier] = useState('A');
+  const [selectedOfferNumber, setSelectedOfferNumber] =
+    useState('ANG-2023-0001');
+  const [selectedVariantIdentifier, setSelectedVariantIdentifier] =
+    useState('A');
 
-  const handleOpenVersionsDialog = (offerNumber: string, variantIdentifier: string) => {
+  const handleOpenVersionsDialog = (
+    offerNumber: string,
+    variantIdentifier: string,
+  ) => {
     setSelectedOfferNumber(offerNumber);
     setSelectedVariantIdentifier(variantIdentifier);
     openDialog(DIALOGS.VERSIONS_FOR_OFFER_VARIANT, {
@@ -101,46 +112,31 @@ const OffersContent: FC = () => {
 
 // Dialog Components
 const NewOfferDialogComponent: FC = () => {
-  const { closeDialog, openDialog } = useDialogManager();
+  const { openDialog } = useDialogManager();
 
-  const handleCancel = () => closeDialog();
-  
   const handleNo = () => {
     openDialog(DIALOGS.CHOOSE_SALES_OPPORTUNITY);
   };
-  
+
   const handleYes = () => {
     openDialog(DIALOGS.CHOOSE_OFFER);
   };
 
-  return (
-    <NewOfferFromExistingDialog
-      onNo={handleNo}
-      onYes={handleYes}
-    />
-  );
+  return <NewOfferFromExistingDialog onNo={handleNo} onYes={handleYes} />;
 };
 
 const ChooseOfferDialogComponent: FC = () => {
-  const { closeDialog, openDialog } = useDialogManager();
+  const { openDialog } = useDialogManager();
 
   const handleWeiter = () => {
-    openDialog(DIALOGS.OFFER_AS_NEW_VARIANT);
+    openDialog(DIALOGS.CHOOSE_SALES_OPPORTUNITY);
   };
 
-  return (
-    <ChooseOfferDialog
-      onWeiter={handleWeiter}
-    />
-  );
+  return <ChooseOfferDialog onWeiter={handleWeiter} />;
 };
 
 const ChooseSalesOpportunityDialogComponent: FC = () => {
-  const { closeDialog, openDialog, goBack } = useDialogManager();
-
-  const handleZurueck = () => {
-    goBack();
-  };
+  const { openDialog } = useDialogManager();
 
   const handleWeiter = (selectedChance: SaleChance) => {
     openDialog(DIALOGS.OFFER_AS_NEW_VARIANT);
@@ -154,12 +150,10 @@ const ChooseSalesOpportunityDialogComponent: FC = () => {
   );
 };
 
-const OfferAsNewVariantDialogComponent: FC<{ fromVariantSelection?: boolean }> = ({ fromVariantSelection }) => {
-  const { closeDialog, openDialog, goBack } = useDialogManager();
-
-  const handleZurueck = () => {
-    goBack();
-  };
+const OfferAsNewVariantDialogComponent: FC<{
+  fromVariantSelection?: boolean;
+}> = ({ fromVariantSelection }) => {
+  const { openDialog } = useDialogManager();
 
   const handleJa = () => {
     openDialog(DIALOGS.CHOOSE_OFFER_LANGUAGE);
@@ -169,63 +163,43 @@ const OfferAsNewVariantDialogComponent: FC<{ fromVariantSelection?: boolean }> =
     openDialog(DIALOGS.CHOOSE_OFFER_VARIANT, { isCreatingNewVersion: true });
   };
 
-  return (
-    <OfferAsNewVariantDialog
-      onJa={handleJa}
-      onNein={handleNein}
-    />
-  );
+  return <OfferAsNewVariantDialog onJa={handleJa} onNein={handleNein} />;
 };
 
 const ChooseOfferLanguageDialogComponent: FC = () => {
-  const { closeDialog, openDialog, goBack } = useDialogManager();
-
-  const handleZurueck = () => {
-    goBack();
-  };
-
   return (
     <ChooseOfferLanguageDialog
-      open={true}
-      onOpenChange={(open) => !open && closeDialog()}
-      onZurueck={handleZurueck}
+    // onErstellen={handleErstellen}
     />
   );
 };
 
-const ChooseOfferVariantDialogComponent: FC<{ isCreatingNewVersion?: boolean }> = ({ isCreatingNewVersion = false }) => {
-  const { closeDialog, openDialog, goBack } = useDialogManager();
+const ChooseOfferVariantDialogComponent: FC<{
+  isCreatingNewVersion?: boolean;
+}> = ({ isCreatingNewVersion = false }) => {
+  const { openDialog } = useDialogManager();
 
-  const handleCancel = () => closeDialog();
-
-  const handleBack = () => {
-    goBack();
-  };
-
-  const handleCreate = () => {
-    openDialog(DIALOGS.CONFIRM_OVERWRITE_VARIANT);
+  const handleCreate = (identifier: any) => {
+    // console.log('handleCreate ChooseOfferVariantDialog');
+    openDialog(DIALOGS.CONFIRM_OVERWRITE_VARIANT, {
+      variantIdentifier: identifier,
+    });
   };
 
   return (
     <ChooseOfferVariantDialog
-      open={true}
-      onOpenChange={(open) => !open && closeDialog()}
-      onCancel={handleCancel}
-      onBack={handleBack}
       onCreate={handleCreate}
-      header={isCreatingNewVersion ? "Zu welcher Angebotsvariante soll eine neue Version erstellt werden?" : undefined}
+      header={
+        isCreatingNewVersion
+          ? 'Zu welcher Angebotsvariante soll eine neue Version erstellt werden?'
+          : undefined
+      }
     />
   );
 };
 
 const ConfirmOverwriteVariantDialogComponent: FC = () => {
-  const { closeDialog, openDialog, goBack } = useDialogManager();
-
-  const handleCancel = () => closeDialog();
-
-  const handleBack = () => {
-    goBack();
-  };
+  const { closeDialog } = useDialogManager();
 
   const handleConfirm = () => {
     closeDialog();
@@ -234,32 +208,21 @@ const ConfirmOverwriteVariantDialogComponent: FC = () => {
 
   return (
     <ConfirmOverwriteVariantDialog
-      open={true}
-      onOpenChange={(open) => !open && closeDialog()}
       offerNumber="ANG-2023-0001"
       variantIdentifier="V2"
-      onCancel={handleCancel}
-      onBack={handleBack}
       onConfirm={handleConfirm}
     />
   );
 };
 
-const VersionsForOfferVariantDialogComponent: FC<{ offerNumber: string; variantIdentifier: string }> = ({
-  offerNumber,
-  variantIdentifier,
-}) => {
-  const { closeDialog } = useDialogManager();
-
-  const handleClose = () => closeDialog();
-
+const VersionsForOfferVariantDialogComponent: FC<{
+  offerNumber: string;
+  variantIdentifier: string;
+}> = ({ offerNumber, variantIdentifier }) => {
   return (
     <VersionsForOfferVariantDialog
-      open={true}
-      onOpenChange={(open) => !open && closeDialog()}
       offerNumber={offerNumber}
       variantIdentifier={variantIdentifier}
-      onClose={handleClose}
     />
   );
 };
@@ -268,12 +231,30 @@ const VersionsForOfferVariantDialogComponent: FC<{ offerNumber: string; variantI
 const dialogComponents = [
   { id: DIALOGS.NEW_OFFER, component: NewOfferDialogComponent },
   { id: DIALOGS.CHOOSE_OFFER, component: ChooseOfferDialogComponent },
-  { id: DIALOGS.CHOOSE_SALES_OPPORTUNITY, component: ChooseSalesOpportunityDialogComponent },
-  { id: DIALOGS.OFFER_AS_NEW_VARIANT, component: OfferAsNewVariantDialogComponent },
-  { id: DIALOGS.CHOOSE_OFFER_LANGUAGE, component: ChooseOfferLanguageDialogComponent },
-  { id: DIALOGS.CHOOSE_OFFER_VARIANT, component: ChooseOfferVariantDialogComponent },
-  { id: DIALOGS.CONFIRM_OVERWRITE_VARIANT, component: ConfirmOverwriteVariantDialogComponent },
-  { id: DIALOGS.VERSIONS_FOR_OFFER_VARIANT, component: VersionsForOfferVariantDialogComponent },
+  {
+    id: DIALOGS.CHOOSE_SALES_OPPORTUNITY,
+    component: ChooseSalesOpportunityDialogComponent,
+  },
+  {
+    id: DIALOGS.OFFER_AS_NEW_VARIANT,
+    component: OfferAsNewVariantDialogComponent,
+  },
+  {
+    id: DIALOGS.CHOOSE_OFFER_LANGUAGE,
+    component: ChooseOfferLanguageDialogComponent,
+  },
+  {
+    id: DIALOGS.CHOOSE_OFFER_VARIANT,
+    component: ChooseOfferVariantDialogComponent,
+  },
+  {
+    id: DIALOGS.CONFIRM_OVERWRITE_VARIANT,
+    component: ConfirmOverwriteVariantDialogComponent,
+  },
+  {
+    id: DIALOGS.VERSIONS_FOR_OFFER_VARIANT,
+    component: VersionsForOfferVariantDialogComponent,
+  },
 ];
 
 // Main component with dialog management
