@@ -16,6 +16,7 @@ import { FilterableTable, DateFilterConfig } from './filterable-table';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
+import PdfPreview from '@/project_components/pdf-preview';
 
 type Offer = {
   id: string;
@@ -335,7 +336,12 @@ export function OffersTable({
               className="rounded p-1 hover:bg-gray-100 cursor-pointer" 
               aria-label="PDF anzeigen" 
               tabIndex={0}
-              onClick={() => window.open('/dummy.pdf', '_blank')}
+              onClick={() => openNewTab({
+                id: `pdf-preview-offer-${row.original.id}-${Date.now()}`,
+                title: `Vorschau Angebot ${row.original.offerNumber}`,
+                content: <PdfPreview file="/dummy.pdf" />,
+                closable: true,
+              })}
             >
               <FileText className="h-4 w-4" />
             </button>

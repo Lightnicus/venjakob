@@ -7,6 +7,8 @@ import versionsData from '@/data/versions-for-variant.json';
 import { Copy, FileText, Trash } from 'lucide-react';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from '@/project_components/delete-confirmation-dialog';
+import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
+import PdfPreview from '@/project_components/pdf-preview';
 
 type Version = {
   id: string;
@@ -46,9 +48,15 @@ const ActionButton: React.FC<{
 const OfferVersionsTable: React.FC = () => {
   const [versions, setVersions] = useState<Version[]>(versionsData);
   const [versionToDelete, setVersionToDelete] = useState<Version | null>(null);
+  const { openNewTab } = useTabbedInterface();
 
-  const handleViewVersion = () => {
-    window.open('/dummy.pdf', '_blank');
+  const handleViewVersion = (version: Version) => {
+    openNewTab({
+      id: `pdf-preview-version-${version.id}-${Date.now()}`,
+      title: `Vorschau Version ${version.version}`,
+      content: <PdfPreview file="/dummy.pdf" />,
+      closable: true,
+    });
   };
 
   const handleCopyVersion = (version: Version) => {
@@ -96,7 +104,7 @@ const OfferVersionsTable: React.FC = () => {
           {
             label: 'Ansehen',
             svg: <FileText size={18} />,
-            onClick: handleViewVersion,
+            onClick: () => handleViewVersion(version),
           },
           {
             label: 'Kopieren',
