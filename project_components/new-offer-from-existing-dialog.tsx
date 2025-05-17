@@ -1,29 +1,42 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { FC } from 'react';
 import { Button } from '@/components/ui/button';
-import type { FC } from 'react';
+import { ManagedDialog } from '@/project_components/managed-dialog';
+import { useDialogManager } from '@/project_components/dialog-manager';
 
-type Props = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onCancel: () => void;
-  onNo: () => void;
-  onYes: () => void;
+type NewOfferFromExistingDialogProps = {
+  onNo?: () => void;
+  onYes?: () => void;
 };
 
-const NewOfferFromExistingDialog: FC<Props> = ({ open, onOpenChange, onCancel, onNo, onYes }) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>Angebot erstellen</DialogTitle>
-      </DialogHeader>
-      <div className="py-4 text-base">Wollen Sie ein bereits existierendes Angebot kopieren?</div>
-      <DialogFooter className="flex justify-end gap-2">
-        <Button variant="outline" onClick={onCancel}>Abbrechen</Button>
-        <Button variant="outline" onClick={onNo}>Nein</Button>
-        <Button onClick={onYes}>Ja</Button>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
+const NewOfferFromExistingDialog: FC<NewOfferFromExistingDialogProps> = ({ 
+  onNo, 
+  onYes 
+}) => {
+  const { closeDialog } = useDialogManager();
+
+  const footer = (
+    <>
+      <Button variant="outline" onClick={onNo}>
+        Nein
+      </Button>
+      <Button onClick={onYes}>
+        Ja
+      </Button>
+    </>
+  );
+
+  return (
+    <ManagedDialog 
+      title="Angebot erstellen"
+      footer={footer}
+      showCloseButton={true}
+      showBackButton={false}
+    >
+      <div className="text-base">
+        Wollen Sie ein bereits existierendes Angebot kopieren?
+      </div>
+    </ManagedDialog>
+  );
+};
 
 export default NewOfferFromExistingDialog; 
