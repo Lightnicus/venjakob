@@ -13,6 +13,7 @@ import offersData from '@/data/offers.json';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import OfferDetail from './offer-detail';
 import { FilterableTable, DateFilterConfig } from './filterable-table';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 type Offer = {
   id: string;
@@ -34,17 +35,22 @@ type Offer = {
 
 export interface OffersTableProps {
   reducedMode?: boolean;
+  selectMode?: boolean;
   onOpenVersionsDialog?: (offerNumber: string, variantIdentifier: string) => void;
+  onSelectOffer?: (offer: Offer) => void;
 }
 
 // Context to provide offers to header
 const OffersTableOffersContext = React.createContext<any[] | undefined>(undefined);
 
 export function OffersTable({ 
-  reducedMode = false, 
-  onOpenVersionsDialog 
+  reducedMode = false,
+  selectMode = false, 
+  onOpenVersionsDialog,
+  onSelectOffer 
 }: OffersTableProps) {
   const [offers, setOffers] = React.useState<Offer[]>(offersData);
+  const [selectedOfferId, setSelectedOfferId] = React.useState<string | null>(null);
   const { openNewTab } = useTabbedInterface();
 
   const toggleCheckbox = (id: string) => {
@@ -56,6 +62,22 @@ export function OffersTable({
         return offer;
       }),
     );
+  };
+
+  const handleSelectOffer = (offerId: string) => {
+    setSelectedOfferId(offerId);
+    if (onSelectOffer) {
+      const selectedOffer = offers.find(offer => offer.id === offerId);
+      if (selectedOffer) {
+        onSelectOffer(selectedOffer);
+      }
+    }
+  };
+
+  const handleRowClick = (row: Row<Offer>) => {
+    if (selectMode) {
+      handleSelectOffer(row.original.id);
+    }
   };
 
   const handleOfferNumberClick = (offerNumber: string) => {
@@ -84,6 +106,25 @@ export function OffersTable({
   ], [offers]);
 
   const columns = React.useMemo<ColumnDef<Offer>[]>(() => [
+    ...(selectMode ? [
+      {
+        id: 'select',
+        header: () => <div className="pl-4">Auswahl</div>,
+        cell: ({ row }: { row: Row<Offer> }) => (
+          <div className="pl-4">
+            <RadioGroupItem
+              value={row.original.id}
+              id={`select-${row.original.id}`}
+              checked={selectedOfferId === row.original.id}
+              onClick={() => handleSelectOffer(row.original.id)}
+              aria-label={`Angebot ${row.original.offer} auswählen`}
+            />
+          </div>
+        ),
+        enableSorting: false,
+        enableColumnFilter: false,
+      }
+    ] : []),
     {
       accessorKey: 'offerNumber',
       header: () => (
@@ -296,10 +337,22 @@ export function OffersTable({
         enableColumnFilter: false,
       },
     ] : []),
-  ], [reducedMode, responsibleOptions, modifiedByOptions]);
+  ], [reducedMode, responsibleOptions, modifiedByOptions, selectMode, selectedOfferId, handleSelectOffer]);
 
-  const getRowClassName = (row: Row<Offer>) => 
-    row.original.checked ? 'bg-blue-50' : '';
+  const getRowClassName = (row: Row<Offer>) => {
+    let classes = [];
+    
+    if (selectMode) {
+      classes.push('cursor-pointer hover:bg-blue-50/50');
+      if (selectedOfferId === row.original.id) {
+        classes.push('bg-blue-50');
+      }
+    } else if (row.original.checked) {
+      classes.push('bg-blue-50');
+    }
+    
+    return classes.join(' ');
+  };
 
   // Define date filter configurations
   const dateFilterConfigs: Record<string, DateFilterConfig> = {
@@ -309,15 +362,18 @@ export function OffersTable({
   };
 
   return (
-    <FilterableTable
-      data={offers}
-      columns={columns}
-      filterColumn="offer"
-      filterPlaceholder="Filtern nach Angebot..."
-      getRowClassName={getRowClassName}
-      contextValue={offers}
-      ContextProvider={OffersTableOffersContext.Provider}
-      dateFilterColumns={dateFilterConfigs}
-    />
+    <RadioGroup value={selectedOfferId || ""}>
+      <FilterableTable
+        data={offers}
+        columns={columns}
+        filterColumn="offer"
+        filterPlaceholder="Filtern nach Angebot..."
+        getRowClassName={getRowClassName}
+        contextValue={offers}
+        ContextProvider={OffersTableOffersContext.Provider}
+        dateFilterColumns={dateFilterConfigs}
+        onRowClick={handleRowClick}
+      />
+    </RadioGroup>
   );
 }
