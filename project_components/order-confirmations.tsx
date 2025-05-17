@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import OfferVersionsTable from './offer-versions-table';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 import { toast } from 'sonner';
+import { useTabbedInterface } from './tabbed-interface-provider';
+import OfferDetail from './offer-detail';
 
 export type OrderConfirmation = {
   abNumber: string;
@@ -34,6 +36,7 @@ type Props = {
 const OrderConfirmations = ({ data /*, onDeleteConfirmation */ }: Props) => {
   const [tableData, setTableData] = React.useState<OrderConfirmation[]>(data); // Manage local state for data
   const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null); // State for dialog
+  const { openNewTab } = useTabbedInterface();
 
   // Update local state if prop data changes
   React.useEffect(() => {
@@ -159,7 +162,18 @@ const OrderConfirmations = ({ data /*, onDeleteConfirmation */ }: Props) => {
     { id: 'aktionen', header: 'Aktionen',
       cell: ({ row }: { row: Row<OrderConfirmation> }) => (
         <div className="flex gap-2">
-          <button aria-label="Bearbeiten" tabIndex={0} className="cursor-pointer rounded p-1 hover:bg-gray-100">
+          <button 
+            aria-label="Bearbeiten" 
+            tabIndex={0} 
+            className="cursor-pointer rounded p-1 hover:bg-gray-100"
+            onClick={() => {
+              openNewTab({
+                id: `offer-detail-${row.original.abNumber}`,
+                title: `Angebot ${row.original.abNumber}`,
+                content: <OfferDetail title={row.original.abNumber} /> 
+              });
+            }}
+          >
             <Edit className="h-4 w-4" />
           </button>
           <button 
@@ -183,7 +197,7 @@ const OrderConfirmations = ({ data /*, onDeleteConfirmation */ }: Props) => {
       enableSorting: false,
       enableColumnFilter: false,
     },
-  ], [responsibleOptions, modifiedByOptions, getValidDatesForModifiedOn]);
+  ], [responsibleOptions, modifiedByOptions, getValidDatesForModifiedOn, openNewTab]);
 
   const dateFilterConfigForModifiedOn: DateFilterConfig = {
     getValidDates: getValidDatesForModifiedOn,
@@ -214,7 +228,7 @@ const OrderConfirmations = ({ data /*, onDeleteConfirmation */ }: Props) => {
           }
         }}
         title="Auftragsbestätigung löschen"
-        description="Möchten Sie diese Auftragsbestätigung wirklich löschen?"
+        description="Möchten Sie diese Auftragsbestätigung wirklich löschen?  "
       />
     </>
   );
