@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Calendar,
   Check,
@@ -31,18 +32,21 @@ type OfferVariant = {
   modifiedOn: string;
 };
 
-export function OfferVariantsTable() {
+export function OfferVariantsTable({ showActions = true }: { showActions?: boolean }) {
   const [offerVariants, setOfferVariants] =
-    useState<OfferVariant[]>(offerVariantsData);
+    useState<OfferVariant[]>(offerVariantsData.map(variant => ({
+      ...variant,
+      checked: false
+    })));
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
 
-  const toggleCheckbox = (id: string) => {
+  const selectVariant = (id: string) => {
+    setSelectedVariantId(id === selectedVariantId ? null : id);
     setOfferVariants(
-      offerVariants.map(variant => {
-        if (variant.id === id) {
-          return { ...variant, checked: !variant.checked };
-        }
-        return variant;
-      }),
+      offerVariants.map(variant => ({
+        ...variant,
+        checked: variant.id === id && id !== selectedVariantId
+      }))
     );
   };
 
@@ -50,13 +54,16 @@ export function OfferVariantsTable() {
     () => [
       {
         id: 'select',
-        header: () => <Checkbox />,
+        header: () => <span className="sr-only">Auswählen</span>,
         cell: ({ row }: { row: Row<OfferVariant> }) => (
-          <Checkbox
-            checked={row.original.checked}
-            onCheckedChange={() => toggleCheckbox(row.original.id)}
-            aria-label="Auswählen"
-          />
+          <div className="flex items-center justify-center">
+            <RadioGroupItem 
+              value={row.original.id}
+              checked={row.original.checked}
+              onClick={() => selectVariant(row.original.id)}
+              aria-label="Auswählen"
+            />
+          </div>
         ),
         enableSorting: false,
         enableColumnFilter: false,
@@ -182,43 +189,42 @@ export function OfferVariantsTable() {
         enableSorting: true,
         enableColumnFilter: true,
       },
-      {
-        id: 'actions',
-        header: () => 'Aktionen',
-        cell: ({ row }: { row: Row<OfferVariant> }) => (
-          <div className="flex items-center gap-1">
-            <button
-              className="rounded p-1 hover:bg-gray-100"
-              aria-label="Bearbeiten"
-              tabIndex={0}
-            >
-              <Edit className="h-4 w-4" />
-            </button>
-            <button
-              className="rounded p-1 hover:bg-gray-100"
-              aria-label="Details anzeigen"
-              tabIndex={0}
-            >
-              <FileText className="h-4 w-4" />
-            </button>
-            <button
-              className="rounded p-1 hover:bg-gray-100"
-              aria-label="Löschen"
-              tabIndex={0}
-            >
-              <Trash className="h-4 w-4" />
-            </button>
-          </div>
-        ),
-        enableSorting: false,
-        enableColumnFilter: false,
-      },
+      ...(showActions ? [
+        {
+          id: 'actions',
+          header: () => 'Aktionen',
+          cell: ({ row }: { row: Row<OfferVariant> }) => (
+            <div className="flex items-center gap-1">
+              <button
+                className="rounded p-1 hover:bg-gray-100"
+                aria-label="Bearbeiten"
+                tabIndex={0}
+              >
+                <Edit className="h-4 w-4" />
+              </button>
+              <button
+                className="rounded p-1 hover:bg-gray-100"
+                aria-label="Details anzeigen"
+                tabIndex={0}
+              >
+                <FileText className="h-4 w-4" />
+              </button>
+              <button
+                className="rounded p-1 hover:bg-gray-100"
+                aria-label="Löschen"
+                tabIndex={0}
+              >
+                <Trash className="h-4 w-4" />
+              </button>
+            </div>
+          ),
+          enableSorting: false,
+          enableColumnFilter: false,
+        }
+      ] : []),
     ],
-    [],
+    [showActions],
   );
-
-  const getRowClassName = (row: Row<OfferVariant>) =>
-    row.original.checked ? 'bg-blue-50' : '';
 
   // Define date filter configurations
   const dateFilterConfigs: Record<string, DateFilterConfig> = {
@@ -227,16 +233,24 @@ export function OfferVariantsTable() {
     }
   };
 
+  const getRowClassName = (row: Row<OfferVariant>) => {
+    const isChecked = row.original.checked;
+    return `${isChecked ? 'bg-blue-50' : ''} cursor-pointer hover:bg-blue-100`;
+  };
+
   return (
-    <FilterableTable
-      data={offerVariants}
-      columns={columns}
-      filterColumn="offerNumber"
-      filterPlaceholder="Filtern nach Angebots-Nr..."
-      getRowClassName={getRowClassName}
-      tableClassName="w-full border"
-      headerClassName="border p-2 text-left bg-gray-50 cursor-pointer select-none"
-      dateFilterColumns={dateFilterConfigs}
-    />
+    <RadioGroup value={selectedVariantId || undefined} onValueChange={selectVariant}>
+      <FilterableTable
+        data={offerVariants}
+        columns={columns}
+        filterColumn="offerNumber"
+        filterPlaceholder="Filtern nach Angebots-Nr..."
+        getRowClassName={getRowClassName}
+        tableClassName="w-full border"
+        headerClassName="border p-2 text-left bg-gray-50 cursor-pointer select-none"
+        dateFilterColumns={dateFilterConfigs}
+        onRowClick={(row) => selectVariant(row.original.id)}
+      />
+    </RadioGroup>
   );
 }

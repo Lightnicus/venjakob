@@ -49,6 +49,7 @@ export interface FilterableTableProps<TData> {
   contextValue?: any;
   ContextProvider?: React.FC<{ value: any; children: React.ReactNode }>;
   dateFilterColumns?: Record<string, DateFilterConfig>;
+  onRowClick?: (row: Row<TData>) => void;
 }
 
 function DateFilterHeader<TData>({ 
@@ -198,6 +199,7 @@ export function FilterableTable<TData>({
   contextValue,
   ContextProvider,
   dateFilterColumns = {},
+  onRowClick,
 }: FilterableTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(defaultSorting);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(defaultColumnFilters);
@@ -283,6 +285,14 @@ export function FilterableTable<TData>({
             <TableRow 
               key={row.id} 
               className={getRowClassName ? getRowClassName(row) : ''}
+              onClick={() => onRowClick?.(row)}
+              tabIndex={onRowClick ? 0 : undefined}
+              onKeyDown={(e) => {
+                if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
+                  onRowClick(row);
+                }
+              }}
             >
               {row.getVisibleCells().map((cell: Cell<TData, unknown>) => (
                 <TableCell key={cell.id} className={cellClassName}>
