@@ -1,4 +1,7 @@
 import React, { useState, useMemo } from 'react';
+import { FilterableTable } from './filterable-table';
+import type { ColumnDef } from '@tanstack/react-table';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 export type Block = {
   id: number;
@@ -34,6 +37,39 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
     [selectedId, blocks]
   );
 
+  const columns = useMemo<ColumnDef<Block>[]>(
+    () => [
+      {
+        id: 'select',
+        header: () => <span className="sr-only">Auswählen</span>,
+        cell: ({ row }) => (
+          <RadioGroup value={selectedId?.toString() || ""} onValueChange={(value) => setSelectedId(Number(value))}>
+            <RadioGroupItem
+              value={row.original.id.toString()}
+              id={`radio-${row.original.id}`}
+              checked={selectedId === row.original.id}
+              aria-label={`Block ${row.original.bezeichnung} auswählen`}
+            />
+          </RadioGroup>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: 'bezeichnung',
+        header: 'Bezeichnung',
+      },
+      {
+        accessorKey: 'ueberschrift',
+        header: 'Überschrift',
+      },
+      {
+        accessorKey: 'aenderung',
+        header: 'letzte Änderung',
+      },
+    ],
+    [selectedId]
+  );
+
   if (!open) return null;
 
   return (
@@ -62,7 +98,7 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="search"
+            placeholder="Suchen"
             aria-label="Suche"
             tabIndex={0}
             className="border border-gray-300 rounded px-3 py-1 w-64 focus:outline-none focus:ring"
@@ -70,38 +106,19 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
         </div>
         {/* Table */}
         <div className="overflow-x-auto mb-4">
-          <table className="min-w-full border border-gray-300 text-sm">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="px-3 py-2 font-bold text-left border-b border-gray-300">Bezeichnung</th>
-                <th className="px-3 py-2 font-bold text-left border-b border-gray-300">Überschrift</th>
-                <th className="px-3 py-2 font-bold text-left border-b border-gray-300">letzte Änderung</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredBlocks.map((b) => (
-                <tr
-                  key={b.id}
-                  tabIndex={0}
-                  aria-label={`Block ${b.bezeichnung} auswählen`}
-                  className={
-                    (selectedId === b.id
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-black hover:bg-gray-100') +
-                    ' cursor-pointer border-b border-gray-200 focus:outline-none'
-                  }
-                  onClick={() => setSelectedId(b.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') setSelectedId(b.id);
-                  }}
-                >
-                  <td className="px-3 py-2">{b.bezeichnung}</td>
-                  <td className="px-3 py-2">{b.ueberschrift}</td>
-                  <td className="px-3 py-2">{b.aenderung}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <FilterableTable
+            data={filteredBlocks}
+            columns={columns}
+            getRowClassName={(row) => 
+              selectedId === row.original.id
+                ? 'cursor-pointer'
+                : 'bg-white text-black hover:bg-gray-100 cursor-pointer'
+            }
+            onRowClick={(row) => setSelectedId(row.original.id)}
+            tableClassName="min-w-full border border-gray-300 text-sm"
+            cellClassName="px-3 py-2 border-b border-gray-200"
+            headerClassName="px-3 py-2 font-bold text-left border-b border-gray-300 bg-gray-100"
+          />
         </div>
         {/* Add Button */}
         <div className="flex justify-end mb-4">

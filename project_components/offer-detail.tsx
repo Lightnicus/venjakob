@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EnterOrderConfirmationNumberDialog from './enter-order-confirmation-number-dialog';
 import { useTabbedInterface } from './tabbed-interface-provider';
+import { toast } from "sonner";
 
 type OfferDetailProps = { 
   title: string;
@@ -42,6 +43,10 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
       closable: true
     });
   };
+
+  const handlePublishClick = () => {
+    toast("Angebot wurde veröffentlicht.");
+  };
   
   return (
     <div className="w-full h-full flex flex-col">
@@ -51,7 +56,16 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
         {language && <p className="text-sm text-gray-500 mb-2">Sprache: {language}</p>}
         <div className="flex flex-wrap gap-2 items-center mb-2">
           <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Bearbeiten">Bearbeiten</Button>
-          <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Veröffentlichen">Veröffentlichen</Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1" 
+            tabIndex={0} 
+            aria-label="Veröffentlichen"
+            onClick={handlePublishClick}
+          >
+            Veröffentlichen
+          </Button>
           <Button 
             variant="outline" 
             size="sm" 
