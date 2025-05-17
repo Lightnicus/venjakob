@@ -5,6 +5,8 @@ import OfferProperties, { OfferPropertiesProps } from './offer-properties';
 import offerPropertiesData from '../data/offer-properties.json';
 import PdfPreview from './pdf-preview';
 import OfferVersionsTable from './offer-versions-table';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type OfferDetailProps = { 
   title: string;
@@ -25,21 +27,24 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
         {variantId && <p className="text-sm text-gray-500 mb-2">Varianten-ID: {variantId}</p>}
         {language && <p className="text-sm text-gray-500 mb-2">Sprache: {language}</p>}
         <div className="flex flex-wrap gap-2 items-center mb-2">
-          <button className="px-4 py-2 bg-gray-200 dark:bg-gray-700 rounded text-gray-800 dark:text-gray-100 font-medium focus:outline-none" tabIndex={0} aria-label="Bearbeiten">Bearbeiten</button>
-          <button className="px-4 py-2 bg-blue-200 dark:bg-blue-700 rounded text-blue-800 dark:text-blue-100 font-medium focus:outline-none" tabIndex={0} aria-label="Veröffentlichen">Veröffentlichen</button>
-          <button className="px-4 py-2 bg-green-200 dark:bg-green-700 rounded text-green-800 dark:text-green-100 font-medium focus:outline-none" tabIndex={0} aria-label="Auftragsbestätigung">Auftragsbestätigung</button>
-          <select
-            className="px-4 py-2 rounded border bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100 focus:outline-none"
-            value={dropdownValue}
-            onChange={e => setDropdownValue(e.target.value)}
-            aria-label="Kalkulation Aktionen"
-            tabIndex={0}
-          >
-            <option>Kalkulation öffnen</option>
-            <option>Kalkulation aktualisieren</option>
-            <option>Kalkulation neu erstellen</option>
-          </select>
-          <button className="px-4 py-2 bg-purple-200 dark:bg-purple-700 rounded text-purple-800 dark:text-purple-100 font-medium focus:outline-none" tabIndex={0} aria-label="Variante erstellen">Variante erstellen</button>
+          <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Bearbeiten">Bearbeiten</Button>
+          <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Veröffentlichen">Veröffentlichen</Button>
+          <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Auftragsbestätigung">Auftragsbestätigung</Button>
+          <Select value={dropdownValue} onValueChange={setDropdownValue}>
+            <SelectTrigger 
+              className="h-9 px-4 py-2 text-sm w-[200px]"
+              aria-label="Kalkulation Aktionen"
+              tabIndex={0}
+            >
+              <SelectValue placeholder="Kalkulation öffnen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="Kalkulation öffnen">Kalkulation öffnen</SelectItem>
+              <SelectItem value="Kalkulation aktualisieren">Kalkulation aktualisieren</SelectItem>
+              <SelectItem value="Kalkulation neu erstellen">Kalkulation neu erstellen</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Variante erstellen">Variante erstellen</Button>
         </div>
       </div>
       <Tabs value={tab} onValueChange={setTab} className="w-full h-full flex flex-col">
