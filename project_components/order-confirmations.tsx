@@ -1,25 +1,11 @@
 import * as React from 'react';
 import type {
   ColumnDef,
-  SortingState,
-  ColumnFiltersState,
-  HeaderGroup,
-  Header,
   Row,
-  Cell,
 } from '@tanstack/react-table';
-import {
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  getFilteredRowModel,
-  useReactTable,
-} from '@tanstack/react-table';
-import { Table, TableHeader, TableRow, TableHead, TableBody, TableCell } from '@/components/ui/table';
-import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { Calendar as CalendarIcon, Edit, FileText, Copy, Trash } from 'lucide-react';
-import { Calendar } from '@/components/ui/calendar';
+import { Edit, FileText, Copy, Trash } from 'lucide-react';
 import Link from 'next/link';
+import { FilterableTable, type DateFilterConfig } from './filterable-table';
 
 export type OrderConfirmation = {
   abNumber: string;
@@ -40,99 +26,34 @@ type Props = {
 };
 
 const OrderConfirmations = ({ data }: Props) => {
-  const [sorting, setSorting] = React.useState<SortingState>([]);
-  const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
-
   // Dropdown options
   const responsibleOptions = React.useMemo(() => Array.from(new Set(data.map(d => d.responsible))).sort(), [data]);
   const modifiedByOptions = React.useMemo(() => Array.from(new Set(data.map(d => d.modifiedBy))).sort(), [data]);
-  // Valid dates for Geändert am
-  const validDates = React.useMemo(() =>
-    Array.from(new Set(data.map(d => d.modifiedOn)))
-      .filter(Boolean)
-      .map((d: string) => {
-        const [day, month, year] = d.split('.');
-        return new Date(Number(year), Number(month) - 1, Number(day));
-      }),
-    [data]
-  );
-  const isDateEnabled = (date: Date) =>
-    validDates.some(
-      d =>
-        d.getFullYear() === date.getFullYear() &&
-        d.getMonth() === date.getMonth() &&
-        d.getDate() === date.getDate()
-    );
 
-  // Calendar header component
-  const ModifiedOnHeader = ({ column }: { column: any }) => {
-    const [open, setOpen] = React.useState(false);
-    const [selectedDate, setSelectedDate] = React.useState<Date | undefined>(undefined);
-    const filterValue = column.getFilterValue();
-    const formatDate = (date: Date) =>
-      date
-        ? `${date.getDate().toString().padStart(2, '0')}.${(date.getMonth() + 1)
-            .toString()
-            .padStart(2, '0')}.${date.getFullYear()}`
-        : '';
-    const handleReset = () => {
-      setSelectedDate(undefined);
-      column.setFilterValue(undefined);
-      setOpen(false);
-    };
-    return (
-      <div className="flex items-center gap-2 min-w-[150px]">
-        <span>Geändert am</span>
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="p-1 rounded hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
-              aria-label="Datum wählen"
-            >
-              <CalendarIcon className="h-4 w-4" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="start" className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={(date: Date | undefined) => {
-                setSelectedDate(date ?? undefined);
-                setOpen(false);
-                if (date) {
-                  column.setFilterValue(formatDate(date));
-                }
-              }}
-              initialFocus
-              disabled={date => !isDateEnabled(date)}
-            />
-            <button
-              type="button"
-              className="mt-2 w-full rounded bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200"
-              onClick={handleReset}
-            >
-              Filter zurücksetzen
-            </button>
-          </PopoverContent>
-        </Popover>
-        {filterValue && (
-          <span
-            className="ml-2 text-xs text-muted-foreground underline cursor-pointer hover:text-foreground"
-            tabIndex={0}
-            role="button"
-            aria-label="Filter zurücksetzen"
-            onClick={handleReset}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') handleReset();
-            }}
-          >
-            {filterValue}
-          </span>
-        )}
-      </div>
-    );
-  };
+  // Function to get valid dates for the 'modifiedOn' filter
+  const getValidDatesForModifiedOn = React.useCallback((tableData: OrderConfirmation[]): Date[] => {
+    const dateStrings = new Set<string>();
+    tableData.forEach(d => {
+      if (d.modifiedOn && typeof d.modifiedOn === 'string') {
+        dateStrings.add(d.modifiedOn);
+      }
+    });
+
+    return Array.from(dateStrings)
+      .map((dateStr: string) => {
+        const parts = dateStr.split('.');
+        if (parts.length === 3) {
+          const day = parseInt(parts[0], 10);
+          const month = parseInt(parts[1], 10); // month is 1-indexed in string
+          const year = parseInt(parts[2], 10);
+          if (!isNaN(day) && !isNaN(month) && !isNaN(year)) {
+            return new Date(year, month - 1, day); // month is 0-indexed for Date constructor
+          }
+        }
+        return null;
+      })
+      .filter((date): date is Date => date instanceof Date && !isNaN(date.getTime()));
+  }, []);
 
   const columns = React.useMemo<ColumnDef<OrderConfirmation>[]>(() => [
     { accessorKey: 'abNumber', header: 'AB-Nr.', enableSorting: true, enableColumnFilter: true,
@@ -199,7 +120,7 @@ const OrderConfirmations = ({ data }: Props) => {
       enableColumnFilter: true,
     },
     { accessorKey: 'modifiedOn',
-      header: ModifiedOnHeader,
+      header: 'Geändert am',
       cell: ({ row }: { row: Row<OrderConfirmation> }) => (
         <span className="min-w-[150px] block">{row.original.modifiedOn}</span>
       ),
@@ -226,70 +147,19 @@ const OrderConfirmations = ({ data }: Props) => {
       enableSorting: false,
       enableColumnFilter: false,
     },
-  ], [responsibleOptions, modifiedByOptions, validDates]);
+  ], [responsibleOptions, modifiedByOptions, getValidDatesForModifiedOn]);
 
-  const table = useReactTable({
-    data,
-    columns,
-    state: { sorting, columnFilters },
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-  });
+  const dateFilterConfigForModifiedOn: DateFilterConfig = {
+    getValidDates: getValidDatesForModifiedOn,
+    dateFieldPath: 'modifiedOn',
+  };
 
   return (
-    <div className="overflow-x-auto">
-      <Table className="w-full border">
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup: HeaderGroup<OrderConfirmation>) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header: Header<OrderConfirmation, unknown>) => {
-                const isSortable = header.column.getCanSort();
-                const sortState = header.column.getIsSorted();
-                let sortIcon = null;
-                if (isSortable) {
-                  if (sortState === 'asc') sortIcon = <span className="ml-1">▲</span>;
-                  else if (sortState === 'desc') sortIcon = <span className="ml-1">▼</span>;
-                  else sortIcon = <span className="ml-1">⇅</span>;
-                }
-                return (
-                  <TableHead
-                    key={header.id}
-                    className="border p-2 text-left cursor-pointer select-none"
-                    onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
-                    aria-sort={sortState ? (sortState === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    tabIndex={isSortable ? 0 : undefined}
-                    onKeyDown={e => {
-                      if ((e.key === 'Enter' || e.key === ' ') && isSortable) {
-                        header.column.toggleSorting();
-                      }
-                    }}
-                  >
-                    <span className="flex items-center">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {isSortable && sortIcon}
-                    </span>
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map((row: Row<OrderConfirmation>) => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map((cell: Cell<OrderConfirmation, unknown>) => (
-                <TableCell key={cell.id} className="border p-2">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
+    <FilterableTable<OrderConfirmation>
+      data={data}
+      columns={columns}
+      dateFilterColumns={{ modifiedOn: dateFilterConfigForModifiedOn }}
+    />
   );
 };
 
