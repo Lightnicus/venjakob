@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import EnterOrderConfirmationNumberDialog from './enter-order-confirmation-number-dialog';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import { toast } from "sonner";
+import { Edit3, Save } from "lucide-react";
 
 type OfferDetailProps = { 
   title: string;
@@ -21,6 +22,7 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
   const [tab, setTab] = useState('bloecke');
   const [dropdownValue, setDropdownValue] = useState('Kalkulation');
   const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const { openNewTab } = useTabbedInterface();
   
   // You can use variantId and language here to fetch specific offer data if needed
@@ -49,7 +51,13 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
   };
   
   const handleEditClick = () => {
-    toast("Bearbeiten Button wurde geklickt. Nicht sicher wofür der genutzt wird?");
+    if (isEditing) {
+      // Save logic here
+      toast("Änderungen wurden gespeichert.");
+    } else {
+      toast("Bearbeitungsmodus aktiviert.");
+    }
+    setIsEditing(!isEditing);
   };
   
   return (
@@ -59,7 +67,16 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
         {variantId && <p className="text-sm text-gray-500 mb-2">Varianten-ID: {variantId}</p>}
         {language && <p className="text-sm text-gray-500 mb-2">Sprache: {language}</p>}
         <div className="flex flex-wrap gap-2 items-center mb-2">
-          <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Bearbeiten" onClick={handleEditClick}>Bearbeiten</Button>
+          <Button 
+            variant={isEditing ? "default" : "outline"} 
+            size="sm" 
+            className={`flex items-center gap-1 ${isEditing ? "bg-blue-600 hover:bg-blue-700 text-white" : ""}`} 
+            tabIndex={0} 
+            aria-label={isEditing ? "Speichern" : "Bearbeiten"} 
+            onClick={handleEditClick}
+          >
+            {isEditing ? <><Save size={14} className="inline-block"/> Speichern</> : <><Edit3 size={14} className="inline-block"/> Bearbeiten</>}
+          </Button>
           <Button 
             variant="outline" 
             size="sm" 
