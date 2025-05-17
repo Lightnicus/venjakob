@@ -1,75 +1,51 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { FC } from 'react';
+import { Button } from '@/components/ui/button';
+import { ManagedDialog } from '@/project_components/managed-dialog';
+import { useDialogManager } from '@/project_components/dialog-manager';
 
 type OfferAsNewVariantDialogProps = {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onAbbrechen?: () => void;
-  onZurueck?: () => void;
   onNein?: () => void;
   onJa?: () => void;
 };
 
 const OfferAsNewVariantDialog: FC<OfferAsNewVariantDialogProps> = ({
-  open,
-  onOpenChange,
-  onAbbrechen,
-  onZurueck,
   onNein,
-  onJa,
-}) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent aria-label="Angebot als neue Variante?">
-      <DialogHeader>
-        <DialogTitle>Angebot als neue Variante?</DialogTitle>
-      </DialogHeader>
-      <div className="py-4 text-base">
+  onJa
+}) => {
+  const { closeDialog } = useDialogManager();
+
+  const footer = (
+    <>
+      <Button
+        type="button"
+        variant="outline"
+        aria-label="Nein"
+        onClick={onNein || closeDialog}
+      >
+        Nein
+      </Button>
+      <Button
+        type="button"
+        aria-label="Ja"
+        onClick={onJa || closeDialog}
+      >
+        Ja
+      </Button>
+    </>
+  );
+
+  return (
+    <ManagedDialog 
+      title="Angebot als neue Variante?"
+      footer={footer}
+      showBackButton={true}
+      showCloseButton={true}
+    >
+      <div className="text-base">
         Soll das Angebot als neue Variante erstellt werden?
       </div>
-      <DialogFooter>
-        <div className="flex gap-2 justify-start w-full">
-          <Button
-            type="button"
-            variant="outline"
-            aria-label="Abbrechen"
-            onClick={onAbbrechen || (() => onOpenChange(false))}
-          >
-            Abbrechen
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            aria-label="Zurück"
-            onClick={onZurueck || (() => onOpenChange(false))}
-          >
-            Zurück
-          </Button>
-          <Button
-            type="button"
-            variant="outline"
-            aria-label="Nein"
-            onClick={onNein || (() => onOpenChange(false))}
-          >
-            Nein
-          </Button>
-          <Button
-            type="button"
-            aria-label="Ja"
-            onClick={onJa || (() => onOpenChange(false))}
-          >
-            Ja
-          </Button>
-        </div>
-      </DialogFooter>
-    </DialogContent>
-  </Dialog>
-);
+    </ManagedDialog>
+  );
+};
 
 export default OfferAsNewVariantDialog;

@@ -171,11 +171,8 @@ const OfferAsNewVariantDialogComponent: FC<{ fromVariantSelection?: boolean }> =
 
   return (
     <OfferAsNewVariantDialog
-      open={true}
-      onOpenChange={(open) => !open && closeDialog()}
       onJa={handleJa}
       onNein={handleNein}
-      onZurueck={handleZurueck}
     />
   );
 };
