@@ -115,9 +115,6 @@ const NewOfferDialogComponent: FC = () => {
 
   return (
     <NewOfferFromExistingDialog
-      open={true}
-      onOpenChange={(open) => !open && closeDialog()}
-      onCancel={handleCancel}
       onNo={handleNo}
       onYes={handleYes}
     />
@@ -151,10 +148,7 @@ const ChooseSalesOpportunityDialogComponent: FC = () => {
 
   return (
     <ChooseSalesOpportunityDialog
-      open={true}
-      onOpenChange={(open) => !open && closeDialog()}
       data={dummySalesOpportunities}
-      onZurueck={handleZurueck}
       onWeiter={handleWeiter}
     />
   );
