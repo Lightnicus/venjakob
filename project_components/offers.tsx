@@ -55,6 +55,7 @@ const Offers = () => {
     useState(false);
   const [chooseOfferVariantDialogOpen, setChooseOfferVariantDialogOpen] = 
     useState(false);
+  const [isCreatingNewVersion, setIsCreatingNewVersion] = useState(false);
   const [confirmOverwriteVariantDialogOpen, setConfirmOverwriteVariantDialogOpen] =
     useState(false);
   const [versionsForOfferVariantDialogOpen, setVersionsForOfferVariantDialogOpen] =
@@ -98,6 +99,7 @@ const Offers = () => {
 
   const handleOfferAsNewVariantDialogNein = () => {
     setOfferAsNewVariantDialogOpen(false);
+    setIsCreatingNewVersion(true);
     setChooseOfferVariantDialogOpen(true);
   };
 
@@ -107,7 +109,12 @@ const Offers = () => {
 
   const handleChooseOfferVariantBack = () => {
     setChooseOfferVariantDialogOpen(false);
-    setOfferAsNewVariantDialogOpen(true);
+    if (isCreatingNewVersion) {
+      setIsCreatingNewVersion(false);
+      setOfferAsNewVariantDialogOpen(true);
+    } else {
+      setOfferAsNewVariantDialogOpen(true);
+    }
   };
 
   const handleChooseOfferVariantCreate = () => {
@@ -200,6 +207,7 @@ const Offers = () => {
         onCancel={handleChooseOfferVariantCancel}
         onBack={handleChooseOfferVariantBack}
         onCreate={handleChooseOfferVariantCreate}
+        header={isCreatingNewVersion ? "Zu welcher Angebotsvariante soll eine neue Version erstellt werden?" : undefined}
       />
       <ConfirmOverwriteVariantDialog
         open={confirmOverwriteVariantDialogOpen}

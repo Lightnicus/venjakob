@@ -15,6 +15,7 @@ interface ChooseOfferVariantProps {
   onCancel: () => void;
   onBack: () => void;
   onCreate: () => void;
+  header?: string;
 }
 
 export function ChooseOfferVariantDialog({
@@ -23,6 +24,7 @@ export function ChooseOfferVariantDialog({
   onCancel,
   onBack,
   onCreate,
+  header = "Angebotsvariante auswählen"
 }: ChooseOfferVariantProps) {
   const handleCancel = () => {
     onCancel();
@@ -33,7 +35,7 @@ export function ChooseOfferVariantDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[99%] min-w-[99%]">
         <DialogHeader>
-          <DialogTitle>Angebotsversion auswählen</DialogTitle>
+          <DialogTitle>{header}</DialogTitle>
         </DialogHeader>
 
         <div className="flex-grow overflow-auto my-4">
