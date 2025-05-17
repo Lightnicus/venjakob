@@ -14,6 +14,18 @@ import { useTabbedInterface } from './tabbed-interface-provider';
 import OfferDetail from './offer-detail';
 import { FilterableTable, DateFilterConfig } from './filterable-table';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogAction,
+  AlertDialogCancel,
+} from '@/components/ui/alert-dialog';
 
 type Offer = {
   id: string;
@@ -51,6 +63,7 @@ export function OffersTable({
 }: OffersTableProps) {
   const [offers, setOffers] = React.useState<Offer[]>(offersData);
   const [selectedOfferId, setSelectedOfferId] = React.useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = React.useState<string | null>(null);
   const { openNewTab } = useTabbedInterface();
 
   const toggleCheckbox = (id: string) => {
@@ -95,6 +108,12 @@ export function OffersTable({
       content: <OfferDetail title={offer.offer} />,
       closable: true,
     });
+  };
+
+  const handleDeleteOffer = (id: string) => {
+    setOffers(offers.filter(o => o.id !== id));
+    setConfirmDeleteId(null);
+    toast('Angebot gelöscht');
   };
 
   // Unique values for dropdowns
@@ -246,13 +265,13 @@ export function OffersTable({
         enableSorting: true,
         enableColumnFilter: true,
       },
-      {
-        accessorKey: 'published',
-        header: () => <Checkbox />,
-        cell: ({ row }: { row: Row<Offer> }) => <Checkbox checked={row.original.published} />,
-        enableSorting: false,
-        enableColumnFilter: false,
-      },
+      // {
+      //   accessorKey: 'published',
+      //   header: () => <Checkbox />,
+      //   cell: ({ row }: { row: Row<Offer> }) => <Checkbox checked={row.original.published} />,
+      //   enableSorting: false,
+      //   enableColumnFilter: false,
+      // },
     ] : []),
     {
       accessorKey: 'responsible',
@@ -319,16 +338,31 @@ export function OffersTable({
         header: () => 'Aktionen',
         cell: ({ row }: { row: Row<Offer> }) => (
           <div className="flex items-center gap-1">
-            <button className="rounded p-1 hover:bg-gray-100" aria-label="Bearbeiten" tabIndex={0}>
+            <button className="rounded p-1 hover:bg-gray-100 cursor-pointer" onClick={() => handleOfferNameClick(row.original)} aria-label="Bearbeiten" tabIndex={0}>
               <Edit className="h-4 w-4" />
             </button>
-            <button className="rounded p-1 hover:bg-gray-100" aria-label="Details anzeigen" tabIndex={0}>
+            <button 
+              className="rounded p-1 hover:bg-gray-100 cursor-pointer" 
+              aria-label="PDF anzeigen" 
+              tabIndex={0}
+              onClick={() => window.open('/dummy.pdf', '_blank')}
+            >
               <FileText className="h-4 w-4" />
             </button>
-            <button className="rounded p-1 hover:bg-gray-100" aria-label="Kopieren" tabIndex={0}>
+            <button 
+              className="rounded p-1 hover:bg-gray-100 cursor-pointer" 
+              aria-label="Kopieren" 
+              tabIndex={0}
+              onClick={() => toast("Angebot kopiert")}
+            >
               <Copy className="h-4 w-4" />
             </button>
-            <button className="rounded p-1 hover:bg-gray-100" aria-label="Löschen" tabIndex={0}>
+            <button 
+              className="rounded p-1 hover:bg-gray-100 cursor-pointer" 
+              aria-label="Löschen" 
+              tabIndex={0}
+              onClick={() => setConfirmDeleteId(row.original.id)}
+            >
               <Trash className="h-4 w-4" />
             </button>
           </div>
@@ -374,6 +408,20 @@ export function OffersTable({
         dateFilterColumns={dateFilterConfigs}
         onRowClick={handleRowClick}
       />
+      <AlertDialog open={!!confirmDeleteId} onOpenChange={open => !open && setConfirmDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Sind Sie sicher?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Möchten Sie das Angebot wirklich löschen? 
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setConfirmDeleteId(null)}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={() => handleDeleteOffer(confirmDeleteId!)}>Löschen</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </RadioGroup>
   );
 }

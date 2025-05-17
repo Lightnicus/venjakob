@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import './globals.css';
 import ShowNavigation from '../project_components/show-navigation';
 import { TabbedInterfaceProvider } from '@/project_components/tabbed-interface-provider';
+import { Toaster } from 'sonner';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -31,6 +32,7 @@ export default function RootLayout({
       >
         <TabbedInterfaceProvider initialTabs={[]}>
           <ShowNavigation />
+          <Toaster />
           {children}
         </TabbedInterfaceProvider>
       </body>
