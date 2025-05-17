@@ -216,7 +216,7 @@ export function FilterableTable<TData>({
   });
 
   const content = (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto w-full">
       {filterColumn && (
         <div className="flex items-center py-4">
           <input

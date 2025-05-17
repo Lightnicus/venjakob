@@ -1,89 +1,162 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
+import { FilterableTable } from './filterable-table';
+import type { ColumnDef } from '@tanstack/react-table';
+import versionsData from '@/data/versions-for-variant.json';
+import { Copy, FileText, Trash } from 'lucide-react';
+import { toast } from 'sonner';
+import { DeleteConfirmationDialog } from '@/project_components/delete-confirmation-dialog';
 
 type Version = {
+  id: string;
   version: string;
   erstelltAm: string;
-  geaendertVon: string;
+  geaendertAm: string;
   betrag: string;
 };
 
-const versionen: Version[] = [
-  { version: '1.0', erstelltAm: '13.10.2023', geaendertVon: 'Max Mustermann', betrag: '20.000 €' },
-  { version: '2.0', erstelltAm: '01.11.2023', geaendertVon: 'Max Mustermann', betrag: '25.000 €' },
-];
-
-const icons = [
-  {
-    label: 'Kopieren',
-    svg: (
-      <svg width="18" height="18" fill="none" viewBox="0 0 20 20" aria-hidden="true"><rect x="5" y="5" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.5"/><rect x="2.5" y="2.5" width="10" height="10" rx="2" stroke="currentColor" strokeWidth="1.5" opacity=".5"/></svg>
-    ),
-  },
-  {
-    label: 'Ansehen',
-    svg: (
-      <svg width="18" height="18" fill="none" viewBox="0 0 20 20" aria-hidden="true"><path d="M10 5C5 5 2 10 2 10s3 5 8 5 8-5 8-5-3-5-8-5Z" stroke="currentColor" strokeWidth="1.5"/><circle cx="10" cy="10" r="2.5" stroke="currentColor" strokeWidth="1.5"/></svg>
-    ),
-  },
-  {
-    label: 'PDF herunterladen',
-    svg: (
-      <svg width="18" height="18" fill="none" viewBox="0 0 20 20" aria-hidden="true"><rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="1.5"/><text x="10" y="14" textAnchor="middle" fontSize="6" fill="currentColor" fontFamily="Arial">PDF</text></svg>
-    ),
-  },
-];
-
-const handleKeyDown = (event: React.KeyboardEvent<HTMLButtonElement>, onClick: () => void) => {
+const handleKeyDown = (
+  event: React.KeyboardEvent<HTMLButtonElement>,
+  onClick: () => void,
+) => {
   if (event.key === 'Enter' || event.key === ' ') {
     event.preventDefault();
     onClick();
   }
 };
 
-const OfferVersionsTable: React.FC = () => (
-  <div className="w-full overflow-x-auto">
-    <table className="min-w-full border border-gray-300 text-sm">
-      <thead>
-        <tr className="bg-gray-200">
-          <th className="px-3 py-2 text-left font-semibold">Version</th>
-          <th className="px-3 py-2 text-left font-semibold">erstellt am</th>
-          <th className="px-3 py-2 text-left font-semibold">geändert von</th>
-          <th className="px-3 py-2 text-right font-semibold">Betrag</th>
-          <th className="px-3 py-2 text-center font-semibold">Aktionen</th>
-        </tr>
-      </thead>
-      <tbody>
-        {versionen.map((v, i) => (
-          <tr key={v.version} className={i % 2 === 0 ? 'bg-gray-100' : 'bg-white'}>
-            <td className="px-3 py-2">{v.version}</td>
-            <td className="px-3 py-2">{v.erstelltAm}</td>
-            <td className="px-3 py-2">{v.geaendertVon}</td>
-            <td className="px-3 py-2 text-right">{v.betrag}</td>
-            <td className="px-3 py-2 text-center">
-              <div className="flex items-center gap-2 justify-center">
-                {icons.map((icon, idx) => (
-                  <button
-                    key={icon.label}
-                    className="p-1 rounded hover:bg-gray-300 focus:bg-gray-300 focus:outline-none"
-                    tabIndex={0}
-                    aria-label={icon.label}
-                    onClick={() => {}}
-                    onKeyDown={e => handleKeyDown(e, () => {})}
-                    type="button"
-                  >
-                    {icon.svg}
-                  </button>
-                ))}
-              </div>
-            </td>
-          </tr>
-        ))}
-        {/* Leere Zeilen für das Layout wie im Screenshot */}
-        <tr className="bg-white h-8"><td colSpan={5}></td></tr>
-        <tr className="bg-gray-100 h-8"><td colSpan={5}></td></tr>
-      </tbody>
-    </table>
-  </div>
+const ActionButton: React.FC<{
+  label: string;
+  svg: React.ReactNode;
+  onClick: () => void;
+}> = ({ label, svg, onClick }) => (
+  <button
+    className="cursor-pointer p-1 rounded hover:bg-gray-300 focus:bg-gray-300 focus:outline-none"
+    tabIndex={0}
+    aria-label={label}
+    onClick={onClick}
+    onKeyDown={e => handleKeyDown(e, onClick)}
+    type="button"
+  >
+    {svg}
+  </button>
 );
 
-export default OfferVersionsTable; 
+const OfferVersionsTable: React.FC = () => {
+  const [versions, setVersions] = useState<Version[]>(versionsData);
+  const [versionToDelete, setVersionToDelete] = useState<Version | null>(null);
+
+  const handleViewVersion = () => {
+    window.open('/dummy.pdf', '_blank');
+  };
+
+  const handleCopyVersion = (version: Version) => {
+    console.log('Kopiere Version:', version.id);
+    toast.success(`Version ${version.version} wurde kopiert`);
+  };
+
+  const handleInitiateDelete = (version: Version) => {
+    setVersionToDelete(version);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!versionToDelete) return;
+    setVersions(prevVersions => prevVersions.filter(v => v.id !== versionToDelete.id));
+    toast.success(`Version ${versionToDelete.version} wurde gelöscht`);
+    setVersionToDelete(null);
+  };
+
+  const columns: ColumnDef<Version>[] = [
+    {
+      accessorKey: 'version',
+      header: 'Version',
+    },
+    {
+      accessorKey: 'erstelltAm',
+      header: 'erstellt am',
+    },
+    {
+      accessorKey: 'geaendertAm',
+      header: 'geändert am',
+    },
+    {
+      accessorKey: 'betrag',
+      header: 'Betrag',
+      cell: ({ row }) => (
+        <div className="text-right">{row.original.betrag}</div>
+      ),
+    },
+    {
+      id: 'aktionen',
+      header: 'Aktionen',
+      cell: ({ row }) => {
+        const version = row.original;
+        const icons = [
+          {
+            label: 'Ansehen',
+            svg: <FileText size={18} />,
+            onClick: handleViewVersion,
+          },
+          {
+            label: 'Kopieren',
+            svg: <Copy size={18} />,
+            onClick: () => handleCopyVersion(version),
+          },
+          {
+            label: 'Löschen',
+            svg: <Trash size={18} />,
+            onClick: () => handleInitiateDelete(version),
+          },
+        ];
+
+        return (
+          <div className="flex items-center gap-2 justify-center">
+            {icons.map(icon => (
+              <ActionButton
+                key={icon.label}
+                label={icon.label}
+                svg={icon.svg}
+                onClick={icon.onClick}
+              />
+            ))}
+          </div>
+        );
+      },
+    },
+  ];
+
+  // Define empty rows for layout
+  const getRowClassName = (row: any) => {
+    const index = parseInt(row.original.id, 10);
+    if (index > versionsData.length) {
+      return index % 2 === 0 ? 'bg-gray-100 h-8' : 'bg-white h-8';
+    }
+    return index % 2 === 0 ? 'bg-gray-100' : 'bg-white';
+  };
+
+  return (
+    <>
+      <FilterableTable
+        data={versions}
+        columns={columns}
+        tableClassName="min-w-full w-full border border-gray-300 text-sm"
+        headerClassName="px-3 py-2 bg-gray-200 text-left font-semibold"
+        cellClassName="px-3 py-2"
+        getRowClassName={getRowClassName}
+        filterColumn="version"
+        filterPlaceholder="Version filtern..."
+        defaultSorting={[{ id: 'version', desc: false }]}
+      />
+      <DeleteConfirmationDialog
+        open={!!versionToDelete}
+        onOpenChange={(open) => !open && setVersionToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Version löschen"
+        description={`Möchten Sie die Version "${versionToDelete?.version || ''}" wirklich löschen?`}
+      />
+    </>
+  );
+};
+
+export default OfferVersionsTable;
