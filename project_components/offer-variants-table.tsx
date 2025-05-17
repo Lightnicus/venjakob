@@ -32,7 +32,15 @@ type OfferVariant = {
   modifiedOn: string;
 };
 
-export function OfferVariantsTable({ showActions = true }: { showActions?: boolean }) {
+interface OfferVariantsTableProps {
+  showActions?: boolean;
+  onSelectionChange?: (id: string | null) => void;
+}
+
+export function OfferVariantsTable({ 
+  showActions = true, 
+  onSelectionChange 
+}: OfferVariantsTableProps) {
   const [offerVariants, setOfferVariants] =
     useState<OfferVariant[]>(offerVariantsData.map(variant => ({
       ...variant,
@@ -41,13 +49,17 @@ export function OfferVariantsTable({ showActions = true }: { showActions?: boole
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
 
   const selectVariant = (id: string) => {
-    setSelectedVariantId(id === selectedVariantId ? null : id);
+    const newSelectedId = id === selectedVariantId ? null : id;
+    setSelectedVariantId(newSelectedId);
     setOfferVariants(
       offerVariants.map(variant => ({
         ...variant,
         checked: variant.id === id && id !== selectedVariantId
       }))
     );
+    if (onSelectionChange) {
+      onSelectionChange(newSelectedId);
+    }
   };
 
   const columns = useMemo<ColumnDef<OfferVariant>[]>(
