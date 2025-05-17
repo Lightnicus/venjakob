@@ -54,16 +54,16 @@ export function SalesOpportunityDetail({ data }: Props) {
 
       {/* Tabs */}
       <Tabs defaultValue="allgemein">
-        <TabsList className="bg-transparent p-0">
+        <TabsList className="shrink-0 bg-white p-0 border-b flex flex-wrap gap-2 justify-start rounded-none w-full">
           <TabsTrigger
             value="allgemein"
-            className="rounded-t-md rounded-b-none border border-b-0 border-gray-300 bg-gray-200 px-4 py-2 data-[state=active]:bg-gray-200 data-[state=inactive]:bg-white"
+            className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100"
           >
             Allgemein
           </TabsTrigger>
           <TabsTrigger
             value="angebote"
-            className="rounded-t-md rounded-b-none border border-b-0 border-gray-300 bg-white px-4 py-2 data-[state=active]:bg-gray-200"
+            className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100"
           >
             Angebote
           </TabsTrigger>
