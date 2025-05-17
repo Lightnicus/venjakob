@@ -48,6 +48,10 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
     toast("Angebot wurde veröffentlicht.");
   };
   
+  const handleEditClick = () => {
+    toast("Bearbeiten Button wurde geklickt. Nicht sicher wofür der genutzt wird?");
+  };
+  
   return (
     <div className="w-full h-full flex flex-col">
       <div className="border-b bg-white dark:bg-gray-800 p-4">
@@ -55,7 +59,7 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
         {variantId && <p className="text-sm text-gray-500 mb-2">Varianten-ID: {variantId}</p>}
         {language && <p className="text-sm text-gray-500 mb-2">Sprache: {language}</p>}
         <div className="flex flex-wrap gap-2 items-center mb-2">
-          <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Bearbeiten">Bearbeiten</Button>
+          <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Bearbeiten" onClick={handleEditClick}>Bearbeiten</Button>
           <Button 
             variant="outline" 
             size="sm" 
