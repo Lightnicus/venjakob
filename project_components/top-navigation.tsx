@@ -77,7 +77,7 @@ const TopNavigation: FC = () => {
         >
           {sitewide.siteName}
         </span>
-        <NavigationMenu className="flex-1 justify-end" aria-label="Hauptnavigation">
+        <NavigationMenu className="flex-1 justify-end" aria-label="Hauptnavigation" viewport={false}>
           <NavigationMenuList>
             {(menuConfig as MenuConfigItem[]).map(({ label, href, children }) =>
               children && children.length > 0 ? (
@@ -89,8 +89,8 @@ const TopNavigation: FC = () => {
                   >
                     {label}
                   </NavigationMenuTrigger>
-                  <NavigationMenuContent className="w-full min-w-full p-0">
-                    <ul className="w-full min-w-full">
+                  <NavigationMenuContent className="left-0">
+                    <ul className="">
                       {children.map(child => (
                         <li key={child.href}>
                           <NavigationMenuLink asChild>
