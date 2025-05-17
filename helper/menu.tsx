@@ -3,7 +3,7 @@
 import { ReactNode } from 'react';
 import { Tab } from '@/project_components/tabbed-interface-provider';
 import Offers from '@/project_components/offers';
-import SaleOpportunitiesTable from '@/project_components/sale-opportunities-table';
+import SalesOpportunitiesTable from '@/project_components/sale-opportunities-table';
 import saleChancesData from '@/data/sale-chances.json';
 import OrderConfirmations, {
   OrderConfirmation,
@@ -37,7 +37,7 @@ export const tabMappings: Record<string, TabDefinition> = {
     content: () => (
       <>
         <h2 className="text-2xl font-bold">Verkaufschancen</h2>
-        <SaleOpportunitiesTable data={saleChancesData} />
+        <SalesOpportunitiesTable data={saleChancesData} showSelectionRadio={false} />
       </>
     ),
     closable: true,

@@ -3,7 +3,9 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ManagedDialog } from '@/project_components/managed-dialog';
 import { useDialogManager } from '@/project_components/dialog-manager';
-import SaleOpportunitiesTable, { SaleChance } from '@/project_components/sale-opportunities-table';
+import SalesOpportunitiesTable, {
+  SaleChance,
+} from '@/project_components/sale-opportunities-table';
 
 type ChooseSalesOpportunityDialogProps = {
   data?: SaleChance[];
@@ -16,7 +18,7 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
 }) => {
   const [selectedChance, setSelectedChance] = useState<SaleChance | null>(null);
   const { closeDialog } = useDialogManager();
-  
+
   const handleRowSelect = (chance: SaleChance) => {
     setSelectedChance(chance);
   };
@@ -55,11 +57,12 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
         </label>
       </div>
       <div className="py-2">
-        <SaleOpportunitiesTable 
-          data={data} 
-          reducedMode 
-          onRowSelect={handleRowSelect} 
-          selectedChance={selectedChance} 
+        <SalesOpportunitiesTable
+          data={data}
+          reducedMode
+          showSelectionRadio
+          onRowSelect={handleRowSelect}
+          selectedChance={selectedChance}
         />
       </div>
     </ManagedDialog>
