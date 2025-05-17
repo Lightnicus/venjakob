@@ -8,6 +8,7 @@ import OfferVersionsTable from './offer-versions-table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import EnterOrderConfirmationNumberDialog from './enter-order-confirmation-number-dialog';
+import { useTabbedInterface } from './tabbed-interface-provider';
 
 type OfferDetailProps = { 
   title: string;
@@ -19,6 +20,7 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
   const [tab, setTab] = useState('bloecke');
   const [dropdownValue, setDropdownValue] = useState('Kalkulation');
   const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false);
+  const { openNewTab } = useTabbedInterface();
   
   // You can use variantId and language here to fetch specific offer data if needed
   
@@ -29,6 +31,16 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
   const handleConfirmationNumber = (confirmationNumber: string) => {
     console.log('Auftragsbestätigungsnummer:', confirmationNumber);
     // Hier kann die weitere Logik implementiert werden
+  };
+  
+  const handleCreateVariant = () => {
+    const newVariantId = variantId ? `${variantId}-neu` : 'V1';
+    openNewTab({
+      id: `angebot-variante-${Date.now()}`,
+      title: `${title} (${newVariantId})`,
+      content: <OfferDetail title={title} variantId={newVariantId} language={language} />,
+      closable: true
+    });
   };
   
   return (
@@ -65,7 +77,16 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
               <SelectItem value="Kalkulation neu erstellen">Kalkulation neu erstellen</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Variante erstellen">Variante erstellen</Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1" 
+            tabIndex={0} 
+            aria-label="Variante erstellen"
+            onClick={handleCreateVariant}
+          >
+            Variante erstellen
+          </Button>
         </div>
       </div>
       <Tabs value={tab} onValueChange={setTab} className="w-full h-full flex flex-col">
