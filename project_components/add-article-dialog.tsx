@@ -1,4 +1,7 @@
 import React, { useState, useMemo } from 'react';
+import { FilterableTable } from './filterable-table';
+import type { ColumnDef } from '@tanstack/react-table';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 export type Article = {
   id: number;
@@ -33,6 +36,42 @@ const AddArticleDialog: React.FC<Props> = ({ open, onClose, onAdd, articles }) =
     () => articles.find((a) => a.id === selectedId) || null,
     [selectedId, articles]
   );
+  
+  const columns = useMemo<ColumnDef<Article>[]>(
+    () => [
+      {
+        id: 'select',
+        header: () => <span className="sr-only">Auswählen</span>,
+        cell: ({ row }) => (
+          <RadioGroup value={selectedId?.toString() || ""} onValueChange={(value) => setSelectedId(Number(value))}>
+            <RadioGroupItem
+              value={row.original.id.toString()}
+              id={`radio-${row.original.id}`}
+              checked={selectedId === row.original.id}
+              aria-label={`Artikel ${row.original.nummer} auswählen`}
+            />
+          </RadioGroup>
+        ),
+        enableSorting: false,
+      },
+      {
+        accessorKey: 'nummer',
+        header: 'Nr.',
+        cell: ({ row }) => (
+          <span className="underline text-blue-700">{row.original.nummer}</span>
+        ),
+      },
+      {
+        accessorKey: 'ueberschrift',
+        header: 'Überschrift',
+      },
+      {
+        accessorKey: 'aenderung',
+        header: 'letzte Änderung',
+      },
+    ],
+    [selectedId]
+  );
 
   if (!open) return null;
 
@@ -62,7 +101,7 @@ const AddArticleDialog: React.FC<Props> = ({ open, onClose, onAdd, articles }) =
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="search"
+            placeholder="Suchen"
             aria-label="Suche"
             tabIndex={0}
             className="border border-gray-300 rounded px-3 py-1 w-64 focus:outline-none focus:ring"
@@ -70,38 +109,19 @@ const AddArticleDialog: React.FC<Props> = ({ open, onClose, onAdd, articles }) =
         </div>
         {/* Table */}
         <div className="overflow-x-auto mb-4">
-          <table className="min-w-full border border-gray-300 text-sm">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="px-3 py-2 font-bold text-left border-b border-gray-300">Nr.</th>
-                <th className="px-3 py-2 font-bold text-left border-b border-gray-300">Überschrift</th>
-                <th className="px-3 py-2 font-bold text-left border-b border-gray-300">letzte Änderung</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredArticles.map((a) => (
-                <tr
-                  key={a.id}
-                  tabIndex={0}
-                  aria-label={`Artikel ${a.nummer} auswählen`}
-                  className={
-                    (selectedId === a.id
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-white text-black hover:bg-gray-100') +
-                    ' cursor-pointer border-b border-gray-200 focus:outline-none'
-                  }
-                  onClick={() => setSelectedId(a.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') setSelectedId(a.id);
-                  }}
-                >
-                  <td className="px-3 py-2 underline text-blue-700">{a.nummer}</td>
-                  <td className="px-3 py-2">{a.ueberschrift}</td>
-                  <td className="px-3 py-2">{a.aenderung}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <FilterableTable
+            data={filteredArticles}
+            columns={columns}
+            getRowClassName={(row) => 
+              selectedId === row.original.id
+                ? 'cursor-pointer'
+                : 'bg-white text-black hover:bg-gray-100 cursor-pointer'
+            }
+            onRowClick={(row) => setSelectedId(row.original.id)}
+            tableClassName="min-w-full border border-gray-300 text-sm"
+            cellClassName="px-3 py-2 border-b border-gray-200"
+            headerClassName="px-3 py-2 font-bold text-left border-b border-gray-300 bg-gray-100"
+          />
         </div>
         {/* Add Button */}
         <div className="flex justify-end mb-4">
