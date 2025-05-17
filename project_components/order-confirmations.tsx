@@ -3,9 +3,11 @@ import type {
   ColumnDef,
   Row,
 } from '@tanstack/react-table';
-import { Edit, FileText, Copy, Trash } from 'lucide-react';
+import { Edit, History, Trash } from 'lucide-react';
 import Link from 'next/link';
 import { FilterableTable, type DateFilterConfig } from './filterable-table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import OfferVersionsTable from './offer-versions-table';
 
 export type OrderConfirmation = {
   abNumber: string;
@@ -29,6 +31,12 @@ const OrderConfirmations = ({ data }: Props) => {
   // Dropdown options
   const responsibleOptions = React.useMemo(() => Array.from(new Set(data.map(d => d.responsible))).sort(), [data]);
   const modifiedByOptions = React.useMemo(() => Array.from(new Set(data.map(d => d.modifiedBy))).sort(), [data]);
+
+  const [showHistoryDialog, setShowHistoryDialog] = React.useState(false);
+
+  const handleShowHistory = () => {
+    setShowHistoryDialog(true);
+  };
 
   // Function to get valid dates for the 'modifiedOn' filter
   const getValidDatesForModifiedOn = React.useCallback((tableData: OrderConfirmation[]): Date[] => {
@@ -130,16 +138,18 @@ const OrderConfirmations = ({ data }: Props) => {
     { id: 'aktionen', header: 'Aktionen',
       cell: ({ row }: { row: Row<OrderConfirmation> }) => (
         <div className="flex gap-2">
-          <button aria-label="Bearbeiten" tabIndex={0} className="rounded p-1 hover:bg-gray-100">
+          <button aria-label="Bearbeiten" tabIndex={0} className="cursor-pointer rounded p-1 hover:bg-gray-100">
             <Edit className="h-4 w-4" />
           </button>
-          <button aria-label="Anzeigen" tabIndex={0} className="rounded p-1 hover:bg-gray-100">
-            <FileText className="h-4 w-4" />
+          <button 
+            aria-label="Historie" 
+            tabIndex={0} 
+            className="cursor-pointer rounded p-1 hover:bg-gray-100"
+            onClick={() => handleShowHistory()}
+          >
+            <History className="h-4 w-4" />
           </button>
-          <button aria-label="Kopieren" tabIndex={0} className="rounded p-1 hover:bg-gray-100">
-            <Copy className="h-4 w-4" />
-          </button>
-          <button aria-label="Löschen" tabIndex={0} className="rounded p-1 hover:bg-gray-100">
+          <button aria-label="Löschen" tabIndex={0} className="cursor-pointer rounded p-1 hover:bg-gray-100">
             <Trash className="h-4 w-4" />
           </button>
         </div>
@@ -155,11 +165,21 @@ const OrderConfirmations = ({ data }: Props) => {
   };
 
   return (
-    <FilterableTable<OrderConfirmation>
-      data={data}
-      columns={columns}
-      dateFilterColumns={{ modifiedOn: dateFilterConfigForModifiedOn }}
-    />
+    <>
+      <FilterableTable<OrderConfirmation>
+        data={data}
+        columns={columns}
+        dateFilterColumns={{ modifiedOn: dateFilterConfigForModifiedOn }}
+      />
+      <Dialog open={showHistoryDialog} onOpenChange={setShowHistoryDialog}>
+        <DialogContent className="sm:max-w-lg md:max-w-xl lg:max-w-2xl xl:max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Angebotshistorie</DialogTitle>
+          </DialogHeader>
+          <OfferVersionsTable />
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
