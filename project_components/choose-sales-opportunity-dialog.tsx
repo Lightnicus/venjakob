@@ -7,7 +7,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FC } from 'react';
+import { FC, useState } from 'react';
 import SaleOpportunitiesTable from './sale-opportunities-table';
 import { SaleChance } from './sale-opportunities-table';
 
@@ -17,7 +17,7 @@ type ChooseSalesOpportunityDialogProps = {
   data: SaleChance[];
   onAbbrechen?: () => void;
   onZurueck?: () => void;
-  onWeiter?: () => void;
+  onWeiter?: (selectedChance: SaleChance) => void;
 };
 
 const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
@@ -28,7 +28,20 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
   onZurueck,
   onWeiter,
 }) => {
-  console.log('props', open, onOpenChange, onAbbrechen, onZurueck, onWeiter);
+  const [selectedChance, setSelectedChance] = useState<SaleChance | null>(null);
+  
+  const handleRowSelect = (chance: SaleChance) => {
+    setSelectedChance(chance);
+  };
+
+  const handleWeiter = () => {
+    if (selectedChance && onWeiter) {
+      onWeiter(selectedChance);
+    } else {
+      onOpenChange(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
@@ -45,7 +58,7 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
           </label>
         </div>
         <div className="py-2">
-          <SaleOpportunitiesTable data={data} reducedMode />
+          <SaleOpportunitiesTable data={data} reducedMode onRowSelect={handleRowSelect} selectedChance={selectedChance} />
         </div>
         <DialogFooter>
           <div className="flex gap-2 justify-end w-full">
@@ -70,10 +83,8 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
             <Button
               type="button"
               aria-label="Weiter"
-              onClick={() => {
-                console.log('Weiter clicked', onWeiter);
-                onWeiter ? onWeiter() : onOpenChange(false);
-              }}
+              disabled={!selectedChance}
+              onClick={handleWeiter}
             >
               Weiter
             </Button>

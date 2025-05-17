@@ -76,6 +76,21 @@ const Offers = () => {
     setOfferAsNewVariantDialogOpen(true);
   };
 
+  const handleSalesOpportunityZurueck = () => {
+    setChooseSalesOpportunityDialogOpen(false);
+    setDialogOpen(true);
+  };
+
+  const handleSalesOpportunityWeiter = (selectedChance: SaleChance) => {
+    setChooseSalesOpportunityDialogOpen(false);
+    setOfferAsNewVariantDialogOpen(true);
+  };
+
+  const handleOfferAsNewVariantDialogZurueck = () => {
+    setOfferAsNewVariantDialogOpen(false);
+    setChooseSalesOpportunityDialogOpen(true);
+  };
+
   const handleOfferAsNewVariantDialogJa = () => {
     setOfferAsNewVariantDialogOpen(false);
     setChooseOfferLanguageDialogOpen(true);
@@ -165,12 +180,15 @@ const Offers = () => {
         open={chooseSalesOpportunityDialogOpen}
         onOpenChange={setChooseSalesOpportunityDialogOpen}
         data={dummySalesOpportunities}
+        onZurueck={handleSalesOpportunityZurueck}
+        onWeiter={handleSalesOpportunityWeiter}
       />
       <OfferAsNewVariantDialog
         open={offerAsNewVariantDialogOpen}
         onOpenChange={setOfferAsNewVariantDialogOpen}
         onJa={handleOfferAsNewVariantDialogJa}
         onNein={handleOfferAsNewVariantDialogNein}
+        onZurueck={handleOfferAsNewVariantDialogZurueck}
       />
       <ChooseOfferLanguageDialog
         open={chooseOfferLanguageDialogOpen}

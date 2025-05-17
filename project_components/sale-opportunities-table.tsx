@@ -30,6 +30,7 @@ import Link from 'next/link';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import { SalesOpportunityDetail, SalesOpportunityDetailData } from './sales-opportunity-detail';
 import salesOpportunityDetailData from '@/data/sales-opportunity-detail.json';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 export type SaleChance = {
   titel: string;
@@ -46,12 +47,27 @@ export type SaleChance = {
 interface SaleChancesProps {
   data: SaleChance[];
   reducedMode?: boolean;
+  onRowSelect?: (chance: SaleChance) => void;
+  selectedChance?: SaleChance | null;
 }
 
-const SaleOpportunitiesTable = ({ data, reducedMode = false }: SaleChancesProps) => {
+const SaleOpportunitiesTable = ({ 
+  data, 
+  reducedMode = false, 
+  onRowSelect, 
+  selectedChance 
+}: SaleChancesProps) => {
   const { openNewTab } = useTabbedInterface();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
+  const [selectedRowIndex, setSelectedRowIndex] = React.useState<string>('');
+
+  React.useEffect(() => {
+    if (selectedRowIndex !== '' && onRowSelect) {
+      const chance = data[parseInt(selectedRowIndex)];
+      onRowSelect(chance);
+    }
+  }, [selectedRowIndex, data, onRowSelect]);
 
   // Dropdown options for Verantwortlicher
   const verantwortlicherOptions = React.useMemo(
@@ -147,6 +163,25 @@ const SaleOpportunitiesTable = ({ data, reducedMode = false }: SaleChancesProps)
   };
 
   const columns = React.useMemo<ColumnDef<SaleChance>[]>(() => [
+    {
+      id: 'select',
+      header: () => <span className="sr-only">Auswahl</span>,
+      cell: ({ row }: { row: Row<SaleChance> }) => (
+        <div className="flex justify-center">
+          <RadioGroupItem
+            value={row.index.toString()}
+            id={`row-${row.index}`}
+            aria-label={`Zeile auswählen für ${row.original.titel}`}
+            className="border-blue-600 data-[state=checked]:bg-blue-600 h-4 w-4 cursor-pointer"
+          />
+        </div>
+      ),
+      enableSorting: false,
+      enableColumnFilter: false,
+      size: 32,
+      minSize: 32,
+      maxSize: 32,
+    },
     {
       accessorKey: 'titel',
       header: 'Titel',
@@ -278,54 +313,71 @@ const SaleOpportunitiesTable = ({ data, reducedMode = false }: SaleChancesProps)
 
   return (
     <div className="overflow-x-auto">
-      <Table className="w-full border">
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup: HeaderGroup<SaleChance>) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header: Header<SaleChance, unknown>) => {
-                const isSortable = header.column.getCanSort();
-                const sortState = header.column.getIsSorted();
-                let sortIcon = null;
-                if (isSortable) {
-                  if (sortState === 'asc') sortIcon = <span className="ml-1">▲</span>;
-                  else if (sortState === 'desc') sortIcon = <span className="ml-1">▼</span>;
-                  else sortIcon = <span className="ml-1">⇅</span>;
-                }
-                return (
-                  <TableHead
-                    key={header.id}
-                    className="border p-2 text-left cursor-pointer select-none"
-                    onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
-                    aria-sort={sortState ? (sortState === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    tabIndex={isSortable ? 0 : undefined}
-                    onKeyDown={e => {
-                      if ((e.key === 'Enter' || e.key === ' ') && isSortable) {
-                        header.column.toggleSorting();
-                      }
-                    }}
-                  >
-                    <span className="flex items-center">
-                      {flexRender(header.column.columnDef.header, header.getContext())}
-                      {isSortable && sortIcon}
-                    </span>
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map((row: Row<SaleChance>) => (
-            <TableRow key={row.id}>
-              {row.getVisibleCells().map((cell: Cell<SaleChance, unknown>) => (
-                <TableCell key={cell.id} className="border p-2">
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <RadioGroup
+        value={selectedRowIndex}
+        onValueChange={setSelectedRowIndex}
+      >
+        <Table className="w-full border">
+          <TableHeader>
+            {table.getHeaderGroups().map((headerGroup: HeaderGroup<SaleChance>) => (
+              <TableRow key={headerGroup.id}>
+                {headerGroup.headers.map((header: Header<SaleChance, unknown>) => {
+                  const isSortable = header.column.getCanSort();
+                  const sortState = header.column.getIsSorted();
+                  let sortIcon = null;
+                  if (isSortable) {
+                    if (sortState === 'asc') sortIcon = <span className="ml-1">▲</span>;
+                    else if (sortState === 'desc') sortIcon = <span className="ml-1">▼</span>;
+                    else sortIcon = <span className="ml-1">⇅</span>;
+                  }
+                  return (
+                    <TableHead
+                      key={header.id}
+                      className="border p-2 text-left cursor-pointer select-none"
+                      onClick={isSortable ? header.column.getToggleSortingHandler() : undefined}
+                      aria-sort={sortState ? (sortState === 'asc' ? 'ascending' : 'descending') : 'none'}
+                      tabIndex={isSortable ? 0 : undefined}
+                      onKeyDown={e => {
+                        if ((e.key === 'Enter' || e.key === ' ') && isSortable) {
+                          header.column.toggleSorting();
+                        }
+                      }}
+                    >
+                      <span className="flex items-center">
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {isSortable && sortIcon}
+                      </span>
+                    </TableHead>
+                  );
+                })}
+              </TableRow>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.map((row: Row<SaleChance>) => (
+              <TableRow 
+                key={row.id} 
+                className={`hover:bg-gray-50 cursor-pointer ${selectedRowIndex === row.index.toString() ? 'bg-blue-50' : ''}`}
+                onClick={() => setSelectedRowIndex(row.index.toString())}
+                tabIndex={0}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    setSelectedRowIndex(row.index.toString());
+                  }
+                }}
+                data-state={selectedRowIndex === row.index.toString() ? 'selected' : 'default'}
+              >
+                {row.getVisibleCells().map((cell: Cell<SaleChance, unknown>) => (
+                  <TableCell key={cell.id} className="border p-2">
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </RadioGroup>
     </div>
   );
 };
