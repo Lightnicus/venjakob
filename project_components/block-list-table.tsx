@@ -1,18 +1,14 @@
-import { FC, useState, ChangeEvent } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { FC, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Pencil, Copy, Trash2 } from 'lucide-react';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import BlockDetail from './block-detail';
 import blockDetailData from '@/data/block-detail.json';
 import languages from '@/data/languages.json';
+import { FilterableTable } from './filterable-table';
+import type { ColumnDef, Row } from '@tanstack/react-table';
+import { toast } from 'sonner';
+import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 
 type Block = {
   bezeichnung: string;
@@ -28,19 +24,14 @@ type BlockListTableProps = {
 };
 
 const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
-  const [searchBezeichnung, setSearchBezeichnung] = useState('');
-  const [searchUeberschrift, setSearchUeberschrift] = useState('');
-  const [selectedRow, setSelectedRow] = useState<number | null>(null);
+  const [selectedRow, setSelectedRow] = useState<string | null>(null);
   const { openNewTab } = useTabbedInterface();
+  const [blockToDelete, setBlockToDelete] = useState<Block | null>(null);
+  const [tableData, setTableData] = useState<Block[]>(data);
 
-  const handleSearchBezeichnung = (e: ChangeEvent<HTMLInputElement>) => setSearchBezeichnung(e.target.value);
-  const handleSearchUeberschrift = (e: ChangeEvent<HTMLInputElement>) => setSearchUeberschrift(e.target.value);
-
-  const filtered = data.filter(
-    b =>
-      b.bezeichnung.toLowerCase().includes(searchBezeichnung.toLowerCase()) &&
-      b.ueberschrift.toLowerCase().includes(searchUeberschrift.toLowerCase())
-  );
+  useEffect(() => {
+    setTableData(data);
+  }, [data]);
 
   const handleOpenBlockDetail = (block: Block) => {
     openNewTab({
@@ -51,77 +42,135 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
     });
   };
 
+  const handleCopyBlock = (block: Block) => {
+    console.log('Kopiere Block:', block.bezeichnung);
+    toast('Block wurde kopiert');
+  };
+
+  const handleInitiateDelete = (block: Block) => {
+    setBlockToDelete(block);
+  };
+
+  const handleConfirmDelete = () => {
+    if (!blockToDelete) return;
+    setTableData(prevData => prevData.filter(b => b.bezeichnung !== blockToDelete.bezeichnung || b.position !== blockToDelete.position));
+    toast.success('Block wurde gelöscht');
+    setBlockToDelete(null);
+  };
+
+  const columns: ColumnDef<Block>[] = [
+    {
+      accessorKey: 'bezeichnung',
+      header: 'Bezeichnung',
+      cell: ({ row }) => (
+        <span
+          className="text-blue-700 underline cursor-pointer"
+          onClick={(e) => { e.stopPropagation(); handleOpenBlockDetail(row.original); }}
+          tabIndex={0}
+          aria-label={`Block ${row.original.bezeichnung} öffnen`}
+          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleOpenBlockDetail(row.original); }}}
+        >
+          {row.original.bezeichnung}
+        </span>
+      ),
+      enableColumnFilter: true,
+    },
+    {
+      accessorKey: 'ueberschrift',
+      header: 'Überschrift',
+      enableColumnFilter: true,
+    },
+    {
+      accessorKey: 'sprachen',
+      header: 'Sprachen',
+    },
+    {
+      accessorKey: 'geaendertAm',
+      header: 'zuletzt geändert am',
+    },
+    {
+      accessorKey: 'standard',
+      header: 'Standard',
+      cell: ({ row }) => <input type="checkbox" checked={row.original.standard} readOnly tabIndex={-1} aria-label="Standard" />,
+    },
+    {
+      accessorKey: 'position',
+      header: 'Position',
+    },
+    {
+      id: 'aktionen',
+      header: 'Aktion',
+      cell: ({ row }) => (
+        <div className="flex gap-2">
+          <button 
+            aria-label="Bearbeiten"
+            tabIndex={0} 
+            className="cursor-pointer hover:text-blue-600"
+            onClick={(e) => { e.stopPropagation(); handleOpenBlockDetail(row.original); }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleOpenBlockDetail(row.original); }}}
+          >
+            <Pencil size={16} />
+          </button>
+          <button 
+            aria-label="Kopieren" 
+            tabIndex={0} 
+            className="cursor-pointer hover:text-blue-600"
+            onClick={(e) => { e.stopPropagation(); handleCopyBlock(row.original); }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleCopyBlock(row.original); }}}
+          >
+            <Copy size={16} />
+          </button>
+          <button 
+            aria-label="Löschen" 
+            tabIndex={0} 
+            className="cursor-pointer hover:text-red-600"
+            onClick={(e) => { e.stopPropagation(); handleInitiateDelete(row.original); }}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleInitiateDelete(row.original); }}}
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+      ),
+    },
+  ];
+
+  const getRowClassName = (row: Row<Block>) => {
+    let className = '';
+    if (parseInt(row.id) % 2 !== 0) {
+      className += 'bg-gray-50 ';
+    } else {
+      className += 'bg-white ';
+    }
+    if (selectedRow === row.id) {
+      className += '!bg-blue-100';
+    }
+    return className;
+  };
+  
+  const handleRowClick = (row: Row<Block>) => {
+    setSelectedRow(row.id);
+  };
+
   return (
     <div className="w-full bg-white rounded shadow p-4">
       <div className="flex items-center gap-2 mb-2">
         <Button aria-label="Block hinzufügen" tabIndex={0} className="h-8 px-3 text-sm">+ Block hinzufügen</Button>
       </div>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="min-w-[180px]">
-                <input
-                  type="text"
-                  value={searchBezeichnung}
-                  onChange={handleSearchBezeichnung}
-                  placeholder="search"
-                  aria-label="Bezeichnung suchen"
-                  tabIndex={0}
-                  className="w-full border rounded px-2 py-1 text-xs"
-                />
-              </TableHead>
-              <TableHead className="min-w-[180px]">
-                <input
-                  type="text"
-                  value={searchUeberschrift}
-                  onChange={handleSearchUeberschrift}
-                  placeholder="search"
-                  aria-label="Überschrift suchen"
-                  tabIndex={0}
-                  className="w-full border rounded px-2 py-1 text-xs"
-                />
-              </TableHead>
-              <TableHead>Sprachen</TableHead>
-              <TableHead>zuletzt geändert am</TableHead>
-              <TableHead>Standard</TableHead>
-              <TableHead>Position</TableHead>
-              <TableHead>Aktion</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filtered.map((block, idx) => (
-              <TableRow
-                key={block.bezeichnung + block.position}
-                className={
-                  `${idx % 2 ? 'bg-gray-50' : 'bg-white'} ` +
-                  (selectedRow === idx ? ' !bg-blue-100' : '')
-                }
-                tabIndex={0}
-                aria-label={`Block ${block.bezeichnung}`}
-                onClick={() => setSelectedRow(idx)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' || e.key === ' ') setSelectedRow(idx);
-                }}
-              >
-                <TableCell className="text-blue-700 underline cursor-pointer" onClick={e => { e.stopPropagation(); handleOpenBlockDetail(block); }} tabIndex={0} aria-label={`Block ${block.bezeichnung} öffnen`} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleOpenBlockDetail(block); }}}>{block.bezeichnung}</TableCell>
-                <TableCell>{block.ueberschrift}</TableCell>
-                <TableCell>{block.sprachen}</TableCell>
-                <TableCell>{block.geaendertAm}</TableCell>
-                <TableCell>
-                  <input type="checkbox" checked={block.standard} readOnly aria-label="Standard" tabIndex={-1} />
-                </TableCell>
-                <TableCell>{block.position}</TableCell>
-                <TableCell className="flex gap-2">
-                  <button aria-label="Bearbeiten" tabIndex={0} className="hover:text-blue-600"><Pencil size={16} /></button>
-                  <button aria-label="Kopieren" tabIndex={0} className="hover:text-blue-600"><Copy size={16} /></button>
-                  <button aria-label="Löschen" tabIndex={0} className="hover:text-red-600"><Trash2 size={16} /></button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <FilterableTable
+        data={tableData}
+        columns={columns}
+        getRowClassName={getRowClassName}
+        onRowClick={handleRowClick}
+        filterColumn={undefined}
+        filterPlaceholder="Suchen..."
+      />
+      <DeleteConfirmationDialog
+        open={!!blockToDelete}
+        onOpenChange={(open) => !open && setBlockToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        title="Block löschen"
+        description={`Möchten Sie den Block "${blockToDelete?.bezeichnung || ''}" wirklich löschen?`}
+      />
     </div>
   );
 };

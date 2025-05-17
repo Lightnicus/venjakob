@@ -48,14 +48,6 @@
     "position": 5
   },
   {
-    "bezeichnung": "Zahlungskondition 20-30-30-10",
-    "ueberschrift": "Zahlungskondition",
-    "sprachen": "DE;EN",
-    "geaendertAm": "2.01.2034",
-    "standard": false,
-    "position": 0
-  },
-  {
     "bezeichnung": "allgemeine Angebotskonditionen",
     "ueberschrift": "Angebotskonditionen",
     "sprachen": "DE;EN",
