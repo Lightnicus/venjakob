@@ -133,8 +133,6 @@ const ChooseOfferDialogComponent: FC = () => {
 
   return (
     <ChooseOfferDialog
-      open={true}
-      onOpenChange={(open) => !open && closeDialog()}
       onWeiter={handleWeiter}
     />
   );

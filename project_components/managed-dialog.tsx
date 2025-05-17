@@ -10,6 +10,7 @@ interface ManagedDialogProps {
   showBackButton?: boolean;
   onBack?: () => void;
   showCloseButton?: boolean;
+  onCloseButtonClick?: () => void;
   className?: string;
 }
 
@@ -20,6 +21,7 @@ export const ManagedDialog: FC<ManagedDialogProps> = ({
   showBackButton = false,
   onBack,
   showCloseButton = true,
+  onCloseButtonClick,
   className,
 }) => {
   const { currentDialog, closeDialog, goBack } = useDialogManager();
@@ -38,6 +40,14 @@ export const ManagedDialog: FC<ManagedDialogProps> = ({
     }
   };
 
+  const handleClose = () => {
+    if (onCloseButtonClick) {
+      onCloseButtonClick();
+    } else {
+      closeDialog();
+    }
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogContent className={className}>
@@ -53,7 +63,7 @@ export const ManagedDialog: FC<ManagedDialogProps> = ({
               </Button>
             )}
             {showCloseButton && (
-              <Button variant="outline" onClick={() => closeDialog()}>
+              <Button variant="outline" onClick={handleClose}>
                 Schließen
               </Button>
             )}

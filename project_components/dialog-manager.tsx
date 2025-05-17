@@ -38,7 +38,7 @@ export const DialogManagerProvider: FC<DialogManagerProviderProps> = ({ children
   };
 
   const closeDialog = () => {
-    setDialogHistory((prev) => prev.slice(0, -1));
+    setDialogHistory([]);
   };
 
   const goBack = () => {
