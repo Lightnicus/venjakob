@@ -7,6 +7,7 @@ import PdfPreview from './pdf-preview';
 import OfferVersionsTable from './offer-versions-table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import EnterOrderConfirmationNumberDialog from './enter-order-confirmation-number-dialog';
 
 type OfferDetailProps = { 
   title: string;
@@ -17,8 +18,18 @@ type OfferDetailProps = {
 const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language }) => {
   const [tab, setTab] = useState('bloecke');
   const [dropdownValue, setDropdownValue] = useState('Kalkulation öffnen');
+  const [isConfirmationDialogOpen, setIsConfirmationDialogOpen] = useState(false);
   
   // You can use variantId and language here to fetch specific offer data if needed
+  
+  const handleOrderConfirmationClick = () => {
+    setIsConfirmationDialogOpen(true);
+  };
+
+  const handleConfirmationNumber = (confirmationNumber: string) => {
+    console.log('Auftragsbestätigungsnummer:', confirmationNumber);
+    // Hier kann die weitere Logik implementiert werden
+  };
   
   return (
     <div className="w-full h-full flex flex-col">
@@ -29,7 +40,16 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
         <div className="flex flex-wrap gap-2 items-center mb-2">
           <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Bearbeiten">Bearbeiten</Button>
           <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Veröffentlichen">Veröffentlichen</Button>
-          <Button variant="outline" size="sm" className="flex items-center gap-1" tabIndex={0} aria-label="Auftragsbestätigung">Auftragsbestätigung</Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="flex items-center gap-1" 
+            tabIndex={0} 
+            aria-label="Auftragsbestätigung"
+            onClick={handleOrderConfirmationClick}
+          >
+            Auftragsbestätigung
+          </Button>
           <Select value={dropdownValue} onValueChange={setDropdownValue}>
             <SelectTrigger 
               className="h-9 px-4 py-2 text-sm w-[200px]"
@@ -68,6 +88,12 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
         </TabsContent>
       </Tabs>
       <div className="mt-2 text-xs text-gray-500 text-left">Zuletzt geändert am 01.05.2024 von Max Mustermann</div>
+      
+      <EnterOrderConfirmationNumberDialog 
+        isOpen={isConfirmationDialogOpen}
+        onOpenChange={setIsConfirmationDialogOpen}
+        onConfirm={handleConfirmationNumber}
+      />
     </div>
   );
 };
