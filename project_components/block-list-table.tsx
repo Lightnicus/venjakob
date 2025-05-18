@@ -74,7 +74,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
       header: 'Bezeichnung',
       cell: ({ row }) => (
         <span
-          className="text-blue-700 underline cursor-pointer"
+          className="text-blue-700 underline cursor-pointer hover:text-blue-900 font-medium"
           onClick={(e) => { e.stopPropagation(); handleOpenBlockDetail(row.original); }}
           tabIndex={0}
           aria-label={`Block ${row.original.bezeichnung} öffnen`}
@@ -115,7 +115,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
           <button 
             aria-label="Bearbeiten"
             tabIndex={0} 
-            className="cursor-pointer hover:text-blue-600"
+            className="cursor-pointer hover:text-blue-600 p-1"
             onClick={(e) => { e.stopPropagation(); handleOpenBlockDetail(row.original); }}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleOpenBlockDetail(row.original); }}}
           >
@@ -124,7 +124,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
           <button 
             aria-label="Kopieren" 
             tabIndex={0} 
-            className="cursor-pointer hover:text-blue-600"
+            className="cursor-pointer hover:text-blue-600 p-1"
             onClick={(e) => { e.stopPropagation(); handleCopyBlock(row.original); }}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleCopyBlock(row.original); }}}
           >
@@ -133,7 +133,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
           <button 
             aria-label="Löschen" 
             tabIndex={0} 
-            className="cursor-pointer hover:text-red-600"
+            className="cursor-pointer hover:text-red-600 p-1"
             onClick={(e) => { e.stopPropagation(); handleInitiateDelete(row.original); }}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleInitiateDelete(row.original); }}}
           >
@@ -145,29 +145,27 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
   ];
 
   const getRowClassName = (row: Row<Block>) => {
-    let className = '';
-    if (parseInt(row.id) % 2 !== 0) {
-      className += 'bg-gray-50 ';
-    } else {
-      className += 'bg-white ';
-    }
+    let className = 'cursor-pointer hover:bg-blue-100';
     if (selectedRow === row.id) {
-      className += '!bg-blue-100';
+      className += ' bg-blue-200';
+    } else {
+      className += row.index % 2 === 0 ? ' bg-white' : ' bg-gray-100';
     }
     return className;
   };
   
   const handleRowClick = (row: Row<Block>) => {
     setSelectedRow(row.id);
+    handleOpenBlockDetail(row.original);
   };
 
   return (
-    <div className="w-full bg-white rounded shadow p-4">
+    <div className="w-full">
       <div className="flex items-center gap-2 mb-2">
         <Button 
           variant="outline"
           size="sm"
-          className="flex items-center gap-1"
+          className="flex items-center gap-1 cursor-pointer"
           aria-label="Block hinzufügen" 
           tabIndex={0} 
           onClick={handleAddNewBlock}
@@ -175,14 +173,16 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
           + Block hinzufügen
         </Button>
       </div>
-      <FilterableTable
-        data={tableData}
-        columns={columns}
-        getRowClassName={getRowClassName}
-        onRowClick={handleRowClick}
-        filterColumn={undefined}
-        filterPlaceholder="Suchen..."
-      />
+      <div className="rounded-md border overflow-x-auto">
+        <FilterableTable
+          data={tableData}
+          columns={columns}
+          getRowClassName={getRowClassName}
+          onRowClick={handleRowClick}
+          filterColumn={undefined}
+          filterPlaceholder="Suchen..."
+        />
+      </div>
       <DeleteConfirmationDialog
         open={!!blockToDelete}
         onOpenChange={(open) => !open && setBlockToDelete(null)}
