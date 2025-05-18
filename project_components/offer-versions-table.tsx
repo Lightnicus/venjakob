@@ -70,7 +70,9 @@ const OfferVersionsTable: React.FC = () => {
 
   const handleConfirmDelete = () => {
     if (!versionToDelete) return;
-    setVersions(prevVersions => prevVersions.filter(v => v.id !== versionToDelete.id));
+    setVersions(prevVersions =>
+      prevVersions.filter(v => v.id !== versionToDelete.id),
+    );
     toast.success(`Version ${versionToDelete.version} wurde gelöscht`);
     setVersionToDelete(null);
   };
@@ -152,13 +154,13 @@ const OfferVersionsTable: React.FC = () => {
         headerClassName="px-3 py-2 bg-gray-200 text-left font-semibold"
         cellClassName="px-3 py-2"
         getRowClassName={getRowClassName}
-        filterColumn="version"
+        globalFilterColumnIds={['version']}
         filterPlaceholder="Version filtern..."
         defaultSorting={[{ id: 'version', desc: false }]}
       />
       <DeleteConfirmationDialog
         open={!!versionToDelete}
-        onOpenChange={(open) => !open && setVersionToDelete(null)}
+        onOpenChange={open => !open && setVersionToDelete(null)}
         onConfirm={handleConfirmDelete}
         title="Version löschen"
         description={`Möchten Sie die Version "${versionToDelete?.version || ''}" wirklich löschen?`}

@@ -18,32 +18,42 @@ type Props = {
   articles: Article[];
 };
 
-const AddArticleDialog: React.FC<Props> = ({ open, onClose, onAdd, articles }) => {
+const AddArticleDialog: React.FC<Props> = ({
+  open,
+  onClose,
+  onAdd,
+  articles,
+}) => {
   const [search, setSearch] = useState('');
-  const [selectedId, setSelectedId] = useState<number | null>(articles[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<number | null>(
+    articles[0]?.id ?? null,
+  );
 
   const filteredArticles = useMemo(
     () =>
       articles.filter(
-        (a) =>
+        a =>
           a.nummer.toLowerCase().includes(search.toLowerCase()) ||
-          a.ueberschrift.toLowerCase().includes(search.toLowerCase())
+          a.ueberschrift.toLowerCase().includes(search.toLowerCase()),
       ),
-    [search, articles]
+    [search, articles],
   );
 
   const selectedArticle = useMemo(
-    () => articles.find((a) => a.id === selectedId) || null,
-    [selectedId, articles]
+    () => articles.find(a => a.id === selectedId) || null,
+    [selectedId, articles],
   );
-  
+
   const columns = useMemo<ColumnDef<Article>[]>(
     () => [
       {
         id: 'select',
         header: () => <span className="sr-only">Auswählen</span>,
         cell: ({ row }) => (
-          <RadioGroup value={selectedId?.toString() || ""} onValueChange={(value) => setSelectedId(Number(value))}>
+          <RadioGroup
+            value={selectedId?.toString() || ''}
+            onValueChange={value => setSelectedId(Number(value))}
+          >
             <RadioGroupItem
               value={row.original.id.toString()}
               id={`radio-${row.original.id}`}
@@ -70,7 +80,7 @@ const AddArticleDialog: React.FC<Props> = ({ open, onClose, onAdd, articles }) =
         header: 'letzte Änderung',
       },
     ],
-    [selectedId]
+    [selectedId],
   );
 
   if (!open) return null;
@@ -94,30 +104,18 @@ const AddArticleDialog: React.FC<Props> = ({ open, onClose, onAdd, articles }) =
         </button>
         {/* Title */}
         <h2 className="text-2xl font-semibold mb-4">Artikel hinzufügen</h2>
-        {/* Search */}
-        <div className="flex items-center mb-2">
-          <span className="material-icons text-gray-400 mr-2">search</span>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Suchen"
-            aria-label="Suche"
-            tabIndex={0}
-            className="border border-gray-300 rounded px-3 py-1 w-64 focus:outline-none focus:ring"
-          />
-        </div>
         {/* Table */}
         <div className="overflow-x-auto mb-4">
           <FilterableTable
             data={filteredArticles}
             columns={columns}
-            getRowClassName={(row) => 
+            getRowClassName={row =>
               selectedId === row.original.id
                 ? 'cursor-pointer'
                 : 'bg-white text-black hover:bg-gray-100 cursor-pointer'
             }
-            onRowClick={(row) => setSelectedId(row.original.id)}
+            globalFilterColumnIds={['ueberschrift', 'nummer']}
+            onRowClick={row => setSelectedId(row.original.id)}
             tableClassName="min-w-full border border-gray-300 text-sm"
             cellClassName="px-3 py-2 border-b border-gray-200"
             headerClassName="px-3 py-2 font-bold text-left border-b border-gray-300 bg-gray-100"
@@ -140,7 +138,9 @@ const AddArticleDialog: React.FC<Props> = ({ open, onClose, onAdd, articles }) =
           <div className="font-bold mb-2">Vorschau</div>
           <div className="relative h-32 overflow-y-auto border border-gray-200 rounded p-2 bg-gray-50 mb-2">
             {selectedArticle ? (
-              <pre className="whitespace-pre-wrap text-sm font-sans">{selectedArticle.vorschau}</pre>
+              <pre className="whitespace-pre-wrap text-sm font-sans">
+                {selectedArticle.vorschau}
+              </pre>
             ) : null}
           </div>
         </div>
@@ -149,4 +149,4 @@ const AddArticleDialog: React.FC<Props> = ({ open, onClose, onAdd, articles }) =
   );
 };
 
-export default AddArticleDialog; 
+export default AddArticleDialog;

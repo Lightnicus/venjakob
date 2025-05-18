@@ -37,7 +37,9 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
     openNewTab({
       id: `block-detail-${block.bezeichnung}`,
       title: `Block: ${block.bezeichnung}`,
-      content: <BlockDetail data={blockDetailData} languages={languages as any} />,
+      content: (
+        <BlockDetail data={blockDetailData} languages={languages as any} />
+      ),
       closable: true,
     });
   };
@@ -63,7 +65,13 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
 
   const handleConfirmDelete = () => {
     if (!blockToDelete) return;
-    setTableData(prevData => prevData.filter(b => b.bezeichnung !== blockToDelete.bezeichnung || b.position !== blockToDelete.position));
+    setTableData(prevData =>
+      prevData.filter(
+        b =>
+          b.bezeichnung !== blockToDelete.bezeichnung ||
+          b.position !== blockToDelete.position,
+      ),
+    );
     toast.success('Block wurde gelöscht');
     setBlockToDelete(null);
   };
@@ -75,10 +83,18 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
       cell: ({ row }) => (
         <span
           className="text-blue-700 underline cursor-pointer hover:text-blue-900 font-medium"
-          onClick={(e) => { e.stopPropagation(); handleOpenBlockDetail(row.original); }}
+          onClick={e => {
+            e.stopPropagation();
+            handleOpenBlockDetail(row.original);
+          }}
           tabIndex={0}
           aria-label={`Block ${row.original.bezeichnung} öffnen`}
-          onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleOpenBlockDetail(row.original); }}}
+          onKeyDown={e => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.stopPropagation();
+              handleOpenBlockDetail(row.original);
+            }
+          }}
         >
           {row.original.bezeichnung}
         </span>
@@ -101,7 +117,15 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
     {
       accessorKey: 'standard',
       header: 'Standard',
-      cell: ({ row }) => <input type="checkbox" checked={row.original.standard} readOnly tabIndex={-1} aria-label="Standard" />,
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={row.original.standard}
+          readOnly
+          tabIndex={-1}
+          aria-label="Standard"
+        />
+      ),
     },
     {
       accessorKey: 'position',
@@ -112,30 +136,54 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
       header: 'Aktion',
       cell: ({ row }) => (
         <div className="flex gap-2">
-          <button 
+          <button
             aria-label="Bearbeiten"
-            tabIndex={0} 
+            tabIndex={0}
             className="cursor-pointer hover:text-blue-600 p-1"
-            onClick={(e) => { e.stopPropagation(); handleOpenBlockDetail(row.original); }}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleOpenBlockDetail(row.original); }}}
+            onClick={e => {
+              e.stopPropagation();
+              handleOpenBlockDetail(row.original);
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                handleOpenBlockDetail(row.original);
+              }
+            }}
           >
             <Pencil size={16} />
           </button>
-          <button 
-            aria-label="Kopieren" 
-            tabIndex={0} 
+          <button
+            aria-label="Kopieren"
+            tabIndex={0}
             className="cursor-pointer hover:text-blue-600 p-1"
-            onClick={(e) => { e.stopPropagation(); handleCopyBlock(row.original); }}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleCopyBlock(row.original); }}}
+            onClick={e => {
+              e.stopPropagation();
+              handleCopyBlock(row.original);
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                handleCopyBlock(row.original);
+              }
+            }}
           >
             <Copy size={16} />
           </button>
-          <button 
-            aria-label="Löschen" 
-            tabIndex={0} 
+          <button
+            aria-label="Löschen"
+            tabIndex={0}
             className="cursor-pointer hover:text-red-600 p-1"
-            onClick={(e) => { e.stopPropagation(); handleInitiateDelete(row.original); }}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleInitiateDelete(row.original); }}}
+            onClick={e => {
+              e.stopPropagation();
+              handleInitiateDelete(row.original);
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                handleInitiateDelete(row.original);
+              }
+            }}
           >
             <Trash2 size={16} />
           </button>
@@ -153,7 +201,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
     }
     return className;
   };
-  
+
   const handleRowClick = (row: Row<Block>) => {
     setSelectedRow(row.id);
     handleOpenBlockDetail(row.original);
@@ -162,12 +210,12 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
   return (
     <div className="w-full">
       <div className="flex items-center gap-2 mb-2">
-        <Button 
+        <Button
           variant="outline"
           size="sm"
           className="flex items-center gap-1 cursor-pointer"
-          aria-label="Block hinzufügen" 
-          tabIndex={0} 
+          aria-label="Block hinzufügen"
+          tabIndex={0}
           onClick={handleAddNewBlock}
         >
           + Block hinzufügen
@@ -179,13 +227,13 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
           columns={columns}
           getRowClassName={getRowClassName}
           onRowClick={handleRowClick}
-          filterColumn={undefined}
-          filterPlaceholder="Suchen..."
+          globalFilterColumnIds={['ueberschrift', 'sprachen', 'bezeichnung']}
+          filterPlaceholder="Filtern..."
         />
       </div>
       <DeleteConfirmationDialog
         open={!!blockToDelete}
-        onOpenChange={(open) => !open && setBlockToDelete(null)}
+        onOpenChange={open => !open && setBlockToDelete(null)}
         onConfirm={handleConfirmDelete}
         title="Block löschen"
         description={`Möchten Sie den Block "${blockToDelete?.bezeichnung || ''}" wirklich löschen?`}
@@ -194,4 +242,4 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
   );
 };
 
-export default BlockListTable; 
+export default BlockListTable;

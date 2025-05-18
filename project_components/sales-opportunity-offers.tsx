@@ -27,7 +27,8 @@ type Props = {
 const SalesOpportunityOffers = ({ data }: Props) => {
   const { openNewTab } = useTabbedInterface();
   const [offersList, setOffersList] = useState<SalesOpportunityOffer[]>(data);
-  const [offerToDelete, setOfferToDelete] = useState<SalesOpportunityOffer | null>(null);
+  const [offerToDelete, setOfferToDelete] =
+    useState<SalesOpportunityOffer | null>(null);
 
   useEffect(() => {
     setOffersList(data);
@@ -52,7 +53,7 @@ const SalesOpportunityOffers = ({ data }: Props) => {
   };
 
   const handleCopyOffer = (offer: SalesOpportunityOffer) => {
-    toast.success("Angebot wurde kopiert");
+    toast.success('Angebot wurde kopiert');
     openNewTab({
       id: `offer-detail-copy-${offer.offerNumber}-${Date.now()}`,
       title: `Kopie von Angebot ${offer.offerNumber}`,
@@ -67,7 +68,9 @@ const SalesOpportunityOffers = ({ data }: Props) => {
 
   const handleConfirmDelete = () => {
     if (offerToDelete) {
-      setOffersList(prevOffers => prevOffers.filter(o => o.offerNumber !== offerToDelete.offerNumber));
+      setOffersList(prevOffers =>
+        prevOffers.filter(o => o.offerNumber !== offerToDelete.offerNumber),
+      );
       toast.success(`Angebot ${offerToDelete.offerNumber} wurde gelöscht.`);
       setOfferToDelete(null);
     }
@@ -76,7 +79,7 @@ const SalesOpportunityOffers = ({ data }: Props) => {
   const columns: ColumnDef<SalesOpportunityOffer>[] = [
     {
       accessorKey: 'offerNumber',
-      header: 'Angebots-Nr.'
+      header: 'Angebots-Nr.',
     },
     {
       accessorKey: 'accepted',
@@ -84,20 +87,28 @@ const SalesOpportunityOffers = ({ data }: Props) => {
       cell: ({ row }) => (
         <div className="text-center">
           {row.original.accepted ? (
-            <Check className="h-5 w-5 text-green-600" aria-label="Angenommen" tabIndex={0} />
+            <Check
+              className="h-5 w-5 text-green-600"
+              aria-label="Angenommen"
+              tabIndex={0}
+            />
           ) : (
-            <XIcon className="h-5 w-5 text-gray-400" aria-label="Nicht angenommen" tabIndex={0} />
+            <XIcon
+              className="h-5 w-5 text-gray-400"
+              aria-label="Nicht angenommen"
+              tabIndex={0}
+            />
           )}
         </div>
-      )
+      ),
     },
     {
       accessorKey: 'amount',
-      header: 'Betrag'
+      header: 'Betrag',
     },
     {
       accessorKey: 'version',
-      header: 'Version'
+      header: 'Version',
     },
     {
       accessorKey: 'published',
@@ -105,20 +116,28 @@ const SalesOpportunityOffers = ({ data }: Props) => {
       cell: ({ row }) => (
         <div className="text-center">
           {row.original.published ? (
-            <Check className="h-5 w-5 text-green-600" aria-label="Veröffentlicht" tabIndex={0} />
+            <Check
+              className="h-5 w-5 text-green-600"
+              aria-label="Veröffentlicht"
+              tabIndex={0}
+            />
           ) : (
-            <XIcon className="h-5 w-5 text-gray-400" aria-label="Nicht veröffentlicht" tabIndex={0} />
+            <XIcon
+              className="h-5 w-5 text-gray-400"
+              aria-label="Nicht veröffentlicht"
+              tabIndex={0}
+            />
           )}
         </div>
-      )
+      ),
     },
     {
       accessorKey: 'modifiedBy',
-      header: 'Geändert von'
+      header: 'Geändert von',
     },
     {
       accessorKey: 'modifiedOn',
-      header: 'Geändert am'
+      header: 'Geändert am',
     },
     {
       id: 'actions',
@@ -158,8 +177,8 @@ const SalesOpportunityOffers = ({ data }: Props) => {
             <Trash className="h-4 w-4" />
           </button>
         </div>
-      )
-    }
+      ),
+    },
   ];
 
   return (
@@ -170,17 +189,17 @@ const SalesOpportunityOffers = ({ data }: Props) => {
         tableClassName="w-full border"
         cellClassName="border p-2"
         headerClassName="border p-2 text-left cursor-pointer select-none bg-gray-50"
-        filterColumn="offerNumber"
+        globalFilterColumnIds={['offerNumber']}
         filterPlaceholder="Angebots-Nr. filtern..."
         dateFilterColumns={{
           modifiedOn: {
-            dateFieldPath: 'modifiedOn'
-          }
+            dateFieldPath: 'modifiedOn',
+          },
         }}
       />
       <DeleteConfirmationDialog
         open={!!offerToDelete}
-        onOpenChange={(isOpen) => !isOpen && setOfferToDelete(null)}
+        onOpenChange={isOpen => !isOpen && setOfferToDelete(null)}
         onConfirm={handleConfirmDelete}
         title="Angebot löschen"
         description={`Möchten Sie das Angebot "${offerToDelete?.offerNumber || ''}" wirklich löschen?`}
@@ -189,4 +208,4 @@ const SalesOpportunityOffers = ({ data }: Props) => {
   );
 };
 
-export default SalesOpportunityOffers; 
+export default SalesOpportunityOffers;

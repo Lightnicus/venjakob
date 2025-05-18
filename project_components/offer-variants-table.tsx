@@ -37,16 +37,19 @@ interface OfferVariantsTableProps {
   onSelectionChange?: (id: string | null) => void;
 }
 
-export function OfferVariantsTable({ 
-  showActions = true, 
-  onSelectionChange 
+export function OfferVariantsTable({
+  showActions = true,
+  onSelectionChange,
 }: OfferVariantsTableProps) {
-  const [offerVariants, setOfferVariants] =
-    useState<OfferVariant[]>(offerVariantsData.map(variant => ({
+  const [offerVariants, setOfferVariants] = useState<OfferVariant[]>(
+    offerVariantsData.map(variant => ({
       ...variant,
-      checked: false
-    })));
-  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+      checked: false,
+    })),
+  );
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(
+    null,
+  );
 
   const selectVariant = (id: string) => {
     const newSelectedId = id === selectedVariantId ? null : id;
@@ -54,8 +57,8 @@ export function OfferVariantsTable({
     setOfferVariants(
       offerVariants.map(variant => ({
         ...variant,
-        checked: variant.id === id && id !== selectedVariantId
-      }))
+        checked: variant.id === id && id !== selectedVariantId,
+      })),
     );
     if (onSelectionChange) {
       onSelectionChange(newSelectedId);
@@ -69,7 +72,7 @@ export function OfferVariantsTable({
         header: () => <span className="sr-only">Auswählen</span>,
         cell: ({ row }: { row: Row<OfferVariant> }) => (
           <div className="flex items-center justify-center">
-            <RadioGroupItem 
+            <RadioGroupItem
               value={row.original.id}
               checked={row.original.checked}
               onClick={() => selectVariant(row.original.id)}
@@ -201,39 +204,41 @@ export function OfferVariantsTable({
         enableSorting: true,
         enableColumnFilter: true,
       },
-      ...(showActions ? [
-        {
-          id: 'actions',
-          header: () => 'Aktionen',
-          cell: ({ row }: { row: Row<OfferVariant> }) => (
-            <div className="flex items-center gap-1">
-              <button
-                className="rounded p-1 hover:bg-gray-100"
-                aria-label="Bearbeiten"
-                tabIndex={0}
-              >
-                <Edit className="h-4 w-4" />
-              </button>
-              <button
-                className="rounded p-1 hover:bg-gray-100"
-                aria-label="Details anzeigen"
-                tabIndex={0}
-              >
-                <FileText className="h-4 w-4" />
-              </button>
-              <button
-                className="rounded p-1 hover:bg-gray-100"
-                aria-label="Löschen"
-                tabIndex={0}
-              >
-                <Trash className="h-4 w-4" />
-              </button>
-            </div>
-          ),
-          enableSorting: false,
-          enableColumnFilter: false,
-        }
-      ] : []),
+      ...(showActions
+        ? [
+            {
+              id: 'actions',
+              header: () => 'Aktionen',
+              cell: ({ row }: { row: Row<OfferVariant> }) => (
+                <div className="flex items-center gap-1">
+                  <button
+                    className="rounded p-1 hover:bg-gray-100"
+                    aria-label="Bearbeiten"
+                    tabIndex={0}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button
+                    className="rounded p-1 hover:bg-gray-100"
+                    aria-label="Details anzeigen"
+                    tabIndex={0}
+                  >
+                    <FileText className="h-4 w-4" />
+                  </button>
+                  <button
+                    className="rounded p-1 hover:bg-gray-100"
+                    aria-label="Löschen"
+                    tabIndex={0}
+                  >
+                    <Trash className="h-4 w-4" />
+                  </button>
+                </div>
+              ),
+              enableSorting: false,
+              enableColumnFilter: false,
+            },
+          ]
+        : []),
     ],
     [showActions],
   );
@@ -242,7 +247,7 @@ export function OfferVariantsTable({
   const dateFilterConfigs: Record<string, DateFilterConfig> = {
     modifiedOn: {
       dateFieldPath: 'modifiedOn',
-    }
+    },
   };
 
   const getRowClassName = (row: Row<OfferVariant>) => {
@@ -251,17 +256,20 @@ export function OfferVariantsTable({
   };
 
   return (
-    <RadioGroup value={selectedVariantId || undefined} onValueChange={selectVariant}>
+    <RadioGroup
+      value={selectedVariantId || undefined}
+      onValueChange={selectVariant}
+    >
       <FilterableTable
         data={offerVariants}
         columns={columns}
-        filterColumn="offerNumber"
-        filterPlaceholder="Filtern nach Angebots-Nr..."
+        globalFilterColumnIds={['offerNumber', 'customer', 'language']}
+        filterPlaceholder="Filtern..."
         getRowClassName={getRowClassName}
         tableClassName="w-full border"
         headerClassName="border p-2 text-left bg-gray-50 cursor-pointer select-none"
         dateFilterColumns={dateFilterConfigs}
-        onRowClick={(row) => selectVariant(row.original.id)}
+        onRowClick={row => selectVariant(row.original.id)}
       />
     </RadioGroup>
   );

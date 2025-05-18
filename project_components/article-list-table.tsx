@@ -52,16 +52,25 @@ const icons = {
 export const ArticleListTable = () => {
   const [selected, setSelected] = useState<string | null>(null);
   const { openNewTab } = useTabbedInterface();
-  const [articleToDelete, setArticleToDelete] = useState<ArticleEntry | null>(null); // State for article to delete
-  const [articles, setArticles] = useState<ArticleEntry[]>(articlesData as ArticleEntry[]); // State for articles
+  const [articleToDelete, setArticleToDelete] = useState<ArticleEntry | null>(
+    null,
+  ); // State for article to delete
+  const [articles, setArticles] = useState<ArticleEntry[]>(
+    articlesData as ArticleEntry[],
+  ); // State for articles
 
   // Cast imported JSON to our defined types
   // const typedArticlesData: ArticleEntry[] = articlesData as ArticleEntry[]; // We'll use the 'articles' state now
-  const typedAllSystemLanguages: LanguageOption[] = allSystemLanguages as LanguageOption[];
+  const typedAllSystemLanguages: LanguageOption[] =
+    allSystemLanguages as LanguageOption[];
 
   const getLanguageLabels = (languageKeys: string[]): string => {
     return languageKeys
-      .map(key => typedAllSystemLanguages.find(lang => lang.value === key)?.label || key)
+      .map(
+        key =>
+          typedAllSystemLanguages.find(lang => lang.value === key)?.label ||
+          key,
+      )
       .join(', ');
   };
 
@@ -76,7 +85,9 @@ export const ArticleListTable = () => {
 
   const handleConfirmDelete = () => {
     if (!articleToDelete) return;
-    setArticles(prevArticles => prevArticles.filter(a => a.nr !== articleToDelete.nr));
+    setArticles(prevArticles =>
+      prevArticles.filter(a => a.nr !== articleToDelete.nr),
+    );
     toast.success(`Artikel "${articleToDelete.nr}" wurde gelöscht`);
     setArticleToDelete(null);
   };
@@ -84,10 +95,11 @@ export const ArticleListTable = () => {
   const handleOpenArticleDetailTab = (article: ArticleEntry) => {
     setSelected(article.nr);
     const tabId = `article-detail-${article.nr}`;
-    
+
     const lastChangeInfo = `Zuletzt geändert am ${article.date} von ${article.lastChangedBy}`;
 
-    const articleSpecificInitialData: Record<string, LocalizedContentDetail> = {};
+    const articleSpecificInitialData: Record<string, LocalizedContentDetail> =
+      {};
     article.languageKeys.forEach(key => {
       if (article.localizedContent[key]) {
         articleSpecificInitialData[key] = article.localizedContent[key];
@@ -103,7 +115,7 @@ export const ArticleListTable = () => {
           initialData={articleSpecificInitialData}
           availableLanguages={typedAllSystemLanguages}
           lastChangeInfo={lastChangeInfo}
-          onSaveChanges={(updatedData) => {
+          onSaveChanges={updatedData => {
             console.log(`Änderungen für ${article.nr} speichern:`, updatedData);
             // Backend/state update logic
           }}
@@ -120,7 +132,7 @@ export const ArticleListTable = () => {
       cell: ({ row }) => (
         <span
           className="text-blue-700 underline hover:text-blue-900 font-medium cursor-pointer"
-          onClick={(e) => {
+          onClick={e => {
             e.stopPropagation();
             handleOpenArticleDetailTab(row.original);
           }}
@@ -155,8 +167,8 @@ export const ArticleListTable = () => {
       enableSorting: false,
       enableColumnFilter: false, // No simple text filter for this
       meta: {
-        headerClassName: "w-40", // Apply original width
-      }
+        headerClassName: 'w-40', // Apply original width
+      },
     },
     {
       accessorKey: 'date',
@@ -165,8 +177,8 @@ export const ArticleListTable = () => {
       enableSorting: true,
       // Column filtering is handled by dateFilterColumns prop
       meta: {
-        headerClassName: "w-32", // Apply original width
-      }
+        headerClassName: 'w-32', // Apply original width
+      },
     },
     {
       id: 'actions',
@@ -177,7 +189,7 @@ export const ArticleListTable = () => {
             tabIndex={0}
             aria-label={`Bearbeiten Artikel ${row.original.nr}`}
             className="cursor-pointer hover:text-blue-600 p-1"
-            onClick={(e) => {
+            onClick={e => {
               e.stopPropagation();
               handleOpenArticleDetailTab(row.original);
             }}
@@ -188,8 +200,16 @@ export const ArticleListTable = () => {
             tabIndex={0}
             aria-label={`Kopieren Artikel ${row.original.nr}`}
             className="cursor-pointer hover:text-blue-600 p-1"
-            onClick={(e) => { e.stopPropagation(); handleCopyBlock(row.original); }}
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleCopyBlock(row.original); }}}
+            onClick={e => {
+              e.stopPropagation();
+              handleCopyBlock(row.original);
+            }}
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                handleCopyBlock(row.original);
+              }
+            }}
           >
             <icons.copy size={16} />
           </button>
@@ -197,8 +217,16 @@ export const ArticleListTable = () => {
             tabIndex={0}
             aria-label={`Löschen Artikel ${row.original.nr}`}
             className="cursor-pointer hover:text-red-600 p-1"
-            onClick={(e) => { e.stopPropagation(); handleInitiateDelete(row.original); }} // Updated onClick
-            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.stopPropagation(); handleInitiateDelete(row.original); }}} // Added onKeyDown for accessibility
+            onClick={e => {
+              e.stopPropagation();
+              handleInitiateDelete(row.original);
+            }} // Updated onClick
+            onKeyDown={e => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                handleInitiateDelete(row.original);
+              }
+            }} // Added onKeyDown for accessibility
           >
             <icons.delete size={16} />
           </button>
@@ -207,8 +235,8 @@ export const ArticleListTable = () => {
       enableSorting: false,
       enableColumnFilter: false,
       meta: {
-        headerClassName: "w-32", // Apply original width
-      }
+        headerClassName: 'w-32', // Apply original width
+      },
     },
   ];
 
@@ -225,7 +253,7 @@ export const ArticleListTable = () => {
     }
     return className;
   };
-  
+
   if (articles.length === 0) {
     return (
       <div className="w-full">
@@ -262,18 +290,20 @@ export const ArticleListTable = () => {
       </div>
       <div className="rounded-md border overflow-x-auto">
         <FilterableTable
-            data={articles}
-            columns={columns}
-            onRowClick={(row) => handleOpenArticleDetailTab(row.original)}
-            getRowClassName={getRowClassName}
-            dateFilterColumns={{ date: dateFilterConfigForDatum }} // 'date' is accessorKey
-            defaultSorting={[{ id: 'nr', desc: false }]} // Default sort by Nr Asc
-            tableClassName="w-full" 
+          data={articles}
+          columns={columns}
+          onRowClick={row => handleOpenArticleDetailTab(row.original)}
+          getRowClassName={getRowClassName}
+          dateFilterColumns={{ date: dateFilterConfigForDatum }} // 'date' is accessorKey
+          defaultSorting={[{ id: 'nr', desc: false }]} // Default sort by Nr Asc
+          tableClassName="w-full"
+          filterPlaceholder="Filtern..."
+          globalFilterColumnIds={['nr', 'languageKeys', 'title']}
         />
       </div>
       <DeleteConfirmationDialog
         open={!!articleToDelete}
-        onOpenChange={(open) => !open && setArticleToDelete(null)}
+        onOpenChange={open => !open && setArticleToDelete(null)}
         onConfirm={handleConfirmDelete}
         title="Artikel löschen"
         description={`Möchten Sie den Artikel "${articleToDelete?.nr || ''}" (${articleToDelete?.title || ''}) wirklich löschen?`}
@@ -282,4 +312,4 @@ export const ArticleListTable = () => {
   );
 };
 
-export default ArticleListTable; 
+export default ArticleListTable;

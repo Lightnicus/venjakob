@@ -20,21 +20,23 @@ type Props = {
 
 const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
   const [search, setSearch] = useState('');
-  const [selectedId, setSelectedId] = useState<number | null>(blocks[0]?.id ?? null);
+  const [selectedId, setSelectedId] = useState<number | null>(
+    blocks[0]?.id ?? null,
+  );
 
   const filteredBlocks = useMemo(
     () =>
       blocks.filter(
-        (b) =>
+        b =>
           b.bezeichnung.toLowerCase().includes(search.toLowerCase()) ||
-          b.ueberschrift.toLowerCase().includes(search.toLowerCase())
+          b.ueberschrift.toLowerCase().includes(search.toLowerCase()),
       ),
-    [search, blocks]
+    [search, blocks],
   );
 
   const selectedBlock = useMemo(
-    () => blocks.find((b) => b.id === selectedId) || null,
-    [selectedId, blocks]
+    () => blocks.find(b => b.id === selectedId) || null,
+    [selectedId, blocks],
   );
 
   const columns = useMemo<ColumnDef<Block>[]>(
@@ -43,7 +45,10 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
         id: 'select',
         header: () => <span className="sr-only">Auswählen</span>,
         cell: ({ row }) => (
-          <RadioGroup value={selectedId?.toString() || ""} onValueChange={(value) => setSelectedId(Number(value))}>
+          <RadioGroup
+            value={selectedId?.toString() || ''}
+            onValueChange={value => setSelectedId(Number(value))}
+          >
             <RadioGroupItem
               value={row.original.id.toString()}
               id={`radio-${row.original.id}`}
@@ -67,7 +72,7 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
         header: 'letzte Änderung',
       },
     ],
-    [selectedId]
+    [selectedId],
   );
 
   if (!open) return null;
@@ -91,30 +96,18 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
         </button>
         {/* Title */}
         <h2 className="text-2xl font-semibold mb-4">Block hinzufügen</h2>
-        {/* Search */}
-        <div className="flex items-center mb-2">
-          <span className="material-icons text-gray-400 mr-2">search</span>
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Suchen"
-            aria-label="Suche"
-            tabIndex={0}
-            className="border border-gray-300 rounded px-3 py-1 w-64 focus:outline-none focus:ring"
-          />
-        </div>
         {/* Table */}
         <div className="overflow-x-auto mb-4">
           <FilterableTable
             data={filteredBlocks}
             columns={columns}
-            getRowClassName={(row) => 
+            getRowClassName={row =>
               selectedId === row.original.id
                 ? 'cursor-pointer'
                 : 'bg-white text-black hover:bg-gray-100 cursor-pointer'
             }
-            onRowClick={(row) => setSelectedId(row.original.id)}
+            globalFilterColumnIds={['bezeichnung', 'ueberschrift']}
+            onRowClick={row => setSelectedId(row.original.id)}
             tableClassName="min-w-full border border-gray-300 text-sm"
             cellClassName="px-3 py-2 border-b border-gray-200"
             headerClassName="px-3 py-2 font-bold text-left border-b border-gray-300 bg-gray-100"
@@ -137,7 +130,9 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
           <div className="font-bold mb-2">Vorschau</div>
           <div className="relative h-48 overflow-y-auto border border-gray-200 rounded p-2 bg-gray-50">
             {selectedBlock ? (
-              <pre className="whitespace-pre-wrap text-sm font-sans">{selectedBlock.vorschau}</pre>
+              <pre className="whitespace-pre-wrap text-sm font-sans">
+                {selectedBlock.vorschau}
+              </pre>
             ) : null}
           </div>
         </div>
@@ -146,4 +141,4 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
   );
 };
 
-export default AddBlockDialog; 
+export default AddBlockDialog;
