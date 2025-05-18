@@ -116,18 +116,7 @@ export const ArticleListTable = () => {
   const columns: ColumnDef<ArticleEntry, any>[] = [
     {
       accessorKey: 'nr',
-      header: ({ column }) => (
-        <div className="w-32"> {/* Maintain width for consistency */}
-          <input
-            className="w-full border rounded px-2 py-1 text-xs"
-            placeholder="Nr. suchen"
-            value={(column.getFilterValue() as string) ?? ''}
-            onChange={(e) => column.setFilterValue(e.target.value)}
-            onClick={(e) => e.stopPropagation()} // Prevent sorting when clicking input
-            aria-label="Suche Artikelnummer"
-          />
-        </div>
-      ),
+      header: 'Nr.',
       cell: ({ row }) => (
         <span
           className="text-blue-700 underline hover:text-blue-900 font-medium cursor-pointer"
@@ -154,16 +143,7 @@ export const ArticleListTable = () => {
     },
     {
       accessorKey: 'title',
-      header: ({ column }) => (
-        <input
-          className="w-full border rounded px-2 py-1 text-xs" // Full width of header cell
-          placeholder="Überschrift suchen"
-          value={(column.getFilterValue() as string) ?? ''}
-          onChange={(e) => column.setFilterValue(e.target.value)}
-          onClick={(e) => e.stopPropagation()}
-          aria-label="Suche Überschrift"
-        />
-      ),
+      header: 'Überschrift',
       cell: ({ row }) => row.original.title,
       enableSorting: true,
       enableColumnFilter: true,
