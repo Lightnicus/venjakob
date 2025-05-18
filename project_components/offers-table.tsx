@@ -218,7 +218,19 @@ export function OffersTable({
       enableSorting: true,
       enableColumnFilter: true,
       cell: ({ row }: { row: Row<Offer> }) => (
-        <span className="text-blue-600 hover:underline">{row.original.recipient}</span>
+        <span
+          className="text-blue-600 hover:underline cursor-pointer"
+          tabIndex={0}
+          onClick={() => toast("Hier geht's zum CRM")}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              toast("Hier geht's zum CRM");
+            }
+          }}
+          aria-label={`CRM für ${row.original.recipient} öffnen`}
+        >
+          {row.original.recipient}
+        </span>
       ),
     },
     ...(!reducedMode ? [

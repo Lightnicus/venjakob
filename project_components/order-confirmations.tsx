@@ -99,7 +99,23 @@ const OrderConfirmations = ({ data /*, onDeleteConfirmation */ }: Props) => {
     { accessorKey: 'customerNumber', header: 'KdNr', enableSorting: true, enableColumnFilter: true },
     { accessorKey: 'customer', header: 'Kunde', enableSorting: true, enableColumnFilter: true,
       cell: ({ row }: { row: Row<OrderConfirmation> }) => (
-        <Link href="#" tabIndex={0} aria-label={`Kunde ${row.original.customer}`} className="text-blue-600 hover:underline cursor-pointer">{row.original.customer}</Link>
+        <span 
+          tabIndex={0} 
+          aria-label={`CRM für ${row.original.customer} öffnen`}
+          className="text-blue-600 hover:underline cursor-pointer"
+          onClick={(e) => {
+            e.stopPropagation();
+            toast("Hier geht's zum CRM");
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.stopPropagation();
+              toast("Hier geht's zum CRM");
+            }
+          }}
+        >
+          {row.original.customer}
+        </span>
       ) },
     { accessorKey: 'location', header: 'Ort', enableSorting: true, enableColumnFilter: true },
     { accessorKey: 'gb', header: 'GB', enableSorting: true, enableColumnFilter: true },

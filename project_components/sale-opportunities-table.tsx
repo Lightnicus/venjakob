@@ -126,13 +126,20 @@ const SalesOpportunitiesTable = ({
         accessorKey: 'kunde',
         header: 'Kunde',
         cell: ({ row }: { row: Row<SaleChance> }) => (
-          // Add similar Link/interaction pattern if Kunde should also open details
-          <span className="text-blue-600 hover:underline cursor-pointer"
+          <span 
+            className="text-blue-600 hover:underline cursor-pointer"
+            tabIndex={0}
             onClick={(e) => {
                e.stopPropagation(); 
-               // TODO: Implement customer detail view or interaction
-               console.log("Kunde clicked:", row.original.kunde);
-              }}
+               toast("Hier geht's zum CRM");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                toast("Hier geht's zum CRM");
+              }
+            }}
+            aria-label={`CRM für ${row.original.kunde} öffnen`}
           >
             {row.original.kunde}
           </span>

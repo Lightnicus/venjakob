@@ -15,6 +15,7 @@ import {
 import offerVariantsData from '@/data/offer-variants.json';
 import { FilterableTable, DateFilterConfig } from './filterable-table';
 import type { ColumnDef, Row } from '@tanstack/react-table';
+import { toast } from 'sonner';
 
 type OfferVariant = {
   id: string;
@@ -128,7 +129,21 @@ export function OfferVariantsTable({
         accessorKey: 'customer',
         header: () => <div className="flex items-center gap-1">Kunde</div>,
         cell: ({ row }: { row: Row<OfferVariant> }) => (
-          <span className="text-blue-600 hover:underline">
+          <span 
+            className="text-blue-600 hover:underline cursor-pointer"
+            tabIndex={0}
+            onClick={(e) => {
+              e.stopPropagation();
+              toast("Hier geht's zum CRM");
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.stopPropagation();
+                toast("Hier geht's zum CRM");
+              }
+            }}
+            aria-label={`CRM für ${row.original.customer} öffnen`}
+          >
             {row.original.customer}
           </span>
         ),
