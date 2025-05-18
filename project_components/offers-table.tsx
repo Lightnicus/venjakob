@@ -396,7 +396,7 @@ export function OffersTable({
       <FilterableTable
         data={offers}
         columns={columns}
-        filterColumn="offer"
+        globalFilterColumnIds={['offerNumber', 'offer', 'vcStatus', 'customerNumber', 'recipient', 'location', 'responsible', 'modifiedBy']}
         filterPlaceholder="Filtern nach Angebot..."
         getRowClassName={getRowClassName}
         contextValue={offers}

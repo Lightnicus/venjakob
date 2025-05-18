@@ -41,7 +41,7 @@ export interface FilterableTableProps<TData> {
   defaultSorting?: SortingState;
   defaultColumnFilters?: ColumnFiltersState;
   filterPlaceholder?: string;
-  filterColumn?: string;
+  globalFilterColumnIds?: string[];
   getRowClassName?: (row: Row<TData>) => string;
   tableClassName?: string;
   cellClassName?: string;
@@ -187,11 +187,11 @@ function DateFilterHeader<TData>({
 
 export function FilterableTable<TData>({
   data,
-  columns,
+  columns: initialColumns,
   defaultSorting = [],
   defaultColumnFilters = [],
   filterPlaceholder = "Filtern...",
-  filterColumn,
+  globalFilterColumnIds,
   getRowClassName,
   tableClassName = "w-full border",
   cellClassName = "border p-2",
@@ -203,13 +203,29 @@ export function FilterableTable<TData>({
 }: FilterableTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(defaultSorting);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(defaultColumnFilters);
+  const [globalFilter, setGlobalFilter] = React.useState<string>('');
+
+  const columns = React.useMemo(() => {
+    return initialColumns.map(colDef => {
+      let enableGlobally = true; 
+      if (globalFilterColumnIds && globalFilterColumnIds.length > 0) {
+        const effectiveId = colDef.id ?? (typeof (colDef as any).accessorKey === 'string' ? (colDef as any).accessorKey : undefined);
+        enableGlobally = effectiveId ? globalFilterColumnIds.includes(effectiveId) : false;
+      }
+      return {
+        ...colDef,
+        enableGlobalFilter: enableGlobally,
+      };
+    });
+  }, [initialColumns, globalFilterColumnIds]);
 
   const table = useReactTable({
     data,
     columns,
-    state: { sorting, columnFilters },
+    state: { sorting, columnFilters, globalFilter },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
@@ -217,17 +233,15 @@ export function FilterableTable<TData>({
 
   const content = (
     <div className="overflow-x-auto w-full">
-      {filterColumn && (
-        <div className="flex items-center py-4">
-          <input
-            placeholder={filterPlaceholder}
-            value={(table.getColumn(filterColumn)?.getFilterValue() as string) ?? ''}
-            onChange={e => table.getColumn(filterColumn)?.setFilterValue(e.target.value)}
-            className="max-w-sm border rounded px-2 py-1"
-            aria-label={filterPlaceholder}
-          />
-        </div>
-      )}
+      <div className="flex items-center py-4">
+        <input
+          placeholder={filterPlaceholder}
+          value={globalFilter ?? ''}
+          onChange={e => setGlobalFilter(e.target.value)}
+          className="max-w-sm border rounded px-2 py-1"
+          aria-label={filterPlaceholder}
+        />
+      </div>
       <Table className={tableClassName}>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup: HeaderGroup<TData>) => (
