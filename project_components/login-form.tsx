@@ -1,9 +1,7 @@
 'use client';
 
 import type React from 'react';
-
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,39 +9,29 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { signIn, signInWithProvider } from '@/lib/auth/actions';
 
 export function LoginForm() {
-  const router = useRouter();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit(formData: FormData) {
     setIsLoading(true);
     setError(null);
 
     try {
-      // In a real application, you would call your authentication API here
-      // For example: await signIn('credentials', { email, password })
-
-      // Simulate authentication delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Redirect to dashboard after successful login
-      router.push('/dashboard');
+      const result = await signIn(formData);
+      if (result?.error) {
+        setError('Ungültige E-Mail oder Passwort. Bitte versuchen Sie es erneut.');
+      }
     } catch (err) {
-      setError(
-        'Ungültige E-Mail oder Passwort. Bitte versuchen Sie es erneut.',
-      );
+      setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
     } finally {
       setIsLoading(false);
     }
@@ -54,18 +42,12 @@ export function LoginForm() {
     setError(null);
 
     try {
-      // In a real application, you would initiate the Microsoft OAuth flow
-      // For example: await signIn('azure-ad')
-
-      // Simulate authentication delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      // Redirect to dashboard after successful login
-      router.push('/portal');
+      const result = await signInWithProvider('azure');
+      if (result?.error) {
+        setError('Microsoft-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
+      }
     } catch (err) {
-      setError(
-        'Microsoft-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.',
-      );
+      setError('Microsoft-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
     } finally {
       setIsLoading(false);
     }
@@ -86,15 +68,14 @@ export function LoginForm() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form action={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">E-Mail</Label>
             <Input
               id="email"
+              name="email"
               type="email"
               placeholder="name@beispiel.de"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
               required
             />
           </div>
@@ -110,9 +91,8 @@ export function LoginForm() {
             </div>
             <Input
               id="password"
+              name="password"
               type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
               required
             />
           </div>
@@ -168,14 +148,6 @@ export function LoginForm() {
           </div>
         </div>
       </CardContent>
-      {/*<CardFooter className="flex justify-center">*/}
-      {/*  <p className="text-sm text-gray-600">*/}
-      {/*    Don't have an account?{" "}*/}
-      {/*    <a href="/register" className="font-medium text-blue-600 hover:text-blue-500">*/}
-      {/*      Sign up*/}
-      {/*    </a>*/}
-      {/*  </p>*/}
-      {/*</CardFooter>*/}
     </Card>
   );
 }
