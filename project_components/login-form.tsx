@@ -1,7 +1,9 @@
 'use client';
 
 import type React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useFormStatus } from 'react-dom';
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,25 +19,35 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signIn, signInWithProvider } from '@/lib/auth/actions';
 
+function SubmitButton() {
+  const { pending } = useFormStatus();
+  
+  return (
+    <Button type="submit" className="w-full" disabled={pending}>
+      {pending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Anmeldung läuft...
+        </>
+      ) : (
+        'Anmelden'
+      )}
+    </Button>
+  );
+}
+
 export function LoginForm() {
+  const searchParams = useSearchParams();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(formData: FormData) {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const result = await signIn(formData);
-      if (result?.error) {
-        setError('Ungültige E-Mail oder Passwort. Bitte versuchen Sie es erneut.');
-      }
-    } catch (err) {
-      setError('Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.');
-    } finally {
-      setIsLoading(false);
+  // Check for error in URL parameters
+  useEffect(() => {
+    const urlError = searchParams.get('error');
+    if (urlError) {
+      setError(decodeURIComponent(urlError));
     }
-  }
+  }, [searchParams]);
 
   async function handleMicrosoftLogin() {
     setIsLoading(true);
@@ -68,7 +80,7 @@ export function LoginForm() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        <form action={handleSubmit} className="space-y-4">
+        <form action={signIn} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">E-Mail</Label>
             <Input
@@ -96,16 +108,7 @@ export function LoginForm() {
               required
             />
           </div>
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Anmeldung läuft...
-              </>
-            ) : (
-              'Anmelden'
-            )}
-          </Button>
+          <SubmitButton />
         </form>
 
         <div className="mt-6">
