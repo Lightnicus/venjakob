@@ -42,6 +42,23 @@ pnpm run db:push
 - `pnpm run db:migrate` - Run pending migrations
 - `pnpm run db:push` - Push schema directly to database (development)
 - `pnpm run db:studio` - Open Drizzle Studio (database GUI)
+- `pnpm run db:seed` - Run all SQL seed files to populate initial data
+
+## Database Seeding
+
+Initial data is managed through SQL seed files in `lib/db/seeds/`. These files:
+- Run in alphabetical order (use numbered prefixes like `01_`, `02_`)
+- Are idempotent (safe to run multiple times)
+- Use `ON CONFLICT DO NOTHING` to prevent duplicate errors
+
+To seed your database:
+```bash
+# After setting up schema
+pnpm run db:push
+
+# Populate with initial data
+pnpm run db:seed
+```
 
 ## Usage
 
@@ -92,7 +109,8 @@ lib/
 │   ├── index.ts          # Database connection
 │   ├── schema.ts         # Database schema definitions
 │   ├── queries.ts        # Database query functions
-│   └── migrations/       # Generated migration files
+│   ├── migrations/       # Generated migration files
+│   └── seeds/            # SQL seed files for initial data
 └── supabase/
     ├── client.ts         # Client-side Supabase instance
     └── server.ts         # Server-side Supabase instance

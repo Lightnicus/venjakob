@@ -8,6 +8,13 @@
       "when": 1749017251383,
       "tag": "0000_magical_hairball",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1749024228984,
+      "tag": "0001_strange_wrecker",
+      "breakpoints": true
     }
   ]
 }
