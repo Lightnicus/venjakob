@@ -25,6 +25,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { signOut } from '@/lib/auth/actions';
+import { useLoading } from './loading-provider';
 
 // Import tab content components - no longer needed here as they are imported in menu.tsx
 
@@ -37,7 +38,7 @@ type MenuConfigItem = {
 const TopNavigation: FC = () => {
   const { openNewTab } = useTabbedInterface();
   const router = useRouter();
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const { setLoading, isLoading } = useLoading();
 
   const handleMenuClick = (menuItemHref: string) => {
     const tabDef = tabMappings[menuItemHref];
@@ -53,7 +54,7 @@ const TopNavigation: FC = () => {
 
   const handleLogout = async () => {
     try {
-      setIsLoggingOut(true);
+      setLoading('logout', true);
       await signOut();
       // The signOut function will redirect to '/' automatically
     } catch (error) {
@@ -61,9 +62,11 @@ const TopNavigation: FC = () => {
       // Fallback to manual redirect if signOut fails
       router.push('/');
     } finally {
-      setIsLoggingOut(false);
+      setLoading('logout', false);
     }
   };
+
+  const isLoggingOut = isLoading('logout');
 
   return (
     <div className="w-full bg-white shadow-md">

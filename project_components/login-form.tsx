@@ -18,6 +18,7 @@ import { Separator } from '@/components/ui/separator';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { signIn, signInWithProvider } from '@/lib/auth/actions';
+import { useLoading } from './loading-provider';
 
 function SubmitButton() {
   const { pending } = useFormStatus();
@@ -38,7 +39,7 @@ function SubmitButton() {
 
 export function LoginForm() {
   const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = useState(false);
+  const { setLoading, isLoading } = useLoading();
   const [error, setError] = useState<string | null>(null);
 
   // Check for error in URL parameters
@@ -50,10 +51,10 @@ export function LoginForm() {
   }, [searchParams]);
 
   async function handleMicrosoftLogin() {
-    setIsLoading(true);
-    setError(null);
-
     try {
+      setLoading('microsoft-oauth', true);
+      setError(null);
+      
       const result = await signInWithProvider('azure');
       if (result?.error) {
         setError('Microsoft-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
@@ -61,9 +62,11 @@ export function LoginForm() {
     } catch (err) {
       setError('Microsoft-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
     } finally {
-      setIsLoading(false);
+      setLoading('microsoft-oauth', false);
     }
   }
+
+  const isMicrosoftLoading = isLoading('microsoft-oauth');
 
   return (
     <Card>
@@ -129,9 +132,9 @@ export function LoginForm() {
               type="button"
               className="w-full"
               onClick={handleMicrosoftLogin}
-              disabled={isLoading}
+              disabled={isMicrosoftLoading}
             >
-              {isLoading ? (
+              {isMicrosoftLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : (
                 <svg
