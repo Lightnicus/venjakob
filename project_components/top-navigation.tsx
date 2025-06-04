@@ -18,6 +18,12 @@ import { tabMappings } from '@/helper/menu';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 // Import tab content components - no longer needed here as they are imported in menu.tsx
 
@@ -29,8 +35,6 @@ type MenuConfigItem = {
 
 const TopNavigation: FC = () => {
   const { openNewTab } = useTabbedInterface();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   const handleMenuClick = (menuItemHref: string) => {
@@ -45,29 +49,7 @@ const TopNavigation: FC = () => {
     }
   };
 
-  const handleAvatarClick = () => setIsDropdownOpen(v => !v);
-  const handleAvatarKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      setIsDropdownOpen(v => !v);
-    }
-    if (e.key === 'Escape') setIsDropdownOpen(false);
-  };
   const handleLogout = () => router.push('/');
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    if (isDropdownOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    } else {
-      document.removeEventListener('mousedown', handleClickOutside);
-    }
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isDropdownOpen]);
 
   return (
     <div className="w-full bg-white shadow-md">
@@ -145,44 +127,26 @@ const TopNavigation: FC = () => {
           </NavigationMenuList>
         </NavigationMenu>
         <div className="flex items-center gap-2 ml-4">
-          <div className="relative" ref={dropdownRef}>
-            <button
-              className="flex items-center gap-2 focus:outline-none rounded px-1 cursor-pointer"
-              aria-label="Benutzermenü öffnen"
-              aria-haspopup="menu"
-              aria-expanded={isDropdownOpen}
-              tabIndex={0}
-              onClick={handleAvatarClick}
-              onKeyDown={handleAvatarKeyDown}
-              type="button"
-            >
-              <Avatar>
-                <AvatarImage src="/avatar.png" alt="Benutzeravatar" />
-                <AvatarFallback>MM</AvatarFallback>
-              </Avatar>
-              <span className="text-sm font-medium text-gray-700">Max Mustermann</span>
-            </button>
-            {isDropdownOpen && (
-              <div
-                className="absolute top-full right-0 w-40 bg-white border border-gray-200 rounded shadow-lg z-50 animate-fade-in mt-2"
-                role="menu"
-                aria-label="Benutzermenü"
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button 
+                variant="ghost" 
+                className="flex items-center gap-2 p-1"
+                aria-label="Benutzermenü öffnen"
               >
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start rounded-none text-gray-700 hover:bg-gray-100 focus:bg-gray-100"
-                  onClick={handleLogout}
-                  role="menuitem"
-                  aria-label="Abmelden"
-                  onKeyDown={e => {
-                    if (e.key === 'Escape') setIsDropdownOpen(false);
-                  }}
-                >
-                  Abmelden
-                </Button>
-              </div>
-            )}
-          </div>
+                <Avatar>
+                  <AvatarImage src="/avatar.png" alt="Benutzeravatar" />
+                  <AvatarFallback>MM</AvatarFallback>
+                </Avatar>
+                <span className="text-sm font-medium text-gray-700">Max Mustermann</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={handleLogout}>
+                Abmelden
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
     </div>

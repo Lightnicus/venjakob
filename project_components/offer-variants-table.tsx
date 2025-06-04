@@ -17,6 +17,7 @@ import { FilterableTable, DateFilterConfig } from './filterable-table';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 type OfferVariant = {
   id: string;
@@ -195,19 +196,15 @@ export function OfferVariantsTable({
         header: () => (
           <div className="flex items-center gap-1">
             Erstellt von
-            <div className="relative inline-block">
-              <select className="h-6 w-full appearance-none rounded border bg-white px-2 py-0 pr-8 text-sm">
-                <option>Alle</option>
-              </select>
-              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                <svg
-                  className="h-4 w-4 fill-current"
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 20 20"
-                >
-                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                </svg>
-              </div>
+            <div className="inline-block w-24">
+              <Select defaultValue="">
+                <SelectTrigger className="h-6 w-full text-sm">
+                  <SelectValue placeholder="Alle" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Alle</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
         ),

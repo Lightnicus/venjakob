@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import { Edit3, Save, PlusCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 type BlockDetailProps = {
   data: Record<string, {
@@ -135,7 +137,7 @@ const BlockDetail: FC<BlockDetailProps> = ({ data, languages, onSaveChanges }) =
         setSelectedPreviewLanguage(nextLang.value);
       }
     } else {
-      alert("Keine weiteren Sprachen verfügbar oder alle Sprachen wurden bereits hinzugefügt.");
+      toast.error("Keine weiteren Sprachen verfügbar oder alle Sprachen wurden bereits hinzugefügt.");
     }
   };
 
@@ -171,50 +173,54 @@ const BlockDetail: FC<BlockDetailProps> = ({ data, languages, onSaveChanges }) =
         </TabsList>
         <TabsContent value="beschreibungen" className="mt-4">
           {currentLanguages.map(lang => (
-            <div key={lang.value} className="mb-8 border rounded p-4 bg-gray-50">
-              <div className="flex justify-between items-center mb-2">
-                <div className="font-semibold">{lang.label}</div>
-                {isEditing && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
-                    onClick={() => handleRemoveLanguage(lang.value)}
-                    aria-label={`${lang.label} Beschreibung löschen`}
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                )}
-              </div>
-              <div className="space-y-3">
-                <div className="mb-2">
-                  <label className="block text-xs mb-1" htmlFor={`ueberschrift-${lang.value}`}>Überschrift</label>
-                  <input
-                    id={`ueberschrift-${lang.value}`}
-                    className="w-full border rounded px-2 py-1 text-sm bg-white read-only:bg-gray-100 read-only:cursor-not-allowed shadow-sm"
-                    value={editedData[lang.value]?.ueberschrift || ''}
-                    onChange={(e) => handleInputChange(lang.value, 'ueberschrift', e.target.value)}
-                    readOnly={!isEditing}
-                    tabIndex={isEditing ? 0 : -1}
-                    aria-label={`Überschrift ${lang.label}`}
-                  />
+            <Card key={lang.value} className="mb-8">
+              <CardHeader className="pb-2">
+                <div className="flex justify-between items-center">
+                  <div className="font-semibold">{lang.label}</div>
+                  {isEditing && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
+                      onClick={() => handleRemoveLanguage(lang.value)}
+                      aria-label={`${lang.label} Beschreibung löschen`}
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  )}
                 </div>
-                <div>
-                  <label className="block text-xs mb-1" htmlFor={`beschreibung-${lang.value}`}>Beschreibung</label>
-                  <QuillRichTextEditor
-                    id={`beschreibung-${lang.value}`}
-                    className="w-full border rounded text-sm bg-white read-only:bg-gray-100"
-                    defaultValue={editedData[lang.value]?.beschreibung || ''}
-                    onTextChange={(content) => handleRichTextChange(lang.value, content as unknown as string)}
-                    readOnly={!isEditing}
-                    aria-label={`Beschreibung ${lang.label}`}
-                  />
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="mb-2">
+                    <label className="block text-xs mb-1" htmlFor={`ueberschrift-${lang.value}`}>Überschrift</label>
+                    <input
+                      id={`ueberschrift-${lang.value}`}
+                      className="w-full border rounded px-2 py-1 text-sm bg-white read-only:bg-gray-100 read-only:cursor-not-allowed shadow-sm"
+                      value={editedData[lang.value]?.ueberschrift || ''}
+                      onChange={(e) => handleInputChange(lang.value, 'ueberschrift', e.target.value)}
+                      readOnly={!isEditing}
+                      tabIndex={isEditing ? 0 : -1}
+                      aria-label={`Überschrift ${lang.label}`}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1" htmlFor={`beschreibung-${lang.value}`}>Beschreibung</label>
+                    <QuillRichTextEditor
+                      id={`beschreibung-${lang.value}`}
+                      className="w-full border rounded text-sm bg-white read-only:bg-gray-100"
+                      defaultValue={editedData[lang.value]?.beschreibung || ''}
+                      onTextChange={(content) => handleRichTextChange(lang.value, content as unknown as string)}
+                      readOnly={!isEditing}
+                      aria-label={`Beschreibung ${lang.label}`}
+                    />
+                  </div>
                 </div>
-              </div>
-              <div className="text-xs text-gray-500 mt-2">
-                Zuletzt geändert am {data[lang.value]?.geaendertAm} von {data[lang.value]?.autor}
-              </div>
-            </div>
+                <div className="text-xs text-gray-500 mt-2">
+                  Zuletzt geändert am {data[lang.value]?.geaendertAm} von {data[lang.value]?.autor}
+                </div>
+              </CardContent>
+            </Card>
           ))}
           {isEditing && (
             <Button 
