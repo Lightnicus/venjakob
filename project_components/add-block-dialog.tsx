@@ -2,6 +2,14 @@ import React, { useState, useMemo } from 'react';
 import { FilterableTable } from './filterable-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 export type Block = {
   id: number;
@@ -75,69 +83,60 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
     [selectedId],
   );
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-20"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Block hinzufügen Dialog"
-    >
-      <div className="relative bg-white rounded-lg shadow-xl w-full max-w-4xl p-6">
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          aria-label="Schließen"
-          tabIndex={0}
-          className="cursor-pointer absolute top-4 right-4 text-2xl text-gray-500 hover:text-black focus:outline-none"
-        >
-          ×
-        </button>
-        {/* Title */}
-        <h2 className="text-2xl font-semibold mb-4">Block hinzufügen</h2>
-        {/* Table */}
-        <div className="overflow-x-auto mb-4">
-          <FilterableTable
-            data={filteredBlocks}
-            columns={columns}
-            getRowClassName={row =>
-              selectedId === row.original.id
-                ? 'cursor-pointer'
-                : 'bg-white text-black hover:bg-gray-100 cursor-pointer'
-            }
-            globalFilterColumnIds={['bezeichnung', 'ueberschrift']}
-            onRowClick={row => setSelectedId(row.original.id)}
-            tableClassName="min-w-full border border-gray-300 text-sm"
-            cellClassName="px-3 py-2 border-b border-gray-200"
-            headerClassName="px-3 py-2 font-bold text-left border-b border-gray-300 bg-gray-100"
-          />
-        </div>
-        {/* Add Button */}
-        <div className="flex justify-end mb-4">
-          <button
-            className="flex items-center px-4 py-2 bg-gray-100 rounded border border-gray-300 hover:bg-gray-200 focus:outline-none"
-            onClick={() => selectedBlock && onAdd(selectedBlock)}
-            aria-label="Block hinzufügen"
-            tabIndex={0}
-            disabled={!selectedBlock}
-          >
-            + Hinzufügen
-          </button>
-        </div>
-        {/* Vorschau */}
-        <div className="border border-gray-300 rounded p-4 bg-white">
-          <div className="font-bold mb-2">Vorschau</div>
-          <div className="relative h-48 overflow-y-auto border border-gray-200 rounded p-2 bg-gray-50">
-            {selectedBlock ? (
-              <pre className="whitespace-pre-wrap text-sm font-sans">
-                {selectedBlock.vorschau}
-              </pre>
-            ) : null}
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-4xl lg:w-[80vw] lg:max-w-none max-h-[80vh] overflow-hidden flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Block hinzufügen</DialogTitle>
+          <DialogDescription>
+            Wählen Sie einen Block aus der Liste aus und fügen Sie ihn hinzu.
+          </DialogDescription>
+        </DialogHeader>
+        
+        <div className="flex-1 overflow-hidden flex flex-col space-y-4">
+          {/* Table */}
+          <div className="flex-1 overflow-auto">
+            <FilterableTable
+              data={filteredBlocks}
+              columns={columns}
+              getRowClassName={row =>
+                selectedId === row.original.id
+                  ? 'cursor-pointer'
+                  : 'bg-white text-black hover:bg-gray-100 cursor-pointer'
+              }
+              globalFilterColumnIds={['bezeichnung', 'ueberschrift']}
+              onRowClick={row => setSelectedId(row.original.id)}
+              tableClassName="min-w-full border border-gray-300 text-sm"
+              cellClassName="px-3 py-2 border-b border-gray-200"
+              headerClassName="px-3 py-2 font-bold text-left border-b border-gray-300 bg-gray-100"
+            />
+          </div>
+          
+          {/* Add Button */}
+          <div className="flex justify-end">
+            <Button
+              onClick={() => selectedBlock && onAdd(selectedBlock)}
+              disabled={!selectedBlock}
+              aria-label="Block hinzufügen"
+            >
+              + Hinzufügen
+            </Button>
+          </div>
+          
+          {/* Vorschau */}
+          <div className="border border-gray-300 rounded p-4 bg-white">
+            <div className="font-bold mb-2">Vorschau</div>
+            <div className="relative h-48 overflow-y-auto border border-gray-200 rounded p-2 bg-gray-50">
+              {selectedBlock ? (
+                <pre className="whitespace-pre-wrap text-sm font-sans">
+                  {selectedBlock.vorschau}
+                </pre>
+              ) : null}
+            </div>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
