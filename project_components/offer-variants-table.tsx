@@ -16,6 +16,7 @@ import offerVariantsData from '@/data/offer-variants.json';
 import { FilterableTable, DateFilterConfig } from './filterable-table';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 type OfferVariant = {
   id: string;
@@ -226,27 +227,30 @@ export function OfferVariantsTable({
               header: () => 'Aktionen',
               cell: ({ row }: { row: Row<OfferVariant> }) => (
                 <div className="flex items-center gap-1">
-                  <button
-                    className="rounded p-1 hover:bg-gray-100"
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
                     aria-label="Bearbeiten"
-                    tabIndex={0}
                   >
                     <Edit className="h-4 w-4" />
-                  </button>
-                  <button
-                    className="rounded p-1 hover:bg-gray-100"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
                     aria-label="Details anzeigen"
-                    tabIndex={0}
                   >
                     <FileText className="h-4 w-4" />
-                  </button>
-                  <button
-                    className="rounded p-1 hover:bg-gray-100"
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
                     aria-label="Löschen"
-                    tabIndex={0}
                   >
                     <Trash className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </div>
               ),
               enableSorting: false,

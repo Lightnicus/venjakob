@@ -12,6 +12,7 @@ import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 import { toast } from 'sonner';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import OfferDetail from './offer-detail';
+import { Button } from '@/components/ui/button';
 
 export type OrderConfirmation = {
   abNumber: string;
@@ -178,10 +179,11 @@ const OrderConfirmations = ({ data /*, onDeleteConfirmation */ }: Props) => {
     { id: 'aktionen', header: 'Aktionen',
       cell: ({ row }: { row: Row<OrderConfirmation> }) => (
         <div className="flex gap-2">
-          <button 
-            aria-label="Bearbeiten" 
-            tabIndex={0} 
-            className="cursor-pointer rounded p-1 hover:bg-gray-100"
+          <Button 
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            aria-label="Bearbeiten"
             onClick={() => {
               openNewTab({
                 id: `offer-detail-${row.original.abNumber}`,
@@ -191,23 +193,25 @@ const OrderConfirmations = ({ data /*, onDeleteConfirmation */ }: Props) => {
             }}
           >
             <Edit className="h-4 w-4" />
-          </button>
-          <button 
-            aria-label="Historie" 
-            tabIndex={0} 
-            className="cursor-pointer rounded p-1 hover:bg-gray-100"
+          </Button>
+          <Button 
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            aria-label="Historie"
             onClick={() => handleShowHistory()}
           >
             <History className="h-4 w-4" />
-          </button>
-          <button 
-            aria-label="Löschen" 
-            tabIndex={0} 
-            className="cursor-pointer rounded p-1 hover:bg-gray-100"
+          </Button>
+          <Button 
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
+            aria-label="Löschen"
             onClick={() => setConfirmDeleteId(row.original.abNumber)}
           >
             <Trash className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       ),
       enableSorting: false,

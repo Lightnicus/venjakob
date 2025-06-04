@@ -17,6 +17,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 import PdfPreview from '@/project_components/pdf-preview';
+import { Button } from '@/components/ui/button';
 
 type Offer = {
   id: string;
@@ -341,13 +342,20 @@ export function OffersTable({
         header: () => 'Aktionen',
         cell: ({ row }: { row: Row<Offer> }) => (
           <div className="flex items-center gap-1">
-            <button className="rounded p-1 hover:bg-gray-100 cursor-pointer" onClick={() => handleOfferNameClick(row.original)} aria-label="Bearbeiten" tabIndex={0}>
+            <Button 
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => handleOfferNameClick(row.original)} 
+              aria-label="Bearbeiten"
+            >
               <Edit className="h-4 w-4" />
-            </button>
-            <button 
-              className="rounded p-1 hover:bg-gray-100 cursor-pointer" 
-              aria-label="PDF anzeigen" 
-              tabIndex={0}
+            </Button>
+            <Button 
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              aria-label="PDF anzeigen"
               onClick={() => openNewTab({
                 id: `pdf-preview-offer-${row.original.id}-${Date.now()}`,
                 title: `Vorschau Angebot ${row.original.offerNumber}`,
@@ -356,23 +364,25 @@ export function OffersTable({
               })}
             >
               <FileText className="h-4 w-4" />
-            </button>
-            <button 
-              className="rounded p-1 hover:bg-gray-100 cursor-pointer" 
-              aria-label="Kopieren" 
-              tabIndex={0}
+            </Button>
+            <Button 
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              aria-label="Kopieren"
               onClick={() => toast("Angebot kopiert")}
             >
               <Copy className="h-4 w-4" />
-            </button>
-            <button 
-              className="rounded p-1 hover:bg-gray-100 cursor-pointer" 
-              aria-label="Löschen" 
-              tabIndex={0}
+            </Button>
+            <Button 
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              aria-label="Löschen"
               onClick={() => setConfirmDeleteId(row.original.id)}
             >
               <Trash className="h-4 w-4" />
-            </button>
+            </Button>
           </div>
         ),
         enableSorting: false,

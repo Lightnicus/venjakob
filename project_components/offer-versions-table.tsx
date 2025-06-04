@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from '@/project_components/delete-confirmation-dialog';
 import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
 import PdfPreview from '@/project_components/pdf-preview';
+import { Button } from '@/components/ui/button';
 
 type Version = {
   id: string;
@@ -17,33 +18,6 @@ type Version = {
   geaendertAm: string;
   betrag: string;
 };
-
-const handleKeyDown = (
-  event: React.KeyboardEvent<HTMLButtonElement>,
-  onClick: () => void,
-) => {
-  if (event.key === 'Enter' || event.key === ' ') {
-    event.preventDefault();
-    onClick();
-  }
-};
-
-const ActionButton: React.FC<{
-  label: string;
-  svg: React.ReactNode;
-  onClick: () => void;
-}> = ({ label, svg, onClick }) => (
-  <button
-    className="cursor-pointer p-1 rounded hover:bg-gray-300 focus:bg-gray-300 focus:outline-none"
-    tabIndex={0}
-    aria-label={label}
-    onClick={onClick}
-    onKeyDown={e => handleKeyDown(e, onClick)}
-    type="button"
-  >
-    {svg}
-  </button>
-);
 
 const OfferVersionsTable: React.FC = () => {
   const [versions, setVersions] = useState<Version[]>(versionsData);
@@ -102,34 +76,36 @@ const OfferVersionsTable: React.FC = () => {
       header: 'Aktionen',
       cell: ({ row }) => {
         const version = row.original;
-        const icons = [
-          {
-            label: 'Ansehen',
-            svg: <FileText size={18} />,
-            onClick: () => handleViewVersion(version),
-          },
-          {
-            label: 'Kopieren',
-            svg: <Copy size={18} />,
-            onClick: () => handleCopyVersion(version),
-          },
-          {
-            label: 'Löschen',
-            svg: <Trash size={18} />,
-            onClick: () => handleInitiateDelete(version),
-          },
-        ];
 
         return (
           <div className="flex items-center gap-2 justify-center">
-            {icons.map(icon => (
-              <ActionButton
-                key={icon.label}
-                label={icon.label}
-                svg={icon.svg}
-                onClick={icon.onClick}
-              />
-            ))}
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              aria-label="Ansehen"
+              onClick={() => handleViewVersion(version)}
+            >
+              <FileText size={18} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              aria-label="Kopieren"
+              onClick={() => handleCopyVersion(version)}
+            >
+              <Copy size={18} />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-100"
+              aria-label="Löschen"
+              onClick={() => handleInitiateDelete(version)}
+            >
+              <Trash size={18} />
+            </Button>
           </div>
         );
       },

@@ -7,6 +7,7 @@ import { SalesOpportunityDetail, SalesOpportunityDetailData } from './sales-oppo
 import salesOpportunityDetailData from '@/data/sales-opportunity-detail.json';
 import { FilterableTable, DateFilterConfig } from './filterable-table';
 import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
 
 export type SaleChance = {
   titel: string;
@@ -211,10 +212,11 @@ const SalesOpportunitiesTable = ({
           header: 'Aktion',
           cell: ({ row }: { row: Row<SaleChance> }) => (
             <div className="flex gap-2">
-              <button 
+              <Button 
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
                 aria-label={`${row.original.titel} anzeigen`} 
-                tabIndex={0} 
-                className="cursor-pointer rounded p-1 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-ring"
                 onClick={(e) => { 
                   e.stopPropagation(); 
                   handleOpenSalesOpportunityDetails(row.original.titel);
@@ -228,18 +230,19 @@ const SalesOpportunitiesTable = ({
                 }}
               >
                 <Eye className="h-4 w-4" />
-              </button>
-              <button 
-                aria-label={`Aktion Kopieren für ${row.original.titel}`} 
-                tabIndex={0} 
-                className="cursor-pointer rounded p-1 hover:bg-gray-100 focus:outline-none focus:ring-1 focus:ring-ring"
+              </Button>
+              <Button 
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                aria-label={`Aktion Kopieren für ${row.original.titel}`}
                 onClick={(e) => { e.stopPropagation(); 
                   /* TODO: Implement copy action */ console.log("Copy action for:", row.original.titel);
                   toast("Verkaufschance kopiert")
                 }}
               >
                 <Copy className="h-4 w-4" />
-              </button>
+              </Button>
             </div>
           ),
           enableSorting: false,

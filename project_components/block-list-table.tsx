@@ -136,10 +136,11 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
       header: 'Aktion',
       cell: ({ row }) => (
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
             aria-label="Bearbeiten"
-            tabIndex={0}
-            className="cursor-pointer hover:text-blue-600 p-1"
             onClick={e => {
               e.stopPropagation();
               handleOpenBlockDetail(row.original);
@@ -152,11 +153,12 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
             }}
           >
             <Pencil size={16} />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
             aria-label="Kopieren"
-            tabIndex={0}
-            className="cursor-pointer hover:text-blue-600 p-1"
             onClick={e => {
               e.stopPropagation();
               handleCopyBlock(row.original);
@@ -169,11 +171,12 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
             }}
           >
             <Copy size={16} />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-100"
             aria-label="Löschen"
-            tabIndex={0}
-            className="cursor-pointer hover:text-red-600 p-1"
             onClick={e => {
               e.stopPropagation();
               handleInitiateDelete(row.original);
@@ -186,7 +189,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
             }}
           >
             <Trash2 size={16} />
-          </button>
+          </Button>
         </div>
       ),
     },

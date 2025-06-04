@@ -9,6 +9,7 @@ import OfferDetail from '@/project_components/offer-detail';
 import PdfPreview from '@/project_components/pdf-preview';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from '@/project_components/delete-confirmation-dialog';
+import { Button } from '@/components/ui/button';
 
 export type SalesOpportunityOffer = {
   offerNumber: string;
@@ -144,38 +145,42 @@ const SalesOpportunityOffers = ({ data }: Props) => {
       header: 'Aktionen',
       cell: ({ row }) => (
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
             aria-label="Bearbeiten"
-            tabIndex={0}
-            className="cursor-pointer rounded p-1 hover:bg-gray-100"
             onClick={() => handleEditOffer(row.original)}
           >
             <Edit className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
             aria-label="Anzeigen"
-            tabIndex={0}
-            className="cursor-pointer rounded p-1 hover:bg-gray-100"
             onClick={() => handleShowPdf(row.original)}
           >
             <FileText className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
             aria-label="Kopieren"
-            tabIndex={0}
-            className="cursor-pointer rounded p-1 hover:bg-gray-100"
             onClick={() => handleCopyOffer(row.original)}
           >
             <Copy className="h-4 w-4" />
-          </button>
-          <button
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
             aria-label="Löschen"
-            tabIndex={0}
-            className="cursor-pointer rounded p-1 hover:bg-gray-100"
             onClick={() => handleInitiateDelete(row.original)}
           >
             <Trash className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
       ),
     },

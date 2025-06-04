@@ -185,21 +185,23 @@ export const ArticleListTable = () => {
       header: 'Aktion',
       cell: ({ row }) => (
         <div className="flex gap-2">
-          <button
-            tabIndex={0}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
             aria-label={`Bearbeiten Artikel ${row.original.nr}`}
-            className="cursor-pointer hover:text-blue-600 p-1"
             onClick={e => {
               e.stopPropagation();
               handleOpenArticleDetailTab(row.original);
             }}
           >
             <icons.edit size={16} />
-          </button>
-          <button
-            tabIndex={0}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
             aria-label={`Kopieren Artikel ${row.original.nr}`}
-            className="cursor-pointer hover:text-blue-600 p-1"
             onClick={e => {
               e.stopPropagation();
               handleCopyBlock(row.original);
@@ -212,24 +214,25 @@ export const ArticleListTable = () => {
             }}
           >
             <icons.copy size={16} />
-          </button>
-          <button
-            tabIndex={0}
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-100"
             aria-label={`Löschen Artikel ${row.original.nr}`}
-            className="cursor-pointer hover:text-red-600 p-1"
             onClick={e => {
               e.stopPropagation();
               handleInitiateDelete(row.original);
-            }} // Updated onClick
+            }}
             onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.stopPropagation();
                 handleInitiateDelete(row.original);
               }
-            }} // Added onKeyDown for accessibility
+            }}
           >
             <icons.delete size={16} />
-          </button>
+          </Button>
         </div>
       ),
       enableSorting: false,

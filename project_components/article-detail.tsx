@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import QuillRichTextEditor, { QuillEditorRef } from './quill-rich-text-editor';
 import { Trash2, Edit3, PlusCircle, Save } from 'lucide-react';
 import ArticleProperties from './article-properties';
+import { Button } from '@/components/ui/button';
 
 interface LocalizedContent {
   ueberschrift: string;
@@ -139,23 +140,22 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
     <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
       <h2 className="text-2xl font-bold mb-4">{articleId}</h2>
       <div className="flex gap-2 mb-4">
-        <button
-          className="border rounded px-3 py-1 text-sm bg-gray-100 hover:bg-gray-200 flex items-center gap-1.5"
-          tabIndex={0}
-          aria-label={isEditing ? 'Abbrechen' : 'Bearbeiten'}
+        <Button
+          variant="outline"
+          size="sm"
           onClick={handleToggleEdit}
+          aria-label={isEditing ? 'Abbrechen' : 'Bearbeiten'}
         >
           {isEditing ? 'Abbrechen' : <><Edit3 size={14} className="inline-block"/> Bearbeiten</>}
-        </button>
+        </Button>
         {isEditing && (
-          <button
-            className="border rounded px-3 py-1 text-sm bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-1.5"
+          <Button
+            size="sm"
             onClick={handleSaveChanges}
             aria-label="Änderungen speichern"
-            tabIndex={0}
           >
             <Save size={14} className="inline-block"/> Speichern
-          </button>
+          </Button>
         )}
       </div>
 
@@ -178,14 +178,15 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
               <div className="flex justify-between items-center mb-2">
                 <div className="font-semibold">{lang.label}</div>
                 {isEditing && (
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 text-red-500 hover:text-red-700 hover:bg-red-100"
                     onClick={() => handleRemoveLanguage(lang.value)}
-                    className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-100"
                     aria-label={`${lang.label} Beschreibung löschen`}
-                    tabIndex={0}
                   >
                     <Trash2 size={16} />
-                  </button>
+                  </Button>
                 )}
               </div>
               <div className="space-y-3">
@@ -216,14 +217,14 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
             </div>
           ))}
           {isEditing && (
-            <button 
+            <Button 
+              variant="outline"
+              size="sm"
               onClick={handleAddLanguage}
-              className="border rounded px-3 py-1 text-sm mt-2 hover:bg-gray-100 flex items-center gap-1.5"
               aria-label="Sprache hinzufügen"
-              tabIndex={0}
             >
               <PlusCircle size={14} className="inline-block"/> Sprache hinzufügen
-            </button>
+            </Button>
           )}
           {!isEditing && currentLanguages.length === 0 && (
              <div className="text-gray-500 text-center py-8">

@@ -28,6 +28,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { CalendarIcon } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 export interface DateFilterConfig {
   getValidDates?: (data: any[]) => Date[];
@@ -136,13 +137,14 @@ function DateFilterHeader<TData>({
       <span>{title}</span>
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
-          <button
-            type="button"
-            className="p-1 rounded hover:bg-accent focus:outline-none focus:ring-2 focus:ring-ring"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0"
             aria-label="Datum wählen"
           >
             <CalendarIcon className="h-4 w-4" />
-          </button>
+          </Button>
         </PopoverTrigger>
         <PopoverContent align="start" className="w-auto p-0">
           <Calendar
@@ -158,13 +160,14 @@ function DateFilterHeader<TData>({
             initialFocus
             disabled={date => !isDateEnabled(date)}
           />
-          <button
-            type="button"
-            className="mt-2 w-full rounded bg-gray-100 px-2 py-1 text-sm hover:bg-gray-200"
+          <Button
+            variant="outline"
+            size="sm"
+            className="mt-2 w-full"
             onClick={handleReset}
           >
             Filter zurücksetzen
-          </button>
+          </Button>
         </PopoverContent>
       </Popover>
       {filterValue && (
