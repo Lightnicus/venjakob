@@ -17,6 +17,7 @@ import { useTabbedInterface } from '@/project_components/tabbed-interface-provid
 import { tabMappings } from '@/helper/menu';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
 
 // Import tab content components - no longer needed here as they are imported in menu.tsx
 
@@ -167,10 +168,10 @@ const TopNavigation: FC = () => {
                 role="menu"
                 aria-label="Benutzermenü"
               >
-                <button
-                  className="w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none rounded cursor-pointer"
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start rounded-none text-gray-700 hover:bg-gray-100 focus:bg-gray-100"
                   onClick={handleLogout}
-                  tabIndex={0}
                   role="menuitem"
                   aria-label="Abmelden"
                   onKeyDown={e => {
@@ -178,7 +179,7 @@ const TopNavigation: FC = () => {
                   }}
                 >
                   Abmelden
-                </button>
+                </Button>
               </div>
             )}
           </div>
