@@ -124,11 +124,9 @@ const QuillRichTextEditor = forwardRef<
             quillRef.current = currentInstance;
 
             if (defaultValue) {
-              const Delta = QuillModule.Delta;
               if (typeof defaultValue === 'string') {
-                const deltaContent =
-                  currentInstance.clipboard.convert(defaultValue);
-                currentInstance.setContents(deltaContent, 'silent');
+                // Set HTML content directly on the editor root
+                currentInstance.root.innerHTML = defaultValue;
               } else {
                 currentInstance.setContents(defaultValue, 'silent');
               }
@@ -190,8 +188,9 @@ const QuillRichTextEditor = forwardRef<
         source: EditorSources,
       ) => {
         if (onTextChange) {
-          // Pass the full Delta from getContents and the editor instance
-          onTextChange(quill.getContents(), quill);
+          // Return HTML content instead of Delta object
+          const htmlContent = quill.root.innerHTML;
+          onTextChange(htmlContent, quill);
         }
       };
 

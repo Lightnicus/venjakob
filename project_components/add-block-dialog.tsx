@@ -10,25 +10,22 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import type { Block, BlockContent } from '@/lib/db/schema';
 
-export type Block = {
-  id: number;
-  bezeichnung: string;
-  ueberschrift: string;
-  aenderung: string;
-  vorschau: string;
+export type BlockWithContent = Block & {
+  content?: BlockContent;
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  onAdd: (block: Block) => void;
-  blocks: Block[];
+  onAdd: (block: BlockWithContent) => void;
+  blocks: BlockWithContent[];
 };
 
 const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
   const [search, setSearch] = useState('');
-  const [selectedId, setSelectedId] = useState<number | null>(
+  const [selectedId, setSelectedId] = useState<string | null>(
     blocks[0]?.id ?? null,
   );
 
@@ -36,8 +33,8 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
     () =>
       blocks.filter(
         b =>
-          b.bezeichnung.toLowerCase().includes(search.toLowerCase()) ||
-          b.ueberschrift.toLowerCase().includes(search.toLowerCase()),
+          b.name.toLowerCase().includes(search.toLowerCase()) ||
+          (b.content?.title && b.content.title.toLowerCase().includes(search.toLowerCase())),
       ),
     [search, blocks],
   );
@@ -47,7 +44,7 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
     [selectedId, blocks],
   );
 
-  const columns = useMemo<ColumnDef<Block>[]>(
+  const columns = useMemo<ColumnDef<BlockWithContent>[]>(
     () => [
       {
         id: 'select',
@@ -55,29 +52,44 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
         cell: ({ row }) => (
           <RadioGroup
             value={selectedId?.toString() || ''}
-            onValueChange={value => setSelectedId(Number(value))}
+            onValueChange={value => setSelectedId(value)}
           >
             <RadioGroupItem
-              value={row.original.id.toString()}
+              value={row.original.id}
               id={`radio-${row.original.id}`}
               checked={selectedId === row.original.id}
-              aria-label={`Block ${row.original.bezeichnung} auswählen`}
+              aria-label={`Block ${row.original.name} auswählen`}
             />
           </RadioGroup>
         ),
         enableSorting: false,
       },
       {
-        accessorKey: 'bezeichnung',
+        accessorKey: 'name',
         header: 'Bezeichnung',
       },
       {
-        accessorKey: 'ueberschrift',
+        accessorKey: 'content.title',
         header: 'Überschrift',
+        cell: ({ row }) => row.original.content?.title || '-',
       },
       {
-        accessorKey: 'aenderung',
+        accessorKey: 'updatedAt',
         header: 'letzte Änderung',
+        cell: ({ row }) => 
+          row.original.updatedAt 
+            ? new Date(row.original.updatedAt).toLocaleDateString('de-DE')
+            : '-',
+      },
+      {
+        accessorKey: 'standard',
+        header: 'Standard',
+        cell: ({ row }) => row.original.standard ? 'Ja' : 'Nein',
+      },
+      {
+        accessorKey: 'mandatory',
+        header: 'Pflicht',
+        cell: ({ row }) => row.original.mandatory ? 'Ja' : 'Nein',
       },
     ],
     [selectedId],
@@ -104,7 +116,7 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
                   ? 'cursor-pointer'
                   : 'bg-white text-black hover:bg-gray-100 cursor-pointer'
               }
-              globalFilterColumnIds={['bezeichnung', 'ueberschrift']}
+              globalFilterColumnIds={['name', 'content.title']}
               onRowClick={row => setSelectedId(row.original.id)}
               tableClassName="min-w-full border border-gray-300 text-sm"
               cellClassName="px-3 py-2 border-b border-gray-200"
@@ -128,9 +140,14 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
             <div className="font-bold mb-2">Vorschau</div>
             <div className="relative h-48 overflow-y-auto border border-gray-200 rounded p-2 bg-gray-50">
               {selectedBlock ? (
-                <pre className="whitespace-pre-wrap text-sm font-sans">
-                  {selectedBlock.vorschau}
-                </pre>
+                <div className="space-y-2">
+                  {selectedBlock.content?.title && !selectedBlock.hideTitle && (
+                    <h3 className="font-bold text-lg">{selectedBlock.content.title}</h3>
+                  )}
+                  <pre className="whitespace-pre-wrap text-sm font-sans">
+                    {selectedBlock.content?.content || 'Kein Inhalt verfügbar'}
+                  </pre>
+                </div>
               ) : null}
             </div>
           </div>

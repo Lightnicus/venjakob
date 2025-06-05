@@ -3,82 +3,130 @@ import { Button } from '@/components/ui/button';
 import { Pencil, Copy, Trash2 } from 'lucide-react';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import BlockDetail from './block-detail';
-import blockDetailData from '@/data/block-detail.json';
-import languages from '@/data/languages.json';
 import { FilterableTable } from './filterable-table';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
+import type { Block, BlockContent, Language } from '@/lib/db/schema';
 
-type Block = {
-  bezeichnung: string;
-  ueberschrift: string;
-  sprachen: string;
-  geaendertAm: string;
-  standard: boolean;
-  position: number;
+type BlockWithContent = Block & {
+  blockContents: BlockContent[];
+  languageCount?: number;
+  lastModified?: Date;
 };
 
 type BlockListTableProps = {
-  data: Block[];
+  data: BlockWithContent[];
+  languages: Language[];
+  onSaveBlockChanges?: (blockId: string, blockContents: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[]) => void;
+  onSaveBlockProperties?: (blockId: string, blockData: Partial<Block>) => void;
+  onDeleteBlock?: (blockId: string) => void;
+  onCreateBlock?: () => Promise<BlockWithContent>;
 };
 
-const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
+const BlockListTable: FC<BlockListTableProps> = ({ 
+  data, 
+  languages,
+  onSaveBlockChanges,
+  onSaveBlockProperties,
+  onDeleteBlock,
+  onCreateBlock
+}) => {
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
   const { openNewTab } = useTabbedInterface();
-  const [blockToDelete, setBlockToDelete] = useState<Block | null>(null);
-  const [tableData, setTableData] = useState<Block[]>(data);
+  const [blockToDelete, setBlockToDelete] = useState<BlockWithContent | null>(null);
+  const [tableData, setTableData] = useState<BlockWithContent[]>(data);
 
   useEffect(() => {
     setTableData(data);
   }, [data]);
 
-  const handleOpenBlockDetail = (block: Block) => {
+  const getLanguagesForBlock = (block: BlockWithContent): string => {
+    const blockLanguages = block.blockContents.map(bc => {
+      const lang = languages.find(l => l.id === bc.languageId);
+      return lang?.label || 'Unknown';
+    });
+    return blockLanguages.join(', ') || 'Keine Sprachen';
+  };
+
+  const getLastModified = (block: BlockWithContent): string => {
+    if (block.blockContents.length === 0) return 'Nie';
+    const latestUpdate = block.blockContents.reduce((latest, current) => 
+      new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
+    );
+    return new Date(latestUpdate.updatedAt).toLocaleDateString('de-DE');
+  };
+
+  const handleOpenBlockDetail = (block: BlockWithContent) => {
     openNewTab({
-      id: `block-detail-${block.bezeichnung}`,
-      title: `Block: ${block.bezeichnung}`,
+      id: `block-detail-${block.id}`,
+      title: `Block: ${block.name}`,
       content: (
-        <BlockDetail data={blockDetailData} languages={languages as any} />
+        <BlockDetail 
+          block={block} 
+          languages={languages}
+          onSaveChanges={onSaveBlockChanges}
+          onSaveBlockProperties={onSaveBlockProperties}
+        />
       ),
       closable: true,
     });
   };
 
-  const handleAddNewBlock = () => {
-    const newBlockId = `new-block-${Date.now()}`;
-    openNewTab({
-      id: newBlockId,
-      title: 'Neuer Block',
-      content: <BlockDetail data={{}} languages={languages as any} />,
-      closable: true,
-    });
+  const handleAddNewBlock = async () => {
+    if (!onCreateBlock) {
+      toast.error('Block-Erstellung nicht verfügbar');
+      return;
+    }
+    
+    try {
+      const newBlock = await onCreateBlock();
+      const newBlockId = `block-detail-${newBlock.id}`;
+      openNewTab({
+        id: newBlockId,
+        title: 'Neuer Block',
+        content: (
+          <BlockDetail 
+            block={newBlock} 
+            languages={languages}
+            onSaveChanges={onSaveBlockChanges}
+            onSaveBlockProperties={onSaveBlockProperties}
+          />
+        ),
+        closable: true,
+      });
+    } catch (error) {
+      toast.error('Fehler beim Erstellen des Blocks');
+    }
   };
 
-  const handleCopyBlock = (block: Block) => {
-    console.log('Kopiere Block:', block.bezeichnung);
+  const handleCopyBlock = (block: BlockWithContent) => {
+    console.log('Kopiere Block:', block.name);
     toast('Block wurde kopiert');
+    // TODO: Implement block copying logic
   };
 
-  const handleInitiateDelete = (block: Block) => {
+  const handleInitiateDelete = (block: BlockWithContent) => {
     setBlockToDelete(block);
   };
 
   const handleConfirmDelete = () => {
     if (!blockToDelete) return;
+    
+    if (onDeleteBlock) {
+      onDeleteBlock(blockToDelete.id);
+    }
+    
     setTableData(prevData =>
-      prevData.filter(
-        b =>
-          b.bezeichnung !== blockToDelete.bezeichnung ||
-          b.position !== blockToDelete.position,
-      ),
+      prevData.filter(b => b.id !== blockToDelete.id)
     );
     toast.success('Block wurde gelöscht');
     setBlockToDelete(null);
   };
 
-  const columns: ColumnDef<Block>[] = [
+  const columns: ColumnDef<BlockWithContent>[] = [
     {
-      accessorKey: 'bezeichnung',
+      accessorKey: 'name',
       header: 'Bezeichnung',
       cell: ({ row }) => (
         <span
@@ -88,7 +136,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
             handleOpenBlockDetail(row.original);
           }}
           tabIndex={0}
-          aria-label={`Block ${row.original.bezeichnung} öffnen`}
+          aria-label={`Block ${row.original.name} öffnen`}
           onKeyDown={e => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.stopPropagation();
@@ -96,23 +144,29 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
             }
           }}
         >
-          {row.original.bezeichnung}
+          {row.original.name}
         </span>
       ),
       enableColumnFilter: true,
     },
     {
-      accessorKey: 'ueberschrift',
-      header: 'Überschrift',
+      accessorKey: 'title',
+      header: 'Titel',
+      cell: ({ row }) => {
+        const firstContent = row.original.blockContents[0];
+        return firstContent?.title || '-';
+      },
       enableColumnFilter: true,
     },
     {
-      accessorKey: 'sprachen',
+      accessorKey: 'languages',
       header: 'Sprachen',
+      cell: ({ row }) => getLanguagesForBlock(row.original),
     },
     {
-      accessorKey: 'geaendertAm',
+      accessorKey: 'lastModified',
       header: 'zuletzt geändert am',
+      cell: ({ row }) => getLastModified(row.original),
     },
     {
       accessorKey: 'standard',
@@ -124,6 +178,19 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
           readOnly
           tabIndex={-1}
           aria-label="Standard"
+        />
+      ),
+    },
+    {
+      accessorKey: 'mandatory',
+      header: 'Pflicht',
+      cell: ({ row }) => (
+        <input
+          type="checkbox"
+          checked={row.original.mandatory}
+          readOnly
+          tabIndex={-1}
+          aria-label="Pflicht"
         />
       ),
     },
@@ -195,7 +262,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
     },
   ];
 
-  const getRowClassName = (row: Row<Block>) => {
+  const getRowClassName = (row: Row<BlockWithContent>) => {
     let className = 'cursor-pointer hover:bg-blue-100';
     if (selectedRow === row.id) {
       className += ' bg-blue-200';
@@ -205,7 +272,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
     return className;
   };
 
-  const handleRowClick = (row: Row<Block>) => {
+  const handleRowClick = (row: Row<BlockWithContent>) => {
     setSelectedRow(row.id);
     handleOpenBlockDetail(row.original);
   };
@@ -220,6 +287,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
           aria-label="Block hinzufügen"
           tabIndex={0}
           onClick={handleAddNewBlock}
+          disabled={!onCreateBlock}
         >
           + Block hinzufügen
         </Button>
@@ -230,7 +298,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
           columns={columns}
           getRowClassName={getRowClassName}
           onRowClick={handleRowClick}
-          globalFilterColumnIds={['ueberschrift', 'sprachen', 'bezeichnung']}
+          globalFilterColumnIds={['name', 'title']}
           filterPlaceholder="Filtern..."
         />
       </div>
@@ -239,7 +307,7 @@ const BlockListTable: FC<BlockListTableProps> = ({ data }) => {
         onOpenChange={open => !open && setBlockToDelete(null)}
         onConfirm={handleConfirmDelete}
         title="Block löschen"
-        description={`Möchten Sie den Block "${blockToDelete?.bezeichnung || ''}" wirklich löschen?`}
+        description={`Möchten Sie den Block "${blockToDelete?.name || ''}" wirklich löschen?`}
       />
     </div>
   );
