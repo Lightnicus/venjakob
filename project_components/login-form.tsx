@@ -1,7 +1,7 @@
 'use client';
 
 import type React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useFormStatus } from 'react-dom';
 import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -37,18 +37,22 @@ function SubmitButton() {
   );
 }
 
-export function LoginForm() {
+function ErrorHandler({ setError }: { setError: (error: string | null) => void }) {
   const searchParams = useSearchParams();
-  const { setLoading, isLoading } = useLoading();
-  const [error, setError] = useState<string | null>(null);
 
-  // Check for error in URL parameters
   useEffect(() => {
     const urlError = searchParams.get('error');
     if (urlError) {
       setError(decodeURIComponent(urlError));
     }
-  }, [searchParams]);
+  }, [searchParams, setError]);
+
+  return null;
+}
+
+function LoginFormContent() {
+  const { setLoading, isLoading } = useLoading();
+  const [error, setError] = useState<string | null>(null);
 
   async function handleMicrosoftLogin() {
     try {
@@ -77,6 +81,9 @@ export function LoginForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        <Suspense fallback={null}>
+          <ErrorHandler setError={setError} />
+        </Suspense>
         {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
@@ -156,4 +163,8 @@ export function LoginForm() {
       </CardContent>
     </Card>
   );
+}
+
+export function LoginForm() {
+  return <LoginFormContent />;
 }

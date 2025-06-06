@@ -1,6 +1,6 @@
 ---
 description: 
 globs: 
-alwaysApply: false
+alwaysApply: true
 ---
-All user interface should be in German.
+All user interface should be in German. The project uses NextJs 15

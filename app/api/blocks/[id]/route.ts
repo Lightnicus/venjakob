@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { saveBlockProperties, deleteBlock, saveBlockContent } from '@/lib/db/blocks';
 
-interface RouteContext {
-  params: { id: string };
-}
-
-export async function PUT(request: NextRequest, { params }: RouteContext) {
+export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     const body = await request.json();
@@ -31,7 +27,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
   }
 }
 
-export async function DELETE(request: NextRequest, { params }: RouteContext) {
+export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
     await deleteBlock(id);

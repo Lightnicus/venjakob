@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ArboristTree } from './arborist-tree';
 import { CustomNode, MyTreeNodeData } from './custom-node';
 import initialTreeDataRaw from '@/data/tree-data.json';
@@ -13,10 +13,13 @@ import { Delta } from 'quill';
 import OfferPositionText from './offer-position-text';
 import { Calculator } from 'lucide-react';
 import OfferPositionArticle from './offer-position-article';
-import blocksData from '@/data/blocks.json';
-import AddBlockDialog, { Block } from './add-block-dialog';
+import AddBlockDialog from './add-block-dialog';
+import type { BlockWithContent as DialogBlockWithContent } from './add-block-dialog';
 import AddArticleDialog, { Article } from './add-article-dialog';
 import articlesData from '@/data/articles.json';
+import type { Language } from '@/lib/db/schema';
+import { fetchBlocksWithContent, fetchLanguages } from '@/lib/api/blocks';
+import type { BlockWithContent } from '@/lib/db/blocks';
 
 const initialTreeData: MyTreeNodeData[] = initialTreeDataRaw as MyTreeNodeData[];
 
@@ -28,10 +31,37 @@ const InteractiveSplitPanel: React.FC = () => {
   const [formDescriptionHtml, setFormDescriptionHtml] = useState<string | undefined>(undefined);
   const [selectedNodeType, setSelectedNodeType] = useState<string | undefined>(undefined);
   const [showAddBlockDialog, setShowAddBlockDialog] = useState(false);
-  const [blocks] = useState<Block[]>(blocksData as Block[]);
+  const [blocks, setBlocks] = useState<BlockWithContent[]>([]);
+  const [languages, setLanguages] = useState<Language[]>([]);
   const [showAddArticleDialog, setShowAddArticleDialog] = useState(false);
   
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
+
+  // Load blocks and languages on component mount
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const [blocksData, languagesData] = await Promise.all([
+          fetchBlocksWithContent(),
+          fetchLanguages()
+        ]);
+        setBlocks(blocksData);
+        setLanguages(languagesData);
+      } catch (error) {
+        console.error('Error loading blocks and languages:', error);
+      }
+    };
+    
+    loadData();
+  }, []);
+
+  // Convert database blocks to dialog format
+  const dialogBlocks = useMemo(() => {
+    return blocks.map((block): DialogBlockWithContent => ({
+      ...block,
+      content: block.blockContents?.[0] // Use first content or undefined
+    }));
+  }, [blocks]);
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -119,7 +149,7 @@ const InteractiveSplitPanel: React.FC = () => {
   // AddBlockDialog handlers
   const handleOpenAddBlock = () => setShowAddBlockDialog(true);
   const handleCloseAddBlock = () => setShowAddBlockDialog(false);
-  const handleAddBlock = (block: Block) => {
+  const handleAddBlock = (block: DialogBlockWithContent) => {
     setShowAddBlockDialog(false);
     // handle block addition logic here
   };
@@ -214,7 +244,7 @@ const InteractiveSplitPanel: React.FC = () => {
         open={showAddBlockDialog}
         onClose={handleCloseAddBlock}
         onAdd={handleAddBlock}
-        blocks={blocks}
+        blocks={dialogBlocks}
       />
       <AddArticleDialog
         open={showAddArticleDialog}
