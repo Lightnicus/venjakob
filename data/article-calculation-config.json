@@ -1,0 +1,44 @@
+[
+  {
+    "name": "Materialkosten",
+    "type": "cost",
+    "value": "0.00",
+    "order": 1
+  },
+  {
+    "name": "Arbeitszeit",
+    "type": "time", 
+    "value": "0.00",
+    "order": 2
+  },
+  {
+    "name": "Maschinenkosten",
+    "type": "cost",
+    "value": "0.00",
+    "order": 3
+  },
+  {
+    "name": "Transportkosten",
+    "type": "cost",
+    "value": "0.00",
+    "order": 4
+  },
+  {
+    "name": "Installationszeit",
+    "type": "time",
+    "value": "0.00",
+    "order": 5
+  },
+  {
+    "name": "Qualitätsprüfung",
+    "type": "time",
+    "value": "0.00",
+    "order": 6
+  },
+  {
+    "name": "Zusatzkosten",
+    "type": "cost",
+    "value": "0.00",
+    "order": 7
+  }
+] 

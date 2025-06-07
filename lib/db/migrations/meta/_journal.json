@@ -36,6 +36,34 @@
       "when": 1749083442518,
       "tag": "0004_friendly_namora",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1749254612332,
+      "tag": "0005_wonderful_elektra",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1749254993410,
+      "tag": "0006_nervous_swarm",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1749255244464,
+      "tag": "0007_optimal_nextwave",
+      "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1749256117376,
+      "tag": "0008_milky_norman_osborn",
+      "breakpoints": true
     }
   ]
 }

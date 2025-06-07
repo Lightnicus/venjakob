@@ -185,6 +185,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
       if (onSaveChanges) {
         const blockContentsToSave = currentLanguages.map(lang => ({
           blockId: block.id,
+          articleId: null,
           title: editedBlockContents[lang.value]?.title || '',
           content: editedBlockContents[lang.value]?.content || '',
           languageId: lang.id,

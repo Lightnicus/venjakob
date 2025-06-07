@@ -1,4 +1,8 @@
-import { pgTable, serial, text, timestamp, uuid, boolean, integer } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, uuid, boolean, integer, pgEnum, numeric, check } from 'drizzle-orm/pg-core';
+import { sql } from 'drizzle-orm';
+
+// Enums
+export const articleCalculationItemTypeEnum = pgEnum('article_calculation_item_type', ['time', 'cost']);
 
 // Example Users table
 export const users = pgTable('users', {
@@ -41,13 +45,51 @@ export const blocks = pgTable('blocks', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Articles table
+export const articles = pgTable('articles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  number: text('number').notNull(),
+  description: text('description'),
+  price: numeric('price').notNull(),
+  hideTitle: boolean('hide_title').notNull().default(false),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
 // Block Content table
 export const blockContent = pgTable('block_content', {
   id: uuid('id').primaryKey().defaultRandom(),
-  blockId: uuid('block_id').notNull().references(() => blocks.id),
+  blockId: uuid('block_id').references(() => blocks.id),
+  articleId: uuid('article_id').references(() => articles.id),
   title: text('title').notNull(),
   content: text('content').notNull(),
   languageId: uuid('language_id').notNull().references(() => languages.id),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  // Ensure either blockId or articleId is set, but not both
+  blockOrArticleCheck: check('block_or_article_check', 
+    sql`(${table.blockId} IS NOT NULL AND ${table.articleId} IS NULL) OR (${table.blockId} IS NULL AND ${table.articleId} IS NOT NULL)`
+  ),
+}));
+
+// Article Calculation Item table
+export const articleCalculationItem = pgTable('article_calculation_item', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull(),
+  type: articleCalculationItemTypeEnum('type').notNull(),
+  value: numeric('value').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Article Calculations (Many-to-Many junction table)
+export const articleCalculations = pgTable('article_calculations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  articleId: uuid('article_id').notNull().references(() => articles.id),
+  articleCalculationItemId: uuid('article_calculation_item_id').notNull().references(() => articleCalculationItem.id),
+  order: integer('order').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -66,4 +108,13 @@ export type Block = typeof blocks.$inferSelect;
 export type InsertBlock = typeof blocks.$inferInsert;
 
 export type BlockContent = typeof blockContent.$inferSelect;
-export type InsertBlockContent = typeof blockContent.$inferInsert; 
+export type InsertBlockContent = typeof blockContent.$inferInsert;
+
+export type ArticleCalculationItem = typeof articleCalculationItem.$inferSelect;
+export type InsertArticleCalculationItem = typeof articleCalculationItem.$inferInsert;
+
+export type Article = typeof articles.$inferSelect;
+export type InsertArticle = typeof articles.$inferInsert;
+
+export type ArticleCalculation = typeof articleCalculations.$inferSelect;
+export type InsertArticleCalculation = typeof articleCalculations.$inferInsert; 
