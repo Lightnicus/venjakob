@@ -4,10 +4,12 @@ import {
   articles, 
   articleCalculations, 
   articleCalculationItem, 
+  blockContent,
   type Article, 
   type ArticleCalculation, 
   type ArticleCalculationItem,
-  type InsertArticleCalculationItem
+  type InsertArticleCalculationItem,
+  type BlockContent
 } from './schema';
 import articleCalculationConfig from '@/data/article-calculation-config.json';
 
@@ -17,6 +19,7 @@ export type ArticleCalculationWithItem = ArticleCalculation & {
 
 export type ArticleWithCalculations = Article & {
   calculations: ArticleCalculationWithItem[];
+  content?: BlockContent[];
 };
 
 // Fetch all articles
@@ -29,7 +32,7 @@ export async function getArticles(): Promise<Article[]> {
   }
 }
 
-// Get a single article with all its calculation items in correct order
+// Get a single article with all its calculation items and content in correct order
 export async function getArticleWithCalculations(articleId: string): Promise<ArticleWithCalculations | null> {
   try {
     // Fetch the article
@@ -61,9 +64,16 @@ export async function getArticleWithCalculations(articleId: string): Promise<Art
       .where(eq(articleCalculations.articleId, articleId))
       .orderBy(asc(articleCalculations.order));
     
+    // Fetch article content (block_content where articleId is set)
+    const articleContent = await db
+      .select()
+      .from(blockContent)
+      .where(eq(blockContent.articleId, articleId));
+    
     return {
       ...article,
-      calculations: calculationsWithItems
+      calculations: calculationsWithItems,
+      content: articleContent
     };
   } catch (error) {
     console.error('Error fetching article with calculations:', error);
@@ -335,4 +345,23 @@ export async function createNewArticle(
   };
   
   return await createArticleWithDefaults(defaultArticleData);
+}
+
+// Save article content (block_content records)
+export async function saveArticleContent(
+  articleId: string,
+  contentData: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[]
+): Promise<void> {
+  try {
+    // Delete existing content for this article
+    await db.delete(blockContent).where(eq(blockContent.articleId, articleId));
+    
+    // Insert new content
+    if (contentData.length > 0) {
+      await db.insert(blockContent).values(contentData);
+    }
+  } catch (error) {
+    console.error('Error saving article content:', error);
+    throw new Error('Failed to save article content');
+  }
 } 

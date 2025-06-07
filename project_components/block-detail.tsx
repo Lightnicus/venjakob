@@ -78,6 +78,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
   const [selectedPreviewLanguage, setSelectedPreviewLanguage] = useState(
     () => currentLanguages[0]?.value || '',
   );
+  const [selectedLanguageToAdd, setSelectedLanguageToAdd] = useState('');
 
   useEffect(() => {
     const initial: Record<
@@ -111,6 +112,9 @@ const BlockDetail: FC<BlockDetailProps> = ({
     } else {
       setSelectedPreviewLanguage('');
     }
+
+    // Reset selected language to add when languages change
+    setSelectedLanguageToAdd('');
   }, [block, languages]);
 
   const handleRichTextChange = (langValue: string, content: string) => {
@@ -224,26 +228,32 @@ const BlockDetail: FC<BlockDetailProps> = ({
   };
 
   const handleAddLanguage = () => {
-    if (!isEditing) return;
-    const nextLang = languages.find(
-      lang => !currentLanguages.some(cl => cl.value === lang.value),
-    );
-    if (nextLang) {
-      const newCurrentLanguages = [...currentLanguages, nextLang];
+    if (!isEditing || !selectedLanguageToAdd) return;
+    
+    // Find the selected language
+    const langToAdd = languages.find(lang => lang.value === selectedLanguageToAdd);
+    
+    if (langToAdd && !currentLanguages.some(cl => cl.value === langToAdd.value)) {
+      const newCurrentLanguages = [...currentLanguages, langToAdd];
       setCurrentLanguages(newCurrentLanguages);
       setEditedBlockContents(prev => ({
         ...prev,
-        [nextLang.value]: { title: '', content: '', languageId: nextLang.id },
+        [langToAdd.value]: { title: '', content: '', languageId: langToAdd.id },
       }));
       if (!selectedPreviewLanguage && newCurrentLanguages.length === 1) {
-        setSelectedPreviewLanguage(nextLang.value);
+        setSelectedPreviewLanguage(langToAdd.value);
       }
+      // Reset the dropdown selection
+      setSelectedLanguageToAdd('');
     } else {
-      toast.error(
-        'Keine weiteren Sprachen verfügbar oder alle Sprachen wurden bereits hinzugefügt.',
-      );
+      toast.error('Die ausgewählte Sprache ist bereits hinzugefügt oder ungültig.');
     }
   };
+
+  // Get available languages for the dropdown
+  const availableLanguages = languages.filter(
+    lang => !currentLanguages.some(cl => cl.value === lang.value)
+  );
 
   const currentPreviewData = editedBlockContents[selectedPreviewLanguage];
   const getOriginalBlockContent = (langValue: string) => {
@@ -403,16 +413,30 @@ const BlockDetail: FC<BlockDetailProps> = ({
               </Card>
             );
           })}
-          {isEditing && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddLanguage}
-              aria-label="Sprache hinzufügen"
-            >
-              <PlusCircle size={14} className="inline-block" /> Sprache
-              hinzufügen
-            </Button>
+          {isEditing && availableLanguages.length > 0 && (
+            <div className="flex items-center gap-2">
+              <Select value={selectedLanguageToAdd} onValueChange={setSelectedLanguageToAdd}>
+                <SelectTrigger className="w-48" aria-label="Sprache zum Hinzufügen auswählen">
+                  <SelectValue placeholder="Sprache auswählen..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableLanguages.map(lang => (
+                    <SelectItem key={lang.value} value={lang.value}>
+                      {lang.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddLanguage}
+                disabled={!selectedLanguageToAdd}
+                aria-label="Ausgewählte Sprache hinzufügen"
+              >
+                <PlusCircle size={14} className="inline-block" /> Sprache hinzufügen
+              </Button>
+            </div>
           )}
           {!isEditing && currentLanguages.length === 0 && (
             <div className="text-gray-500 text-center py-8">

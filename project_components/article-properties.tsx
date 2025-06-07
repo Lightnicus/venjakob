@@ -4,9 +4,11 @@ import { FC, useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import type { ArticleWithCalculations } from '@/lib/db/articles';
 
 // Define types for the data structures
 interface AllgemeineData {
+  name: string;
   nr: string;
   einzelpreis: string;
   ueberschriftNichtDrucken: boolean;
@@ -24,20 +26,12 @@ interface KalkulationData {
 }
 
 interface ArticlePropertiesProps {
+  article: ArticleWithCalculations;
   isEditing: boolean;
-  // In a real scenario, you'd pass initial data and handlers
-  // initialAllgemeineData?: AllgemeineData;
-  // initialKalkulationData?: KalkulationData;
-  // onDataChange?: (data: { allgemeine: AllgemeineData; kalkulation: KalkulationData }) => void;
+  onDataChange?: (data: { allgemeine: AllgemeineData; kalkulation: KalkulationData }) => void;
 }
 
-// Default data (can be replaced by props later)
-const defaultAllgemeineData: AllgemeineData = {
-  nr: 'TB-20-11100',
-  einzelpreis: '5.000 €',
-  ueberschriftNichtDrucken: false,
-};
-
+// Default kalkulation data
 const defaultKalkulationData: KalkulationData = {
   materialEK: '5200',
   projektierung: '10',
@@ -50,23 +44,39 @@ const defaultKalkulationData: KalkulationData = {
 };
 
 const ArticleProperties: FC<ArticlePropertiesProps> = ({
+  article,
   isEditing,
-  // initialAllgemeineData = defaultAllgemeineData, // Example of using props
-  // initialKalkulationData = defaultKalkulationData, // Example of using props
+  onDataChange,
 }) => {
-  const [allgemeineData, setAllgemeineData] = useState<AllgemeineData>(defaultAllgemeineData);
+  const [allgemeineData, setAllgemeineData] = useState<AllgemeineData>(() => ({
+    name: article.name || '',
+    nr: article.number || '',
+    einzelpreis: article.price || '0.00',
+    ueberschriftNichtDrucken: article.hideTitle || false,
+  }));
+
   const [kalkulationData, setKalkulationData] = useState<KalkulationData>(defaultKalkulationData);
 
-  // Effect to reset data if isEditing changes (e.g., when cancelling an edit)
-  // This is a simple reset; a more robust solution might involve a data fetching/caching strategy.
+  // Effect to reset data when article changes or when cancelling edit
   useEffect(() => {
+    setAllgemeineData({
+      name: article.name || '',
+      nr: article.number || '',
+      einzelpreis: article.price || '0.00',
+      ueberschriftNichtDrucken: article.hideTitle || false,
+    });
+    
     if (!isEditing) {
-      setAllgemeineData(defaultAllgemeineData);
       setKalkulationData(defaultKalkulationData);
     }
-    // Add dependencies for initialAllgemeineData, initialKalkulationData if they are used from props
-  }, [isEditing]);
+  }, [article, isEditing]);
 
+  // Effect to notify parent of data changes
+  useEffect(() => {
+    if (onDataChange) {
+      onDataChange({ allgemeine: allgemeineData, kalkulation: kalkulationData });
+    }
+  }, [allgemeineData, kalkulationData]);
 
   const handleAllgemeineInputChange = (field: keyof Omit<AllgemeineData, 'ueberschriftNichtDrucken'>, value: string) => {
     if (!isEditing) return;
@@ -81,7 +91,7 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
       setAllgemeineData(prev => ({ ...prev, ueberschriftNichtDrucken: checked }));
     }
   };
-  
+
   const handleKalkulationInputChange = (field: keyof KalkulationData, value: string) => {
     if (!isEditing) return;
     // Basic validation: allow only numbers or empty string for numeric fields
@@ -106,6 +116,21 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
           Allgemein
         </h3>
         <div className="space-y-4">
+            <div className={gridRowStyles}>
+              <Label htmlFor="name" className={labelStyles}>
+                Name
+              </Label>
+              <Input
+                id="name"
+                type="text"
+                value={allgemeineData.name}
+                readOnly={!isEditing}
+                onChange={(e) => handleAllgemeineInputChange('name', e.target.value)}
+                className={`${getInputStyles(isEditing)} md:col-span-2`}
+                aria-label="Artikelname"
+              />
+            </div>
+
             <div className={gridRowStyles}>
               <Label htmlFor="nr" className={labelStyles}>
                 Nr.
