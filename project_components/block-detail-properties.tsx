@@ -10,6 +10,8 @@ type BlockDetailPropertiesProps = {
   block: Block;
   onSave?: (blockId: string, blockData: Partial<Block>) => void;
   isEditing: boolean;
+  editedProperties?: Partial<Block>;
+  onPropertyChange?: (field: keyof Block, value: string | number | boolean) => void;
 };
 
 export interface BlockDetailPropertiesRef {
@@ -19,9 +21,12 @@ export interface BlockDetailPropertiesRef {
 const BlockDetailProperties = forwardRef<BlockDetailPropertiesRef, BlockDetailPropertiesProps>(({ 
   block, 
   onSave, 
-  isEditing 
+  isEditing,
+  editedProperties,
+  onPropertyChange
 }, ref) => {
-  const [editedBlock, setEditedBlock] = useState<Partial<Block>>({
+  // Use local state only if no external state is provided
+  const [localEditedBlock, setLocalEditedBlock] = useState<Partial<Block>>({
     name: block.name,
     standard: block.standard,
     mandatory: block.mandatory,
@@ -30,20 +35,26 @@ const BlockDetailProperties = forwardRef<BlockDetailPropertiesRef, BlockDetailPr
     pageBreakAbove: block.pageBreakAbove,
   });
 
+  // Use external state if provided, otherwise use local state
+  const editedBlock = editedProperties || localEditedBlock;
+
   useImperativeHandle(ref, () => ({
     getEditedData: () => editedBlock,
   }));
 
   useEffect(() => {
-    setEditedBlock({
-      name: block.name,
-      standard: block.standard,
-      mandatory: block.mandatory,
-      position: block.position,
-      hideTitle: block.hideTitle,
-      pageBreakAbove: block.pageBreakAbove,
-    });
-  }, [block]);
+    // Only update local state if no external state is provided
+    if (!editedProperties) {
+      setLocalEditedBlock({
+        name: block.name,
+        standard: block.standard,
+        mandatory: block.mandatory,
+        position: block.position,
+        hideTitle: block.hideTitle,
+        pageBreakAbove: block.pageBreakAbove,
+      });
+    }
+  }, [block, editedProperties]);
 
   const handleSave = () => {
     if (onSave) {
@@ -53,7 +64,13 @@ const BlockDetailProperties = forwardRef<BlockDetailPropertiesRef, BlockDetailPr
 
   const handleInputChange = (field: keyof typeof editedBlock, value: string | number | boolean) => {
     if (!isEditing) return;
-    setEditedBlock(prev => ({ ...prev, [field]: value }));
+    
+    // Use external handler if provided, otherwise use local state
+    if (onPropertyChange) {
+      onPropertyChange(field, value);
+    } else {
+      setLocalEditedBlock(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   return (

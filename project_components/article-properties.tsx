@@ -20,6 +20,10 @@ interface ArticlePropertiesProps {
   calculationItems: ArticleCalculationItem[];
   isEditing: boolean;
   onDataChange?: (data: { allgemeine: AllgemeineData; kalkulation: Record<string, string> }) => void;
+  editedAllgemeineData?: AllgemeineData;
+  editedKalkulationData?: Record<string, string>;
+  onAllgemeineChange?: (field: keyof AllgemeineData, value: string | boolean) => void;
+  onKalkulationChange?: (itemId: string, value: string) => void;
 }
 
 const ArticleProperties: FC<ArticlePropertiesProps> = ({
@@ -27,8 +31,13 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
   calculationItems,
   isEditing,
   onDataChange,
+  editedAllgemeineData,
+  editedKalkulationData,
+  onAllgemeineChange,
+  onKalkulationChange,
 }) => {
-  const [allgemeineData, setAllgemeineData] = useState<AllgemeineData>(() => ({
+  // Use local state only if no external state is provided
+  const [localAllgemeineData, setLocalAllgemeineData] = useState<AllgemeineData>(() => ({
     name: article.name || '',
     nr: article.number || '',
     einzelpreis: article.price || '0.00',
@@ -36,7 +45,7 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
   }));
 
   // Initialize kalkulation data from calculationItems
-  const [kalkulationData, setKalkulationData] = useState<Record<string, string>>(() => {
+  const [localKalkulationData, setLocalKalkulationData] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     calculationItems.forEach(item => {
       initial[item.id] = item.value || '0';
@@ -44,33 +53,48 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
     return initial;
   });
 
+  // Use external state if provided, otherwise use local state
+  const allgemeineData = editedAllgemeineData || localAllgemeineData;
+  const kalkulationData = editedKalkulationData || localKalkulationData;
+
   // Effect to reset data when article changes or when cancelling edit
   useEffect(() => {
-    setAllgemeineData({
-      name: article.name || '',
-      nr: article.number || '',
-      einzelpreis: article.price || '0.00',
-      ueberschriftNichtDrucken: article.hideTitle || false,
-    });
+    // Only update local state if no external state is provided
+    if (!editedAllgemeineData) {
+      setLocalAllgemeineData({
+        name: article.name || '',
+        nr: article.number || '',
+        einzelpreis: article.price || '0.00',
+        ueberschriftNichtDrucken: article.hideTitle || false,
+      });
+    }
     
     // Reset kalkulation data to original values
-    const resetKalkulation: Record<string, string> = {};
-    calculationItems.forEach(item => {
-      resetKalkulation[item.id] = item.value || '0';
-    });
-    setKalkulationData(resetKalkulation);
-  }, [article, calculationItems, isEditing]);
+    if (!editedKalkulationData) {
+      const resetKalkulation: Record<string, string> = {};
+      calculationItems.forEach(item => {
+        resetKalkulation[item.id] = item.value || '0';
+      });
+      setLocalKalkulationData(resetKalkulation);
+    }
+  }, [article, calculationItems, isEditing, editedAllgemeineData, editedKalkulationData]);
 
-  // Effect to notify parent of data changes
+  // Effect to notify parent of data changes - only when using legacy callback mode
   useEffect(() => {
-    if (onDataChange) {
+    if (onDataChange && !editedAllgemeineData && !editedKalkulationData) {
       onDataChange({ allgemeine: allgemeineData, kalkulation: kalkulationData });
     }
-  }, [allgemeineData, kalkulationData]);
+  }, [allgemeineData, kalkulationData, onDataChange, editedAllgemeineData, editedKalkulationData]);
 
   const handleAllgemeineInputChange = (field: keyof Omit<AllgemeineData, 'ueberschriftNichtDrucken'>, value: string) => {
     if (!isEditing) return;
-    setAllgemeineData(prev => ({ ...prev, [field]: value }));
+    
+    // Use external handler if provided, otherwise use local state
+    if (onAllgemeineChange) {
+      onAllgemeineChange(field, value);
+    } else {
+      setLocalAllgemeineData(prev => ({ ...prev, [field]: value }));
+    }
   };
 
   const handleUeberschriftNichtDruckenChange = (checked: boolean | 'indeterminate') => {
@@ -78,7 +102,12 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
     // The Checkbox component from shadcn might return 'indeterminate' or boolean.
     // We are expecting boolean here.
     if (typeof checked === 'boolean') {
-      setAllgemeineData(prev => ({ ...prev, ueberschriftNichtDrucken: checked }));
+      // Use external handler if provided, otherwise use local state
+      if (onAllgemeineChange) {
+        onAllgemeineChange('ueberschriftNichtDrucken', checked);
+      } else {
+        setLocalAllgemeineData(prev => ({ ...prev, ueberschriftNichtDrucken: checked }));
+      }
     }
   };
 
@@ -86,7 +115,12 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
     if (!isEditing) return;
     // Basic validation: allow only numbers and decimal points for numeric fields
     if (/^\d*\.?\d*$/.test(value) || value === '') {
-      setKalkulationData(prev => ({ ...prev, [itemId]: value }));
+      // Use external handler if provided, otherwise use local state
+      if (onKalkulationChange) {
+        onKalkulationChange(itemId, value);
+      } else {
+        setLocalKalkulationData(prev => ({ ...prev, [itemId]: value }));
+      }
     }
   };
 

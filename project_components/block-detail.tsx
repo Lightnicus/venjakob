@@ -42,6 +42,17 @@ const BlockDetail: FC<BlockDetailProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [tab, setTab] = useState('beschreibungen');
   const propertiesRef = useRef<BlockDetailPropertiesRef>(null);
+
+  // Add state for block properties
+  const [editedBlockProperties, setEditedBlockProperties] = useState<Partial<Block>>(() => ({
+    name: block.name,
+    standard: block.standard,
+    mandatory: block.mandatory,
+    position: block.position,
+    hideTitle: block.hideTitle,
+    pageBreakAbove: block.pageBreakAbove,
+  }));
+
   const [editedBlockContents, setEditedBlockContents] = useState<
     Record<
       string,
@@ -81,6 +92,16 @@ const BlockDetail: FC<BlockDetailProps> = ({
   const [selectedLanguageToAdd, setSelectedLanguageToAdd] = useState('');
 
   useEffect(() => {
+    // Reset block properties state when block changes
+    setEditedBlockProperties({
+      name: block.name,
+      standard: block.standard,
+      mandatory: block.mandatory,
+      position: block.position,
+      hideTitle: block.hideTitle,
+      pageBreakAbove: block.pageBreakAbove,
+    });
+
     const initial: Record<
       string,
       { title: string; content: string; languageId: string }
@@ -143,9 +164,24 @@ const BlockDetail: FC<BlockDetailProps> = ({
     }));
   };
 
+  // Add handler for block property changes
+  const handleBlockPropertyChange = (field: keyof typeof editedBlockProperties, value: string | number | boolean) => {
+    if (!isEditing) return;
+    setEditedBlockProperties(prev => ({ ...prev, [field]: value }));
+  };
+
   const handleToggleEdit = () => {
     if (isEditing) {
       // Reset to original data
+      setEditedBlockProperties({
+        name: block.name,
+        standard: block.standard,
+        mandatory: block.mandatory,
+        position: block.position,
+        hideTitle: block.hideTitle,
+        pageBreakAbove: block.pageBreakAbove,
+      });
+
       const initial: Record<
         string,
         { title: string; content: string; languageId: string }
@@ -197,10 +233,9 @@ const BlockDetail: FC<BlockDetailProps> = ({
         await onSaveChanges(block.id, blockContentsToSave);
       }
 
-      // Save properties
-      if (onSaveBlockProperties && propertiesRef.current) {
-        const editedProperties = propertiesRef.current.getEditedData();
-        await onSaveBlockProperties(block.id, editedProperties);
+      // Save properties - use local state instead of ref
+      if (onSaveBlockProperties) {
+        await onSaveBlockProperties(block.id, editedBlockProperties);
       }
 
       setIsEditing(false);
@@ -450,6 +485,8 @@ const BlockDetail: FC<BlockDetailProps> = ({
             block={block}
             onSave={onSaveBlockProperties}
             isEditing={isEditing}
+            editedProperties={editedBlockProperties}
+            onPropertyChange={handleBlockPropertyChange}
             ref={propertiesRef}
           />
         </TabsContent>

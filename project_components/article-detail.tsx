@@ -19,6 +19,14 @@ type ArticleDetailProps = {
   onSaveCalculations?: (articleId: string, calculations: any[]) => void;
 };
 
+// Define types for the article properties data structures
+interface AllgemeineData {
+  name: string;
+  nr: string;
+  einzelpreis: string;
+  ueberschriftNichtDrucken: boolean;
+}
+
 const ArticleDetail: FC<ArticleDetailProps> = ({
   article: initialArticle,
   languages,
@@ -31,9 +39,41 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
   const [tab, setTab] = useState('beschreibungen');
   const [article, setArticle] = useState(initialArticle);
   
+  // Add state for article properties
+  const [editedAllgemeineData, setEditedAllgemeineData] = useState<AllgemeineData>(() => ({
+    name: initialArticle.name || '',
+    nr: initialArticle.number || '',
+    einzelpreis: initialArticle.price || '0.00',
+    ueberschriftNichtDrucken: initialArticle.hideTitle || false,
+  }));
+
+  // Add state for calculation data
+  const [editedKalkulationData, setEditedKalkulationData] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    initialArticle.calculations?.forEach(item => {
+      initial[item.id] = item.value || '0';
+    });
+    return initial;
+  });
+  
   // Update article state when initialArticle prop changes
   useEffect(() => {
     setArticle(initialArticle);
+    
+    // Reset properties state when article changes
+    setEditedAllgemeineData({
+      name: initialArticle.name || '',
+      nr: initialArticle.number || '',
+      einzelpreis: initialArticle.price || '0.00',
+      ueberschriftNichtDrucken: initialArticle.hideTitle || false,
+    });
+
+    // Reset calculation data to original values
+    const resetKalkulation: Record<string, string> = {};
+    initialArticle.calculations?.forEach(item => {
+      resetKalkulation[item.id] = item.value || '0';
+    });
+    setEditedKalkulationData(resetKalkulation);
   }, [initialArticle]);
 
   // Content editing state - similar to BlockDetail
@@ -46,14 +86,14 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
     return initial;
   });
 
-  // Properties data state
+  // Properties data state - kept for backward compatibility but will be constructed from individual states
   const [propertiesData, setPropertiesData] = useState<any>(null);
 
   const [currentLanguages, setCurrentLanguages] = useState<Language[]>([]);
   const [selectedPreviewLanguage, setSelectedPreviewLanguage] = useState('');
   const [selectedLanguageToAdd, setSelectedLanguageToAdd] = useState('');
 
-  // Initialize content state from article data
+  // Initialize content state from article data - only on mount or when article ID changes
   useEffect(() => {
     const initial: Record<string, { title: string; content: string; languageId: string }> = {};
     const contentLanguages: Language[] = [];
@@ -88,7 +128,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
 
     // Reset selected language to add when languages change
     setSelectedLanguageToAdd('');
-  }, [article, languages]);
+  }, [article.id, languages]); // Only react to article ID changes, not the entire article object
 
   const handleRichTextChange = (langValue: string, content: string) => {
     if (!isEditing) return;
@@ -112,13 +152,39 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
     }));
   };
 
-  const handlePropertiesDataChange = (data: any) => {
-    setPropertiesData(data);
+  // Add handlers for property changes
+  const handleAllgemeineChange = (field: keyof AllgemeineData, value: string | boolean) => {
+    if (!isEditing) return;
+    setEditedAllgemeineData(prev => ({ ...prev, [field]: value }));
   };
+
+  const handleKalkulationChange = (itemId: string, value: string) => {
+    if (!isEditing) return;
+    setEditedKalkulationData(prev => ({ ...prev, [itemId]: value }));
+  };
+
+  // Remove the callback since we're managing state directly now
+  // const handlePropertiesDataChange = (data: any) => {
+  //   setPropertiesData(data);
+  // };
 
   const handleToggleEdit = () => {
     if (isEditing) {
       // Reset to original data
+      setEditedAllgemeineData({
+        name: article.name || '',
+        nr: article.number || '',
+        einzelpreis: article.price || '0.00',
+        ueberschriftNichtDrucken: article.hideTitle || false,
+      });
+
+      // Reset calculation data to original values
+      const resetKalkulation: Record<string, string> = {};
+      article.calculations?.forEach(item => {
+        resetKalkulation[item.id] = item.value || '0';
+      });
+      setEditedKalkulationData(resetKalkulation);
+
       const initial: Record<string, { title: string; content: string; languageId: string }> = {};
       const contentLanguages: Language[] = [];
       
@@ -163,13 +229,13 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
 
     setIsSaving(true);
     try {
-      // Save properties if handler provided and data available
-      if (onSaveProperties && propertiesData) {
+      // Save properties if handler provided - use local state instead of propertiesData
+      if (onSaveProperties) {
         const articleData = {
-          name: propertiesData.allgemeine.name,
-          number: propertiesData.allgemeine.nr,
-          price: propertiesData.allgemeine.einzelpreis,
-          hideTitle: propertiesData.allgemeine.ueberschriftNichtDrucken,
+          name: editedAllgemeineData.name,
+          number: editedAllgemeineData.nr,
+          price: editedAllgemeineData.einzelpreis,
+          hideTitle: editedAllgemeineData.ueberschriftNichtDrucken,
         };
         await onSaveProperties(article.id, articleData);
         
@@ -184,12 +250,12 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
         }));
       }
 
-      // Save calculation items if handler provided and data available
-      if (onSaveCalculations && propertiesData?.kalkulation) {
+      // Save calculation items if handler provided - use local state instead of propertiesData
+      if (onSaveCalculations && article.calculations) {
         const calculationsToSave = article.calculations.map(item => ({
           name: item.name,
           type: item.type,
-          value: propertiesData.kalkulation[item.id] || item.value,
+          value: editedKalkulationData[item.id] || item.value,
           articleId: article.id,
           order: item.order,
         }));
@@ -201,7 +267,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
           ...prev,
           calculations: prev.calculations.map(item => ({
             ...item,
-            value: propertiesData.kalkulation[item.id] || item.value,
+            value: editedKalkulationData[item.id] || item.value,
             updatedAt: new Date()
           })),
           updatedAt: new Date()
@@ -218,13 +284,6 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
           languageId: lang.id,
         }));
         await onSaveContent(article.id, contentToSave);
-        
-        // Update local article state with new content
-        // Note: We keep the existing content structure but update the updatedAt
-        setArticle(prev => ({
-          ...prev,
-          updatedAt: new Date()
-        }));
       }
 
       setIsEditing(false);
@@ -451,7 +510,10 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
             article={article}
             calculationItems={article.calculations || []}
             isEditing={isEditing} 
-            onDataChange={handlePropertiesDataChange}
+            editedAllgemeineData={editedAllgemeineData}
+            editedKalkulationData={editedKalkulationData}
+            onAllgemeineChange={handleAllgemeineChange}
+            onKalkulationChange={handleKalkulationChange}
           />
         </TabsContent>
         
