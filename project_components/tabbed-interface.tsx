@@ -51,7 +51,13 @@ export function TabbedInterface() {
               </TabsList>
 
               {openTabs.map(tab => (
-                <TabsContent key={tab.id} value={tab.id} className="m-0 p-4">
+                <TabsContent 
+                  key={tab.id} 
+                  value={tab.id} 
+                  className="m-0 p-4"
+                  forceMount={true}
+                  style={{ display: activeTabId === tab.id ? 'block' : 'none' }}
+                >
                   {tab.content}
                 </TabsContent>
               ))}
