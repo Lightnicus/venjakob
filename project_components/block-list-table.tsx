@@ -5,6 +5,7 @@ import { useTabbedInterface } from './tabbed-interface-provider';
 import BlockDetail from './block-detail';
 import { FilterableTable } from './filterable-table';
 import IconButton from './icon-button';
+import InlineRowCheckbox from './inline-row-checkbox';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
@@ -204,12 +205,15 @@ const BlockListTable: FC<BlockListTableProps> = ({
       accessorKey: 'standard',
       header: 'Standard',
       cell: ({ row }) => (
-        <input
-          type="checkbox"
+        <InlineRowCheckbox
           checked={row.original.standard}
-          readOnly
-          tabIndex={-1}
+          onClick={async (checked) => {
+            if (onSaveBlockProperties) {
+              await onSaveBlockProperties(row.original.id, { standard: checked });
+            }
+          }}
           aria-label="Standard"
+          disabled={!onSaveBlockProperties}
         />
       ),
     },
@@ -217,12 +221,15 @@ const BlockListTable: FC<BlockListTableProps> = ({
       accessorKey: 'mandatory',
       header: 'Pflicht',
       cell: ({ row }) => (
-        <input
-          type="checkbox"
+        <InlineRowCheckbox
           checked={row.original.mandatory}
-          readOnly
-          tabIndex={-1}
+          onClick={async (checked) => {
+            if (onSaveBlockProperties) {
+              await onSaveBlockProperties(row.original.id, { mandatory: checked });
+            }
+          }}
           aria-label="Pflicht"
+          disabled={!onSaveBlockProperties}
         />
       ),
     },

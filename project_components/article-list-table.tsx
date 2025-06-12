@@ -5,6 +5,7 @@ import { useTabbedInterface } from './tabbed-interface-provider';
 import ArticleDetail from './article-detail';
 import { FilterableTable } from './filterable-table';
 import IconButton from './icon-button';
+import InlineRowCheckbox from './inline-row-checkbox';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
@@ -229,12 +230,15 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
       accessorKey: 'hideTitle',
       header: 'Titel ausblenden',
       cell: ({ row }) => (
-        <input
-          type="checkbox"
+        <InlineRowCheckbox
           checked={row.original.hideTitle}
-          readOnly
-          tabIndex={-1}
+          onClick={async (checked) => {
+            if (onSaveArticleProperties) {
+              await onSaveArticleProperties(row.original.id, { hideTitle: checked });
+            }
+          }}
           aria-label="Titel ausblenden"
+          disabled={!onSaveArticleProperties}
         />
       ),
     },
