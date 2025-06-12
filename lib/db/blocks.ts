@@ -121,6 +121,58 @@ export async function createBlock(): Promise<BlockWithContent> {
   }
 }
 
+// Copy a block
+export async function copyBlock(originalBlockId: string): Promise<BlockWithContent> {
+  try {
+    // Get the original block with content
+    const originalBlock = await getBlockWithContent(originalBlockId);
+    if (!originalBlock) {
+      throw new Error('Original block not found');
+    }
+    
+    // Get the next position
+    const maxPositionResult = await db.select({ maxPosition: blocks.position })
+      .from(blocks)
+      .orderBy(desc(blocks.position))
+      .limit(1);
+    
+    const nextPosition = (maxPositionResult[0]?.maxPosition || 0) + 1;
+    
+    // Create new block with "(Kopie)" appended to the name
+    const [newBlock] = await db.insert(blocks).values({
+      name: `${originalBlock.name} (Kopie)`,
+      standard: originalBlock.standard,
+      mandatory: originalBlock.mandatory,
+      position: nextPosition,
+      hideTitle: originalBlock.hideTitle,
+      pageBreakAbove: originalBlock.pageBreakAbove,
+    }).returning();
+    
+    // Copy all block contents (without modifying titles)
+    const copiedContents = [];
+    if (originalBlock.blockContents.length > 0) {
+      const contentToInsert = originalBlock.blockContents.map(content => ({
+        blockId: newBlock.id,
+        articleId: content.articleId,
+        title: content.title,
+        content: content.content,
+        languageId: content.languageId,
+      }));
+      
+      const insertedContents = await db.insert(blockContent).values(contentToInsert).returning();
+      copiedContents.push(...insertedContents);
+    }
+    
+    return {
+      ...newBlock,
+      blockContents: copiedContents
+    };
+  } catch (error) {
+    console.error('Error copying block:', error);
+    throw new Error('Failed to copy block');
+  }
+}
+
 // Delete a block and its content
 export async function deleteBlock(blockId: string): Promise<void> {
   try {

@@ -78,4 +78,19 @@ export async function deleteBlockAPI(blockId: string): Promise<void> {
   if (!response.ok) {
     throw new Error('Failed to delete block');
   }
+}
+
+// Copy a block
+export async function copyBlockAPI(originalBlock: BlockWithContent): Promise<BlockWithContent> {
+  const response = await fetch('/api/blocks/copy', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ originalBlockId: originalBlock.id }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to copy block');
+  }
+  return response.json();
 } 

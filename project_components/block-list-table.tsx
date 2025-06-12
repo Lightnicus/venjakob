@@ -22,6 +22,7 @@ type BlockListTableProps = {
   onSaveBlockProperties?: (blockId: string, blockData: Partial<Block>) => void;
   onDeleteBlock?: (blockId: string) => void;
   onCreateBlock?: () => Promise<BlockWithContent>;
+  onCopyBlock?: (originalBlock: BlockWithContent) => Promise<BlockWithContent>;
 };
 
 const BlockListTable: FC<BlockListTableProps> = ({ 
@@ -30,7 +31,8 @@ const BlockListTable: FC<BlockListTableProps> = ({
   onSaveBlockChanges,
   onSaveBlockProperties,
   onDeleteBlock,
-  onCreateBlock
+  onCreateBlock,
+  onCopyBlock
 }) => {
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
   const { openNewTab } = useTabbedInterface();
@@ -100,10 +102,39 @@ const BlockListTable: FC<BlockListTableProps> = ({
     }
   };
 
-  const handleCopyBlock = (block: BlockWithContent) => {
-    console.log('Kopiere Block:', block.name);
-    toast('Block wurde kopiert');
-    // TODO: Implement block copying logic
+  const handleCopyBlock = async (block: BlockWithContent) => {
+    if (!onCopyBlock) {
+      toast.error('Block-Kopierung nicht verfügbar');
+      return;
+    }
+
+    try {
+      const copiedBlock = await onCopyBlock(block);
+      
+      // Update the table data with the new copied block
+      setTableData(prevData => [...prevData, copiedBlock]);
+      
+      toast.success(`Block "${block.name}" wurde kopiert`);
+      
+      // Optionally open the copied block in a new tab
+      const copiedBlockId = `block-detail-${copiedBlock.id}`;
+      openNewTab({
+        id: copiedBlockId,
+        title: `Block: ${copiedBlock.name}`,
+        content: (
+          <BlockDetail 
+            block={copiedBlock} 
+            languages={languages}
+            onSaveChanges={onSaveBlockChanges}
+            onSaveBlockProperties={onSaveBlockProperties}
+          />
+        ),
+        closable: true,
+      });
+    } catch (error) {
+      console.error('Fehler beim Kopieren des Blocks:', error);
+      toast.error('Fehler beim Kopieren des Blocks');
+    }
   };
 
   const handleInitiateDelete = (block: BlockWithContent) => {
@@ -226,15 +257,21 @@ const BlockListTable: FC<BlockListTableProps> = ({
             size="sm"
             className="h-8 w-8 p-0"
             aria-label="Kopieren"
+            disabled={!onCopyBlock}
             onClick={e => {
+              e.preventDefault();
               e.stopPropagation();
               handleCopyBlock(row.original);
             }}
             onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
                 e.stopPropagation();
                 handleCopyBlock(row.original);
               }
+            }}
+            onMouseDown={e => {
+              e.stopPropagation();
             }}
           >
             <Copy size={16} />

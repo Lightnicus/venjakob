@@ -9,6 +9,7 @@ import {
   saveBlockPropertiesAPI,
   deleteBlockAPI,
   createNewBlock,
+  copyBlockAPI,
 } from '@/lib/api/blocks';
 import type { BlockWithContent } from '@/lib/db/blocks';
 
@@ -88,6 +89,20 @@ const BlockManagement = () => {
     }
   };
 
+  const handleCopyBlock = async (originalBlock: BlockWithContent): Promise<BlockWithContent> => {
+    try {
+      const copiedBlock = await copyBlockAPI(originalBlock);
+      toast.success(`Block "${originalBlock.name}" wurde kopiert`);
+      // Add to local state immediately
+      setBlocks(prev => [...prev, copiedBlock]);
+      return copiedBlock;
+    } catch (error) {
+      console.error('Error copying block:', error);
+      toast.error('Fehler beim Kopieren des Blocks');
+      throw error;
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-4">
@@ -109,6 +124,7 @@ const BlockManagement = () => {
         onSaveBlockProperties={handleSaveBlockProperties}
         onDeleteBlock={handleDeleteBlock}
         onCreateBlock={handleCreateBlock}
+        onCopyBlock={handleCopyBlock}
       />
     </div>
   );
