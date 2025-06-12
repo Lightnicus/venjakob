@@ -76,15 +76,28 @@ const BlockListTable: FC<BlockListTableProps> = ({
   };
 
   const handleOpenBlockDetail = (block: BlockWithContent) => {
+    // Create wrapper functions to match BlockDetail's expected signatures
+    const handleSaveChanges = onSaveBlockChanges
+      ? async (blockId: string, blockContents: any[]) => {
+          onSaveBlockChanges(blockId, blockContents);
+        }
+      : undefined;
+
+    const handleSaveProperties = onSaveBlockProperties
+      ? async (blockId: string, blockData: any) => {
+          onSaveBlockProperties(blockId, blockData, false);
+        }
+      : undefined;
+
     openNewTab({
       id: `block-detail-${block.id}`,
       title: `Block: ${block.name}`,
       content: (
         <BlockDetail 
-          block={block} 
+          blockId={block.id}
           languages={languages}
-          onSaveChanges={onSaveBlockChanges}
-          onSaveBlockProperties={onSaveBlockProperties}
+          onSaveChanges={handleSaveChanges}
+          onSaveBlockProperties={handleSaveProperties}
         />
       ),
       closable: true,
@@ -99,16 +112,30 @@ const BlockListTable: FC<BlockListTableProps> = ({
     
     try {
       const newBlock = await onCreateBlock();
+
+      // Create wrapper functions to match BlockDetail's expected signatures
+      const handleSaveChanges = onSaveBlockChanges
+        ? async (blockId: string, blockContents: any[]) => {
+            onSaveBlockChanges(blockId, blockContents);
+          }
+        : undefined;
+
+      const handleSaveProperties = onSaveBlockProperties
+        ? async (blockId: string, blockData: any) => {
+            onSaveBlockProperties(blockId, blockData, false);
+          }
+        : undefined;
+
       const newBlockId = `block-detail-${newBlock.id}`;
       openNewTab({
         id: newBlockId,
         title: 'Neuer Block',
         content: (
           <BlockDetail 
-            block={newBlock} 
+            blockId={newBlock.id}
             languages={languages}
-            onSaveChanges={onSaveBlockChanges}
-            onSaveBlockProperties={onSaveBlockProperties}
+            onSaveChanges={handleSaveChanges}
+            onSaveBlockProperties={handleSaveProperties}
           />
         ),
         closable: true,
@@ -132,6 +159,19 @@ const BlockListTable: FC<BlockListTableProps> = ({
       
       toast.success(`Block "${block.name}" wurde kopiert`);
       
+      // Create wrapper functions to match BlockDetail's expected signatures
+      const handleSaveChanges = onSaveBlockChanges
+        ? async (blockId: string, blockContents: any[]) => {
+            onSaveBlockChanges(blockId, blockContents);
+          }
+        : undefined;
+
+      const handleSaveProperties = onSaveBlockProperties
+        ? async (blockId: string, blockData: any) => {
+            onSaveBlockProperties(blockId, blockData, false);
+          }
+        : undefined;
+      
       // Optionally open the copied block in a new tab
       const copiedBlockId = `block-detail-${copiedBlock.id}`;
       openNewTab({
@@ -139,10 +179,10 @@ const BlockListTable: FC<BlockListTableProps> = ({
         title: `Block: ${copiedBlock.name}`,
         content: (
           <BlockDetail 
-            block={copiedBlock} 
+            blockId={copiedBlock.id}
             languages={languages}
-            onSaveChanges={onSaveBlockChanges}
-            onSaveBlockProperties={onSaveBlockProperties}
+            onSaveChanges={handleSaveChanges}
+            onSaveBlockProperties={handleSaveProperties}
           />
         ),
         closable: true,

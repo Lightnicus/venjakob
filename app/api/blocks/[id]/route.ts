@@ -1,5 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { saveBlockProperties, deleteBlock, saveBlockContent } from '@/lib/db/blocks';
+import { saveBlockProperties, deleteBlock, saveBlockContent, getBlockWithContent } from '@/lib/db/blocks';
+
+export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const block = await getBlockWithContent(id);
+    
+    if (!block) {
+      return NextResponse.json(
+        { error: 'Block not found' },
+        { status: 404 }
+      );
+    }
+    
+    return NextResponse.json(block);
+  } catch (error) {
+    console.error('Error fetching block:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch block' },
+      { status: 500 }
+    );
+  }
+}
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {

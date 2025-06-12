@@ -1,25 +1,23 @@
-import { FC, useState, useEffect, useRef } from 'react';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Label } from '@/components/ui/label';
+import { FC, useState, useEffect } from 'react';
 import { Edit3, Save, Loader2, Trash2, PlusCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { toast } from 'sonner';
-import type { Language, ArticleCalculationItem } from '@/lib/db/schema';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Label } from '@/components/ui/label';
+import QuillRichTextEditor from '@/project_components/quill-rich-text-editor';
+import ArticleProperties from '@/project_components/article-properties';
+import { fetchArticleWithCalculations } from '@/lib/api/articles';
 import type { ArticleWithCalculations } from '@/lib/db/articles';
-import ArticleProperties from './article-properties';
-import QuillRichTextEditor from './quill-rich-text-editor';
 
-type ArticleDetailProps = {
-  article: ArticleWithCalculations;
-  languages: Language[];
-  onSaveProperties?: (articleId: string, articleData: any) => void;
-  onSaveContent?: (articleId: string, contentData: any[]) => void;
-  onSaveCalculations?: (articleId: string, calculations: any[]) => void;
-};
+// Types
+interface Language {
+  id: string;
+  value: string;
+  label: string;
+}
 
-// Define types for the article properties data structures
 interface AllgemeineData {
   name: string;
   nr: string;
@@ -27,108 +25,124 @@ interface AllgemeineData {
   ueberschriftNichtDrucken: boolean;
 }
 
+
+
+interface ArticleDetailProps {
+  articleId: string;
+  languages: Language[];
+  onSaveProperties?: (articleId: string, data: any) => Promise<void>;
+  onSaveContent?: (articleId: string, content: any[]) => Promise<void>;
+  onSaveCalculations?: (articleId: string, calculations: any[]) => Promise<void>;
+}
+
 const ArticleDetail: FC<ArticleDetailProps> = ({
-  article: initialArticle,
+  articleId,
   languages,
   onSaveProperties,
   onSaveContent,
   onSaveCalculations,
 }) => {
+  const [article, setArticle] = useState<ArticleWithCalculations | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [tab, setTab] = useState('beschreibungen');
-  const [article, setArticle] = useState(initialArticle);
   
   // Add state for article properties
-  const [editedAllgemeineData, setEditedAllgemeineData] = useState<AllgemeineData>(() => ({
-    name: initialArticle.name || '',
-    nr: initialArticle.number || '',
-    einzelpreis: initialArticle.price || '0.00',
-    ueberschriftNichtDrucken: initialArticle.hideTitle || false,
-  }));
+  const [editedAllgemeineData, setEditedAllgemeineData] = useState<AllgemeineData>({
+    name: '',
+    nr: '',
+    einzelpreis: '0.00',
+    ueberschriftNichtDrucken: false,
+  });
 
   // Add state for calculation data
-  const [editedKalkulationData, setEditedKalkulationData] = useState<Record<string, string>>(() => {
-    const initial: Record<string, string> = {};
-    initialArticle.calculations?.forEach(item => {
-      initial[item.id] = item.value || '0';
-    });
-    return initial;
-  });
+  const [editedKalkulationData, setEditedKalkulationData] = useState<Record<string, string>>({});
   
-  // Update article state when initialArticle prop changes
-  useEffect(() => {
-    setArticle(initialArticle);
-    
-    // Reset properties state when article changes
-    setEditedAllgemeineData({
-      name: initialArticle.name || '',
-      nr: initialArticle.number || '',
-      einzelpreis: initialArticle.price || '0.00',
-      ueberschriftNichtDrucken: initialArticle.hideTitle || false,
-    });
-
-    // Reset calculation data to original values
-    const resetKalkulation: Record<string, string> = {};
-    initialArticle.calculations?.forEach(item => {
-      resetKalkulation[item.id] = item.value || '0';
-    });
-    setEditedKalkulationData(resetKalkulation);
-  }, [initialArticle]);
-
-  // Content editing state - similar to BlockDetail
+  // Content editing state
   const [editedArticleContents, setEditedArticleContents] = useState<
     Record<string, { title: string; content: string; languageId: string }>
-  >(() => {
-    const initial: Record<string, { title: string; content: string; languageId: string }> = {};
-    // Note: We'll need to fetch article content from block_content table where articleId = article.id
-    // For now, initialize empty - this would be populated from API
-    return initial;
-  });
-
-  // Properties data state - kept for backward compatibility but will be constructed from individual states
-  const [propertiesData, setPropertiesData] = useState<any>(null);
+  >({});
 
   const [currentLanguages, setCurrentLanguages] = useState<Language[]>([]);
   const [selectedPreviewLanguage, setSelectedPreviewLanguage] = useState('');
   const [selectedLanguageToAdd, setSelectedLanguageToAdd] = useState('');
 
-  // Initialize content state from article data - only on mount or when article ID changes
-  useEffect(() => {
-    const initial: Record<string, { title: string; content: string; languageId: string }> = {};
-    const contentLanguages: Language[] = [];
+  // Load article data
+  const loadArticleData = async () => {
+    setIsLoading(true);
+    setLoadError(null);
     
-    // Initialize from existing article content
-    if (article.content) {
-      article.content.forEach(content => {
-        const lang = languages.find(l => l.id === content.languageId);
-        if (lang) {
-          initial[lang.value] = {
-            title: content.title,
-            content: content.content,
-            languageId: content.languageId,
-          };
-          if (!contentLanguages.find(cl => cl.id === lang.id)) {
-            contentLanguages.push(lang);
-          }
-        }
-      });
-    }
-    
-    setEditedArticleContents(initial);
-    setCurrentLanguages(contentLanguages);
-    
-    if (contentLanguages.length > 0) {
-      if (!contentLanguages.find(l => l.value === selectedPreviewLanguage) || !selectedPreviewLanguage) {
-        setSelectedPreviewLanguage(contentLanguages[0].value);
+    try {
+      // Fetch article data using the existing API function
+      const articleData = await fetchArticleWithCalculations(articleId);
+      
+      if (!articleData) {
+        throw new Error('Article not found');
       }
-    } else {
-      setSelectedPreviewLanguage('');
-    }
+      setArticle(articleData);
+      
+      // Initialize properties state
+      setEditedAllgemeineData({
+        name: articleData.name || '',
+        nr: articleData.number || '',
+        einzelpreis: articleData.price || '0.00',
+        ueberschriftNichtDrucken: articleData.hideTitle || false,
+      });
 
-    // Reset selected language to add when languages change
-    setSelectedLanguageToAdd('');
-  }, [article.id, languages]); // Only react to article ID changes, not the entire article object
+      // Initialize calculation data
+      const initialKalkulation: Record<string, string> = {};
+      articleData.calculations.forEach(item => {
+        initialKalkulation[item.id] = item.value || '0';
+      });
+      setEditedKalkulationData(initialKalkulation);
+
+      // Initialize content state
+      const initialContent: Record<string, { title: string; content: string; languageId: string }> = {};
+      const contentLanguages: Language[] = [];
+      
+      if (articleData.content) {
+        articleData.content.forEach(content => {
+          const lang = languages.find(l => l.id === content.languageId);
+          if (lang) {
+            initialContent[lang.value] = {
+              title: content.title,
+              content: content.content,
+              languageId: content.languageId,
+            };
+            if (!contentLanguages.find(cl => cl.id === lang.id)) {
+              contentLanguages.push(lang);
+            }
+          }
+        });
+      }
+      
+      setEditedArticleContents(initialContent);
+      setCurrentLanguages(contentLanguages);
+      
+      if (contentLanguages.length > 0) {
+        setSelectedPreviewLanguage(contentLanguages[0].value);
+      } else {
+        setSelectedPreviewLanguage('');
+      }
+
+      setSelectedLanguageToAdd('');
+      
+    } catch (error) {
+      console.error('Error loading article:', error);
+      setLoadError('Fehler beim Laden des Artikels');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load article data when articleId changes
+  useEffect(() => {
+    if (articleId) {
+      loadArticleData();
+    }
+  }, [articleId]);
 
   const handleRichTextChange = (langValue: string, content: string) => {
     if (!isEditing) return;
@@ -163,13 +177,8 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
     setEditedKalkulationData(prev => ({ ...prev, [itemId]: value }));
   };
 
-  // Remove the callback since we're managing state directly now
-  // const handlePropertiesDataChange = (data: any) => {
-  //   setPropertiesData(data);
-  // };
-
   const handleToggleEdit = () => {
-    if (isEditing) {
+    if (isEditing && article) {
       // Reset to original data
       setEditedAllgemeineData({
         name: article.name || '',
@@ -180,7 +189,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
 
       // Reset calculation data to original values
       const resetKalkulation: Record<string, string> = {};
-      article.calculations?.forEach(item => {
+      article.calculations.forEach(item => {
         resetKalkulation[item.id] = item.value || '0';
       });
       setEditedKalkulationData(resetKalkulation);
@@ -217,19 +226,16 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
       } else {
         setSelectedPreviewLanguage('');
       }
-
-      // Reset properties data
-      setPropertiesData(null);
     }
     setIsEditing(!isEditing);
   };
 
   const handleSaveChanges = async () => {
-    if (isSaving) return;
+    if (isSaving || !article) return;
 
     setIsSaving(true);
     try {
-      // Save properties if handler provided - use local state instead of propertiesData
+      // Save properties if handler provided
       if (onSaveProperties) {
         const articleData = {
           name: editedAllgemeineData.name,
@@ -240,39 +246,39 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
         await onSaveProperties(article.id, articleData);
         
         // Update local article state immediately to reflect changes in UI
-        setArticle(prev => ({
+        setArticle(prev => prev ? ({
           ...prev,
           name: articleData.name,
           number: articleData.number,
           price: articleData.price,
           hideTitle: articleData.hideTitle,
           updatedAt: new Date()
-        }));
+        }) : null);
       }
 
-      // Save calculation items if handler provided - use local state instead of propertiesData
-      if (onSaveCalculations && article.calculations) {
-        const calculationsToSave = article.calculations.map(item => ({
-          name: item.name,
-          type: item.type,
-          value: editedKalkulationData[item.id] || item.value,
-          articleId: article.id,
-          order: item.order,
-        }));
-        
-        await onSaveCalculations(article.id, calculationsToSave);
-        
-        // Update local article state with new calculation values
-        setArticle(prev => ({
-          ...prev,
-          calculations: prev.calculations.map(item => ({
-            ...item,
+              // Save calculation items if handler provided
+        if (onSaveCalculations) {
+          const calculationsToSave = article.calculations.map(item => ({
+            name: item.name,
+            type: item.type,
             value: editedKalkulationData[item.id] || item.value,
+            articleId: article.id,
+            order: item.order,
+          }));
+          
+          await onSaveCalculations(article.id, calculationsToSave);
+          
+          // Update local article state with new calculation values
+          setArticle(prev => prev ? ({
+            ...prev,
+            calculations: prev.calculations.map(item => ({
+              ...item,
+              value: editedKalkulationData[item.id] || item.value,
+              updatedAt: new Date()
+            })),
             updatedAt: new Date()
-          })),
-          updatedAt: new Date()
-        }));
-      }
+          }) : null);
+        }
 
       // Save content if handler provided
       if (onSaveContent) {
@@ -340,6 +346,32 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
   );
 
   const currentPreviewData = editedArticleContents[selectedPreviewLanguage];
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={32} className="animate-spin mr-2" />
+          <span>Artikel wird geladen...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (loadError || !article) {
+    return (
+      <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
+        <div className="text-center py-12">
+          <div className="text-red-600 mb-2">{loadError || 'Artikel nicht gefunden'}</div>
+          <Button onClick={loadArticleData} variant="outline">
+            Erneut versuchen
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
@@ -508,7 +540,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
         <TabsContent value="eigenschaften" className="mt-4">
           <ArticleProperties 
             article={article}
-            calculationItems={article.calculations || []}
+            calculationItems={article.calculations}
             isEditing={isEditing} 
             editedAllgemeineData={editedAllgemeineData}
             editedKalkulationData={editedKalkulationData}

@@ -19,6 +19,18 @@ export async function fetchBlocksWithContent(): Promise<BlockWithContent[]> {
   return response.json();
 }
 
+// Fetch a single block with content
+export async function fetchBlockWithContent(blockId: string): Promise<BlockWithContent | null> {
+  const response = await fetch(`/api/blocks/${blockId}`);
+  if (!response.ok) {
+    if (response.status === 404) {
+      return null;
+    }
+    throw new Error('Failed to fetch block');
+  }
+  return response.json();
+}
+
 // Create a new block
 export async function createNewBlock(): Promise<BlockWithContent> {
   const response = await fetch('/api/blocks', {

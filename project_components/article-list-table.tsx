@@ -11,7 +11,7 @@ import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 import type { Language } from '@/lib/db/schema';
 import type { ArticleWithCalculations } from '@/lib/db/articles';
-import { fetchArticleWithCalculations } from '@/lib/api/articles';
+
 
 type ArticleWithCalculationCount = ArticleWithCalculations & {
   calculationCount?: number;
@@ -70,32 +70,39 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
   };
 
   const handleOpenArticleDetail = async (article: ArticleWithCalculationCount) => {
-    try {
-      // Fetch the full article data with calculations and content
-      const fullArticle = await fetchArticleWithCalculations(article.id);
-      if (!fullArticle) {
-        toast.error('Artikel konnte nicht geladen werden');
-        return;
-      }
+    // Create wrapper functions to match ArticleDetail's expected signatures
+    const handleSaveProperties = onSaveArticleProperties 
+      ? async (articleId: string, data: any) => {
+          onSaveArticleProperties(articleId, data, false);
+        }
+      : undefined;
 
-      openNewTab({
-        id: `article-detail-${article.id}`,
-        title: `Artikel: ${article.name}`,
-        content: (
-          <ArticleDetail 
-            article={fullArticle} 
-            languages={languages}
-            onSaveProperties={onSaveArticleProperties}
-            onSaveContent={onSaveArticleContent}
-            onSaveCalculations={onSaveArticleCalculations}
-          />
-        ),
-        closable: true,
-      });
-    } catch (error) {
-      console.error('Error fetching article details:', error);
-      toast.error('Fehler beim Laden der Artikel-Details');
-    }
+    const handleSaveContent = onSaveArticleContent
+      ? async (articleId: string, content: any[]) => {
+          onSaveArticleContent(articleId, content);
+        }
+      : undefined;
+
+    const handleSaveCalculations = onSaveArticleCalculations
+      ? async (articleId: string, calculations: any[]) => {
+          onSaveArticleCalculations(articleId, calculations);
+        }
+      : undefined;
+
+    openNewTab({
+      id: `article-detail-${article.id}`,
+      title: `Artikel: ${article.name}`,
+      content: (
+        <ArticleDetail 
+          articleId={article.id}
+          languages={languages}
+          onSaveProperties={handleSaveProperties}
+          onSaveContent={handleSaveContent}
+          onSaveCalculations={handleSaveCalculations}
+        />
+      ),
+      closable: true,
+    });
   };
 
   const handleAddNewArticle = async () => {
@@ -106,25 +113,37 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     
     try {
       const newArticle = await onCreateArticle();
-      // The newArticle from createNewArticleAPI should already include calculations
-      // but let's ensure we have the full data by fetching it again
-      const fullArticle = await fetchArticleWithCalculations(newArticle.id);
-      if (!fullArticle) {
-        toast.error('Neuer Artikel konnte nicht geladen werden');
-        return;
-      }
 
-      const newArticleId = `article-detail-${fullArticle.id}`;
+      // Create wrapper functions to match ArticleDetail's expected signatures
+      const handleSaveProperties = onSaveArticleProperties 
+        ? async (articleId: string, data: any) => {
+            onSaveArticleProperties(articleId, data, false);
+          }
+        : undefined;
+
+      const handleSaveContent = onSaveArticleContent
+        ? async (articleId: string, content: any[]) => {
+            onSaveArticleContent(articleId, content);
+          }
+        : undefined;
+
+      const handleSaveCalculations = onSaveArticleCalculations
+        ? async (articleId: string, calculations: any[]) => {
+            onSaveArticleCalculations(articleId, calculations);
+          }
+        : undefined;
+
+      const newArticleId = `article-detail-${newArticle.id}`;
       openNewTab({
         id: newArticleId,
         title: 'Neuer Artikel',
         content: (
           <ArticleDetail 
-            article={fullArticle} 
+            articleId={newArticle.id}
             languages={languages}
-            onSaveProperties={onSaveArticleProperties}
-            onSaveContent={onSaveArticleContent}
-            onSaveCalculations={onSaveArticleCalculations}
+            onSaveProperties={handleSaveProperties}
+            onSaveContent={handleSaveContent}
+            onSaveCalculations={handleSaveCalculations}
           />
         ),
         closable: true,
@@ -149,6 +168,25 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
       
       toast.success(`Artikel "${article.name}" wurde kopiert`);
       
+      // Create wrapper functions to match ArticleDetail's expected signatures
+      const handleSaveProperties = onSaveArticleProperties 
+        ? async (articleId: string, data: any) => {
+            onSaveArticleProperties(articleId, data, false);
+          }
+        : undefined;
+
+      const handleSaveContent = onSaveArticleContent
+        ? async (articleId: string, content: any[]) => {
+            onSaveArticleContent(articleId, content);
+          }
+        : undefined;
+
+      const handleSaveCalculations = onSaveArticleCalculations
+        ? async (articleId: string, calculations: any[]) => {
+            onSaveArticleCalculations(articleId, calculations);
+          }
+        : undefined;
+      
       // Optionally open the copied article in a new tab
       const copiedArticleId = `article-detail-${copiedArticle.id}`;
       openNewTab({
@@ -156,11 +194,11 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
         title: `Artikel: ${copiedArticle.name}`,
         content: (
           <ArticleDetail 
-            article={copiedArticle} 
+            articleId={copiedArticle.id}
             languages={languages}
-            onSaveProperties={onSaveArticleProperties}
-            onSaveContent={onSaveArticleContent}
-            onSaveCalculations={onSaveArticleCalculations}
+            onSaveProperties={handleSaveProperties}
+            onSaveContent={handleSaveContent}
+            onSaveCalculations={handleSaveCalculations}
           />
         ),
         closable: true,

@@ -17,41 +17,38 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { Block, BlockContent, Language } from '@/lib/db/schema';
+import { fetchBlockWithContent } from '@/lib/api/blocks';
 
 type BlockWithContent = Block & {
   blockContents: BlockContent[];
 };
 
 type BlockDetailProps = {
-  block: BlockWithContent;
+  blockId: string;
   languages: Language[];
   onSaveChanges?: (
     blockId: string,
     blockContents: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[],
-  ) => void;
-  onSaveBlockProperties?: (blockId: string, blockData: Partial<Block>) => void;
+  ) => Promise<void>;
+  onSaveBlockProperties?: (blockId: string, blockData: Partial<Block>) => Promise<void>;
 };
 
 const BlockDetail: FC<BlockDetailProps> = ({
-  block,
+  blockId,
   languages,
   onSaveChanges,
   onSaveBlockProperties,
 }) => {
+  const [block, setBlock] = useState<BlockWithContent | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [tab, setTab] = useState('beschreibungen');
   const propertiesRef = useRef<BlockDetailPropertiesRef>(null);
 
   // Add state for block properties
-  const [editedBlockProperties, setEditedBlockProperties] = useState<Partial<Block>>(() => ({
-    name: block.name,
-    standard: block.standard,
-    mandatory: block.mandatory,
-    position: block.position,
-    hideTitle: block.hideTitle,
-    pageBreakAbove: block.pageBreakAbove,
-  }));
+  const [editedBlockProperties, setEditedBlockProperties] = useState<Partial<Block>>({});
 
   const [editedBlockContents, setEditedBlockContents] = useState<
     Record<
@@ -62,81 +59,82 @@ const BlockDetail: FC<BlockDetailProps> = ({
         languageId: string;
       }
     >
-  >(() => {
-    const initial: Record<
-      string,
-      { title: string; content: string; languageId: string }
-    > = {};
-    block.blockContents.forEach(bc => {
-      const lang = languages.find(l => l.id === bc.languageId);
-      if (lang) {
-        initial[lang.value] = {
-          title: bc.title,
-          content: bc.content,
-          languageId: bc.languageId,
-        };
-      }
-    });
-    return initial;
-  });
+  >({});
 
-  const [currentLanguages, setCurrentLanguages] = useState<Language[]>(() =>
-    languages.filter(lang =>
-      block.blockContents.some(bc => bc.languageId === lang.id),
-    ),
-  );
+  const [currentLanguages, setCurrentLanguages] = useState<Language[]>([]);
 
-  const [selectedPreviewLanguage, setSelectedPreviewLanguage] = useState(
-    () => currentLanguages[0]?.value || '',
-  );
+  const [selectedPreviewLanguage, setSelectedPreviewLanguage] = useState('');
   const [selectedLanguageToAdd, setSelectedLanguageToAdd] = useState('');
 
-  useEffect(() => {
-    // Reset block properties state when block changes
-    setEditedBlockProperties({
-      name: block.name,
-      standard: block.standard,
-      mandatory: block.mandatory,
-      position: block.position,
-      hideTitle: block.hideTitle,
-      pageBreakAbove: block.pageBreakAbove,
-    });
-
-    const initial: Record<
-      string,
-      { title: string; content: string; languageId: string }
-    > = {};
-    block.blockContents.forEach(bc => {
-      const lang = languages.find(l => l.id === bc.languageId);
-      if (lang) {
-        initial[lang.value] = {
-          title: bc.title,
-          content: bc.content,
-          languageId: bc.languageId,
-        };
+  // Load block data
+  const loadBlockData = async () => {
+    setIsLoading(true);
+    setLoadError(null);
+    
+    try {
+      // Fetch block data using the existing API function
+      const blockData = await fetchBlockWithContent(blockId);
+      
+      if (!blockData) {
+        throw new Error('Block not found');
       }
-    });
-    setEditedBlockContents(initial);
+      
+      setBlock(blockData);
+      
+      // Initialize block properties state
+      setEditedBlockProperties({
+        name: blockData.name,
+        standard: blockData.standard,
+        mandatory: blockData.mandatory,
+        position: blockData.position,
+        hideTitle: blockData.hideTitle,
+        pageBreakAbove: blockData.pageBreakAbove,
+      });
 
-    const activeLangs = languages.filter(lang =>
-      block.blockContents.some(bc => bc.languageId === lang.id),
-    );
-    setCurrentLanguages(activeLangs);
+      // Initialize content state
+      const initial: Record<
+        string,
+        { title: string; content: string; languageId: string }
+      > = {};
+      blockData.blockContents.forEach((bc: BlockContent) => {
+        const lang = languages.find(l => l.id === bc.languageId);
+        if (lang) {
+          initial[lang.value] = {
+            title: bc.title,
+            content: bc.content,
+            languageId: bc.languageId,
+          };
+        }
+      });
+      setEditedBlockContents(initial);
 
-    if (activeLangs.length > 0) {
-      if (
-        !activeLangs.find(l => l.value === selectedPreviewLanguage) ||
-        !selectedPreviewLanguage
-      ) {
+      const activeLangs = languages.filter(lang =>
+        blockData.blockContents.some((bc: BlockContent) => bc.languageId === lang.id),
+      );
+      setCurrentLanguages(activeLangs);
+
+      if (activeLangs.length > 0) {
         setSelectedPreviewLanguage(activeLangs[0].value);
+      } else {
+        setSelectedPreviewLanguage('');
       }
-    } else {
-      setSelectedPreviewLanguage('');
-    }
 
-    // Reset selected language to add when languages change
-    setSelectedLanguageToAdd('');
-  }, [block, languages]);
+      setSelectedLanguageToAdd('');
+      
+    } catch (error) {
+      console.error('Error loading block:', error);
+      setLoadError('Fehler beim Laden des Blocks');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load block data when blockId changes
+  useEffect(() => {
+    if (blockId) {
+      loadBlockData();
+    }
+  }, [blockId]);
 
   const handleRichTextChange = (langValue: string, content: string) => {
     if (!isEditing) return;
@@ -171,7 +169,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
   };
 
   const handleToggleEdit = () => {
-    if (isEditing) {
+    if (isEditing && block) {
       // Reset to original data
       setEditedBlockProperties({
         name: block.name,
@@ -217,7 +215,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
   };
 
   const handleSaveChanges = async () => {
-    if (isSaving) return; // Prevent multiple saves
+    if (isSaving || !block) return; // Prevent multiple saves
 
     setIsSaving(true);
     try {
@@ -239,6 +237,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
       }
 
       setIsEditing(false);
+      toast.success('Block gespeichert');
     } catch (error) {
       console.error('Error saving block:', error);
       toast.error('Fehler beim Speichern');
@@ -292,11 +291,38 @@ const BlockDetail: FC<BlockDetailProps> = ({
 
   const currentPreviewData = editedBlockContents[selectedPreviewLanguage];
   const getOriginalBlockContent = (langValue: string) => {
+    if (!block) return null;
     const lang = languages.find(l => l.value === langValue);
     return lang
       ? block.blockContents.find(bc => bc.languageId === lang.id)
       : null;
   };
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
+        <div className="flex items-center justify-center py-12">
+          <Loader2 size={32} className="animate-spin mr-2" />
+          <span>Block wird geladen...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (loadError || !block) {
+    return (
+      <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
+        <div className="text-center py-12">
+          <div className="text-red-600 mb-2">{loadError || 'Block nicht gefunden'}</div>
+          <Button onClick={loadBlockData} variant="outline">
+            Erneut versuchen
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
