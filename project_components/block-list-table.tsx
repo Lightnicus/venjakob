@@ -21,7 +21,7 @@ type BlockListTableProps = {
   data: BlockWithContent[];
   languages: Language[];
   onSaveBlockChanges?: (blockId: string, blockContents: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[]) => void;
-  onSaveBlockProperties?: (blockId: string, blockData: Partial<Block>) => void;
+  onSaveBlockProperties?: (blockId: string, blockData: Partial<Block>, reloadData?: boolean) => void;
   onDeleteBlock?: (blockId: string) => void;
   onCreateBlock?: () => Promise<BlockWithContent>;
   onCopyBlock?: (originalBlock: BlockWithContent) => Promise<BlockWithContent>;
@@ -44,6 +44,20 @@ const BlockListTable: FC<BlockListTableProps> = ({
   useEffect(() => {
     setTableData(data);
   }, [data]);
+
+  const handleOptimisticUpdate = (blockId: string, updates: Partial<BlockWithContent>) => {
+    setTableData(prevData =>
+      prevData.map(block =>
+        block.id === blockId
+          ? { ...block, ...updates }
+          : block
+      )
+    );
+    
+    if (onSaveBlockProperties) {
+      onSaveBlockProperties(blockId, updates, false);
+    }
+  };
 
   const getLanguagesForBlock = (block: BlockWithContent): string => {
     const blockLanguages = block.blockContents.map(bc => {
@@ -208,9 +222,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
         <InlineRowCheckbox
           checked={row.original.standard}
           onClick={async (checked) => {
-            if (onSaveBlockProperties) {
-              await onSaveBlockProperties(row.original.id, { standard: checked });
-            }
+            handleOptimisticUpdate(row.original.id, { standard: checked });
           }}
           aria-label="Standard"
           disabled={!onSaveBlockProperties}
@@ -224,9 +236,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
         <InlineRowCheckbox
           checked={row.original.mandatory}
           onClick={async (checked) => {
-            if (onSaveBlockProperties) {
-              await onSaveBlockProperties(row.original.id, { mandatory: checked });
-            }
+            handleOptimisticUpdate(row.original.id, { mandatory: checked });
           }}
           aria-label="Pflicht"
           disabled={!onSaveBlockProperties}

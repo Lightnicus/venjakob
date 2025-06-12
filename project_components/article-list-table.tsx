@@ -20,7 +20,7 @@ type ArticleWithCalculationCount = ArticleWithCalculations & {
 type ArticleListTableProps = {
   data: ArticleWithCalculationCount[];
   languages: Language[];
-  onSaveArticleProperties?: (articleId: string, articleData: any) => void;
+  onSaveArticleProperties?: (articleId: string, articleData: any, reloadData?: boolean) => void;
   onSaveArticleContent?: (articleId: string, contentData: any[]) => void;
   onSaveArticleCalculations?: (articleId: string, calculations: any[]) => void;
   onDeleteArticle?: (articleId: string) => void;
@@ -46,6 +46,20 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
   useEffect(() => {
     setTableData(data);
   }, [data]);
+
+  const handleOptimisticUpdate = (articleId: string, updates: Partial<ArticleWithCalculationCount>) => {
+    setTableData(prevData =>
+      prevData.map(article =>
+        article.id === articleId
+          ? { ...article, ...updates }
+          : article
+      )
+    );
+    
+    if (onSaveArticleProperties) {
+      onSaveArticleProperties(articleId, updates, false);
+    }
+  };
 
   const getCalculationCount = (article: ArticleWithCalculationCount): number => {
     return article.calculationCount || article.calculations?.length || 0;
@@ -233,9 +247,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
         <InlineRowCheckbox
           checked={row.original.hideTitle}
           onClick={async (checked) => {
-            if (onSaveArticleProperties) {
-              await onSaveArticleProperties(row.original.id, { hideTitle: checked });
-            }
+            handleOptimisticUpdate(row.original.id, { hideTitle: checked });
           }}
           aria-label="Titel ausblenden"
           disabled={!onSaveArticleProperties}

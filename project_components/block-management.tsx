@@ -51,12 +51,14 @@ const BlockManagement = () => {
     }
   };
 
-  const handleSaveBlockProperties = async (blockId: string, blockData: Parameters<typeof saveBlockPropertiesAPI>[1]) => {
+  const handleSaveBlockProperties = async (blockId: string, blockData: Parameters<typeof saveBlockPropertiesAPI>[1], reloadData: boolean = true) => {
     try {
       await saveBlockPropertiesAPI(blockId, blockData);
       toast.success('Block-Eigenschaften gespeichert');
       // Reload data to reflect changes
-      await loadData();
+      if (reloadData) {
+        await loadData();
+      }
     } catch (error) {
       console.error('Error saving block properties:', error);
       toast.error('Fehler beim Speichern der Block-Eigenschaften');

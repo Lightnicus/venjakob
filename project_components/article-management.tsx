@@ -40,12 +40,14 @@ const ArticleManagement = () => {
     }
   };
 
-  const handleSaveArticleProperties = async (articleId: string, articleData: Parameters<typeof saveArticlePropertiesAPI>[1]) => {
+  const handleSaveArticleProperties = async (articleId: string, articleData: Parameters<typeof saveArticlePropertiesAPI>[1], reloadData: boolean = true) => {
     try {
       await saveArticlePropertiesAPI(articleId, articleData);
       toast.success('Artikel-Eigenschaften gespeichert');
       // Reload data to reflect changes
-      await loadData();
+      if (reloadData) {
+        await loadData();
+      }
     } catch (error) {
       console.error('Error saving article properties:', error);
       toast.error('Fehler beim Speichern der Artikel-Eigenschaften');
