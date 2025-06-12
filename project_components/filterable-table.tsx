@@ -15,6 +15,7 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   getFilteredRowModel,
+  getPaginationRowModel,
   useReactTable,
 } from '@tanstack/react-table';
 import {
@@ -232,6 +233,12 @@ export function FilterableTable<TData>({
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    initialState: {
+      pagination: {
+        pageSize: 10,
+      },
+    },
   });
 
   const content = (
@@ -320,6 +327,43 @@ export function FilterableTable<TData>({
           ))}
         </TableBody>
       </Table>
+      
+      {/* Pagination Controls */}
+      <div className="flex items-center justify-between space-x-2 py-4">
+        <div className="text-sm text-muted-foreground">
+          {table.getFilteredSelectedRowModel().rows.length > 0 && (
+            <span>{table.getFilteredSelectedRowModel().rows.length} von {table.getFilteredRowModel().rows.length} Zeile(n) ausgewählt.</span>
+          )}
+          {table.getFilteredSelectedRowModel().rows.length === 0 && (
+            <span>Zeige {table.getRowModel().rows.length} von {table.getFilteredRowModel().rows.length} Einträgen</span>
+          )}
+        </div>
+        <div className="flex items-center space-x-6">
+          <div className="flex w-[100px] items-center justify-center text-sm font-medium">
+            Seite {table.getState().pagination.pageIndex + 1} von {table.getPageCount()}
+          </div>
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+              aria-label="Vorherige Seite"
+            >
+              Zurück
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+              aria-label="Nächste Seite"
+            >
+              Weiter
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
