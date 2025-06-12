@@ -7,7 +7,7 @@ import { FilterableTable } from './filterable-table';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
-import type { Language, ArticleCalculationItem } from '@/lib/db/schema';
+import type { Language } from '@/lib/db/schema';
 import type { ArticleWithCalculations } from '@/lib/db/articles';
 import { fetchArticleWithCalculations } from '@/lib/api/articles';
 
@@ -18,7 +18,6 @@ type ArticleWithCalculationCount = ArticleWithCalculations & {
 type ArticleListTableProps = {
   data: ArticleWithCalculationCount[];
   languages: Language[];
-  calculationItems: ArticleCalculationItem[];
   onSaveArticleProperties?: (articleId: string, articleData: any) => void;
   onSaveArticleContent?: (articleId: string, contentData: any[]) => void;
   onSaveArticleCalculations?: (articleId: string, calculations: any[]) => void;
@@ -30,7 +29,6 @@ type ArticleListTableProps = {
 const ArticleListTable: FC<ArticleListTableProps> = ({ 
   data, 
   languages,
-  calculationItems,
   onSaveArticleProperties,
   onSaveArticleContent,
   onSaveArticleCalculations,
@@ -171,7 +169,6 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     setTableData(prevData =>
       prevData.filter(a => a.id !== articleToDelete.id)
     );
-    toast.success('Artikel wurde gelöscht');
     setArticleToDelete(null);
   };
 

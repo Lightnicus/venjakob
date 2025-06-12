@@ -1,5 +1,5 @@
 import type { ArticleWithCalculations } from '@/lib/db/articles';
-import type { Article, ArticleCalculationItem } from '@/lib/db/schema';
+import type { Article } from '@/lib/db/schema';
 
 // Fetch all articles with calculations
 export async function fetchArticlesWithCalculations(): Promise<(ArticleWithCalculations & { calculationCount: number })[]> {
@@ -69,14 +69,7 @@ export async function deleteArticleAPI(articleId: string): Promise<void> {
   }
 }
 
-// Fetch all calculation items
-export async function fetchCalculationItems(): Promise<ArticleCalculationItem[]> {
-  const response = await fetch('/api/calculation-items');
-  if (!response.ok) {
-    throw new Error('Failed to fetch calculation items');
-  }
-  return response.json();
-}
+
 
 // Save article content
 export async function saveArticleContentAPI(

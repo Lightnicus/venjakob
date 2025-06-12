@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import ArticleListTable from './article-list-table';
-import type { Language, ArticleCalculationItem } from '@/lib/db/schema';
+import type { Language } from '@/lib/db/schema';
 import type { ArticleWithCalculations } from '@/lib/db/articles';
 import { toast } from 'sonner';
 import {
   fetchArticlesWithCalculations,
-  fetchCalculationItems,
   saveArticlePropertiesAPI,
   saveArticleContentAPI,
   saveArticleCalculationsAPI,
@@ -18,7 +17,6 @@ import { fetchLanguages } from '@/lib/api/blocks';
 const ArticleManagement = () => {
   const [articles, setArticles] = useState<(ArticleWithCalculations & { calculationCount?: number })[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
-  const [calculationItems, setCalculationItems] = useState<ArticleCalculationItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -28,14 +26,12 @@ const ArticleManagement = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [articlesData, languagesData, calculationItemsData] = await Promise.all([
+      const [articlesData, languagesData] = await Promise.all([
         fetchArticlesWithCalculations(),
-        fetchLanguages(),
-        fetchCalculationItems()
+        fetchLanguages()
       ]);
       setArticles(articlesData);
       setLanguages(languagesData);
-      setCalculationItems(calculationItemsData);
     } catch (error) {
       console.error('Error loading data:', error);
       toast.error('Fehler beim Laden der Daten');
@@ -147,7 +143,6 @@ const ArticleManagement = () => {
       <ArticleListTable 
         data={articles}
         languages={languages}
-        calculationItems={calculationItems}
         onSaveArticleProperties={handleSaveArticleProperties}
         onSaveArticleContent={handleSaveArticleContent}
         onSaveArticleCalculations={handleSaveArticleCalculations}
