@@ -329,7 +329,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
           + Block hinzufügen
         </Button>
       </div>
-      <div className="rounded-md border overflow-x-auto">
+      <div className="overflow-x-auto">
         <FilterableTable
           data={tableData}
           columns={columns}
