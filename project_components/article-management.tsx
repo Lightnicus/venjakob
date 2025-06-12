@@ -13,15 +13,12 @@ import {
   copyArticleAPI,
 } from '@/lib/api/articles';
 import { fetchLanguages } from '@/lib/api/blocks';
+import { useTabReload } from './tabbed-interface-provider';
 
 const ArticleManagement = () => {
   const [articles, setArticles] = useState<(ArticleWithCalculations & { calculationCount?: number })[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     try {
@@ -39,6 +36,13 @@ const ArticleManagement = () => {
       setLoading(false);
     }
   };
+
+  // Set up reload functionality for articles
+  useTabReload('articles', loadData);
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleSaveArticleProperties = async (articleId: string, articleData: Parameters<typeof saveArticlePropertiesAPI>[1], reloadData: boolean = true) => {
     try {

@@ -10,6 +10,7 @@ import QuillRichTextEditor from '@/project_components/quill-rich-text-editor';
 import ArticleProperties from '@/project_components/article-properties';
 import { fetchArticleWithCalculations } from '@/lib/api/articles';
 import type { ArticleWithCalculations } from '@/lib/db/articles';
+import { useTabReload } from './tabbed-interface-provider';
 
 // Types
 interface Language {
@@ -68,6 +69,9 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
   const [currentLanguages, setCurrentLanguages] = useState<Language[]>([]);
   const [selectedPreviewLanguage, setSelectedPreviewLanguage] = useState('');
   const [selectedLanguageToAdd, setSelectedLanguageToAdd] = useState('');
+
+  // Set up reload functionality - no callback needed as this component loads its own data
+  const { triggerReload } = useTabReload('articles', () => {});
 
   // Load article data
   const loadArticleData = async () => {
@@ -294,6 +298,9 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
 
       setIsEditing(false);
       toast.success('Artikel gespeichert');
+      
+      // Trigger reload for other tabs (like ArticleManagement)
+      triggerReload();
     } catch (error) {
       console.error('Error saving article:', error);
       toast.error('Fehler beim Speichern');

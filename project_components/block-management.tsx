@@ -12,15 +12,12 @@ import {
   copyBlockAPI,
 } from '@/lib/api/blocks';
 import type { BlockWithContent } from '@/lib/db/blocks';
+import { useTabReload } from './tabbed-interface-provider';
 
 const BlockManagement = () => {
   const [blocks, setBlocks] = useState<BlockWithContent[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadData();
-  }, []);
 
   const loadData = async () => {
     try {
@@ -38,6 +35,13 @@ const BlockManagement = () => {
       setLoading(false);
     }
   };
+
+  // Set up reload functionality for blocks
+  useTabReload('blocks', loadData);
+
+  useEffect(() => {
+    loadData();
+  }, []);
 
   const handleSaveBlockChanges = async (blockId: string, blockContents: Parameters<typeof saveBlockContentAPI>[1]) => {
     try {

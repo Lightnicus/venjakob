@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { Block, BlockContent, Language } from '@/lib/db/schema';
 import { fetchBlockWithContent } from '@/lib/api/blocks';
+import { useTabReload } from './tabbed-interface-provider';
 
 type BlockWithContent = Block & {
   blockContents: BlockContent[];
@@ -65,6 +66,9 @@ const BlockDetail: FC<BlockDetailProps> = ({
 
   const [selectedPreviewLanguage, setSelectedPreviewLanguage] = useState('');
   const [selectedLanguageToAdd, setSelectedLanguageToAdd] = useState('');
+
+  // Set up reload functionality - no callback needed as this component loads its own data
+  const { triggerReload } = useTabReload('blocks', () => {});
 
   // Load block data
   const loadBlockData = async () => {
@@ -238,6 +242,9 @@ const BlockDetail: FC<BlockDetailProps> = ({
 
       setIsEditing(false);
       toast.success('Block gespeichert');
+      
+      // Trigger reload for other tabs (like BlockManagement)
+      triggerReload();
     } catch (error) {
       console.error('Error saving block:', error);
       toast.error('Fehler beim Speichern');
