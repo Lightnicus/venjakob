@@ -46,7 +46,7 @@ const BlockManagement = () => {
   const handleSaveBlockChanges = async (blockId: string, blockContents: Parameters<typeof saveBlockContentAPI>[1]) => {
     try {
       await saveBlockContentAPI(blockId, blockContents);
-      toast.success('Block-Inhalte gespeichert');
+      // Don't show toast when called from BlockDetail - it handles its own success message
       // Reload data to reflect changes
       await loadData();
     } catch (error) {
@@ -58,9 +58,9 @@ const BlockManagement = () => {
   const handleSaveBlockProperties = async (blockId: string, blockData: Parameters<typeof saveBlockPropertiesAPI>[1], reloadData: boolean = true) => {
     try {
       await saveBlockPropertiesAPI(blockId, blockData);
-      toast.success('Block-Eigenschaften gespeichert');
-      // Reload data to reflect changes
+      // Only show toast for direct property saves (reloadData=true), not from BlockDetail
       if (reloadData) {
+        toast.success('Block-Eigenschaften gespeichert');
         await loadData();
       }
     } catch (error) {

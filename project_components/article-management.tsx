@@ -47,9 +47,9 @@ const ArticleManagement = () => {
   const handleSaveArticleProperties = async (articleId: string, articleData: Parameters<typeof saveArticlePropertiesAPI>[1], reloadData: boolean = true) => {
     try {
       await saveArticlePropertiesAPI(articleId, articleData);
-      toast.success('Artikel-Eigenschaften gespeichert');
-      // Reload data to reflect changes
+      // Only show toast for direct property saves (reloadData=true), not from ArticleDetail
       if (reloadData) {
+        toast.success('Artikel-Eigenschaften gespeichert');
         await loadData();
       }
     } catch (error) {
@@ -61,7 +61,7 @@ const ArticleManagement = () => {
   const handleSaveArticleContent = async (articleId: string, contentData: any[]) => {
     try {
       await saveArticleContentAPI(articleId, contentData);
-      toast.success('Artikel-Inhalte gespeichert');
+      // Don't show toast when called from ArticleDetail - it handles its own success message
       // Reload data to reflect changes
       await loadData();
     } catch (error) {
@@ -73,7 +73,7 @@ const ArticleManagement = () => {
   const handleSaveArticleCalculations = async (articleId: string, calculations: any[]) => {
     try {
       await saveArticleCalculationsAPI(articleId, calculations);
-      toast.success('Artikel-Kalkulationen gespeichert');
+      // Don't show toast when called from ArticleDetail - it handles its own success message
       // Reload data to reflect changes
       await loadData();
     } catch (error) {

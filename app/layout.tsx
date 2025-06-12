@@ -35,7 +35,13 @@ export default function RootLayout({
         <LoadingProvider>
           <TabbedInterfaceProvider initialTabs={[]}>
             <ShowNavigation />
-            <Toaster />
+            <Toaster 
+              position="bottom-right"
+              richColors
+              expand={true}
+              visibleToasts={5}
+              closeButton
+            />
             <GlobalLoadingIndicator />
             {children}
           </TabbedInterfaceProvider>
