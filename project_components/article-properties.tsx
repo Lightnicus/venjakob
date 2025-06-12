@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import type { ArticleWithCalculations } from '@/lib/db/articles';
+import type { ArticleCalculationItem } from '@/lib/db/schema';
 
 // Define types for the data structures
 interface AllgemeineData {
@@ -14,37 +15,16 @@ interface AllgemeineData {
   ueberschriftNichtDrucken: boolean;
 }
 
-interface KalkulationData {
-  materialEK: string; // Use string to allow empty input, parse to number on save/submit
-  projektierung: string;
-  mKonstruktion: string;
-  eKonstruktion: string;
-  automatisierung: string;
-  eFertigung: string;
-  vorfertigung: string;
-  montage: string;
-}
-
 interface ArticlePropertiesProps {
   article: ArticleWithCalculations;
+  calculationItems: ArticleCalculationItem[];
   isEditing: boolean;
-  onDataChange?: (data: { allgemeine: AllgemeineData; kalkulation: KalkulationData }) => void;
+  onDataChange?: (data: { allgemeine: AllgemeineData; kalkulation: Record<string, string> }) => void;
 }
-
-// Default kalkulation data
-const defaultKalkulationData: KalkulationData = {
-  materialEK: '5200',
-  projektierung: '10',
-  mKonstruktion: '2',
-  eKonstruktion: '6',
-  automatisierung: '18',
-  eFertigung: '8',
-  vorfertigung: '16',
-  montage: '16',
-};
 
 const ArticleProperties: FC<ArticlePropertiesProps> = ({
   article,
+  calculationItems,
   isEditing,
   onDataChange,
 }) => {
@@ -55,7 +35,14 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
     ueberschriftNichtDrucken: article.hideTitle || false,
   }));
 
-  const [kalkulationData, setKalkulationData] = useState<KalkulationData>(defaultKalkulationData);
+  // Initialize kalkulation data from calculationItems
+  const [kalkulationData, setKalkulationData] = useState<Record<string, string>>(() => {
+    const initial: Record<string, string> = {};
+    calculationItems.forEach(item => {
+      initial[item.id] = item.value || '0';
+    });
+    return initial;
+  });
 
   // Effect to reset data when article changes or when cancelling edit
   useEffect(() => {
@@ -66,10 +53,13 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
       ueberschriftNichtDrucken: article.hideTitle || false,
     });
     
-    if (!isEditing) {
-      setKalkulationData(defaultKalkulationData);
-    }
-  }, [article, isEditing]);
+    // Reset kalkulation data to original values
+    const resetKalkulation: Record<string, string> = {};
+    calculationItems.forEach(item => {
+      resetKalkulation[item.id] = item.value || '0';
+    });
+    setKalkulationData(resetKalkulation);
+  }, [article, calculationItems, isEditing]);
 
   // Effect to notify parent of data changes
   useEffect(() => {
@@ -92,11 +82,11 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
     }
   };
 
-  const handleKalkulationInputChange = (field: keyof KalkulationData, value: string) => {
+  const handleKalkulationInputChange = (itemId: string, value: string) => {
     if (!isEditing) return;
-    // Basic validation: allow only numbers or empty string for numeric fields
-    if (/^\d*$/.test(value) || value === '') {
-      setKalkulationData(prev => ({ ...prev, [field]: value }));
+    // Basic validation: allow only numbers and decimal points for numeric fields
+    if (/^\d*\.?\d*$/.test(value) || value === '') {
+      setKalkulationData(prev => ({ ...prev, [itemId]: value }));
     }
   };
 
@@ -107,6 +97,16 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
 
   const labelStyles = "text-sm font-medium text-gray-700 md:col-span-1";
   const gridRowStyles = "grid grid-cols-1 md:grid-cols-3 gap-x-6 gap-y-2 items-center";
+
+  // Sort calculation items by order (if available) or by name
+  const sortedCalculationItems = [...calculationItems].sort((a, b) => {
+    if (a.order !== null && b.order !== null) {
+      return a.order - b.order;
+    }
+    if (a.order !== null && b.order === null) return -1;
+    if (a.order === null && b.order !== null) return 1;
+    return a.name.localeCompare(b.name);
+  });
 
   return (
     <div className="space-y-10 p-1">
@@ -186,38 +186,30 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
           Kalkulation
         </h3>
         <div className="space-y-4">
-            {(Object.keys(kalkulationData) as Array<keyof KalkulationData>).map((key) => {
-              let labelText = '';
-              let ariaLabelText = '';
-              switch (key) {
-                case 'materialEK': labelText = 'Material EK (€)'; ariaLabelText = 'Material Einkaufspreis in Euro'; break;
-                case 'projektierung': labelText = 'Projektierung (h)'; ariaLabelText = 'Projektierungsstunden'; break;
-                case 'mKonstruktion': labelText = 'm. Konstruktion (h)'; ariaLabelText = 'Mechanische Konstruktionsstunden'; break;
-                case 'eKonstruktion': labelText = 'e. Konstruktion (h)'; ariaLabelText = 'Elektrische Konstruktionsstunden'; break;
-                case 'automatisierung': labelText = 'Automatisierung (h)'; ariaLabelText = 'Automatisierungsstunden'; break;
-                case 'eFertigung': labelText = 'e. Fertigung (h)'; ariaLabelText = 'Elektrische Fertigungsstunden'; break;
-                case 'vorfertigung': labelText = 'Vorfertigung (h)'; ariaLabelText = 'Vorfertigungsstunden'; break;
-                case 'montage': labelText = 'Montage (h)'; ariaLabelText = 'Montagestunden'; break;
-              }
-              return (
-                <div className={gridRowStyles} key={key}>
-                  <Label htmlFor={key} className={labelStyles}>
-                    {labelText}
-                  </Label>
-                  <Input
-                    id={key}
-                    type="text" // Use text to allow empty string, manage as number with handleKalkulationInputChange
-                    value={kalkulationData[key]}
-                    readOnly={!isEditing}
-                    onChange={(e) => handleKalkulationInputChange(key, e.target.value)}
-                    className={`${getInputStyles(isEditing)} md:col-span-2`}
-                    aria-label={ariaLabelText}
-                    inputMode="numeric" // Hint for mobile keyboards
-                    pattern="[0-9]*"    // Basic pattern for numbers
-                  />
-                </div>
-              );
-            })}
+          {sortedCalculationItems.length > 0 ? (
+            sortedCalculationItems.map((item) => (
+              <div className={gridRowStyles} key={item.id}>
+                <Label htmlFor={item.id} className={labelStyles}>
+                  {item.name} {item.type === 'time' ? '(h)' : '(€)'}
+                </Label>
+                <Input
+                  id={item.id}
+                  type="text"
+                  value={kalkulationData[item.id] || ''}
+                  readOnly={!isEditing}
+                  onChange={(e) => handleKalkulationInputChange(item.id, e.target.value)}
+                  className={`${getInputStyles(isEditing)} md:col-span-2`}
+                  aria-label={`${item.name} ${item.type === 'time' ? 'in Stunden' : 'in Euro'}`}
+                  inputMode="decimal"
+                  pattern="[0-9]*\.?[0-9]*"
+                />
+              </div>
+            ))
+          ) : (
+            <div className="text-gray-500 text-center py-4">
+              Keine Kalkulationsposten verfügbar
+            </div>
+          )}
         </div>
       </div>
     </div>

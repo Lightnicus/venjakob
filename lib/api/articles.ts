@@ -93,4 +93,22 @@ export async function saveArticleContentAPI(
   if (!response.ok) {
     throw new Error('Failed to save article content');
   }
+}
+
+// Save article calculations
+export async function saveArticleCalculationsAPI(
+  articleId: string,
+  calculations: any[]
+): Promise<void> {
+  const response = await fetch(`/api/articles/${articleId}/calculations`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ calculations }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to save article calculations');
+  }
 } 

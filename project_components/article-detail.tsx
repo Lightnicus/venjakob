@@ -14,22 +14,28 @@ import QuillRichTextEditor from './quill-rich-text-editor';
 type ArticleDetailProps = {
   article: ArticleWithCalculations;
   languages: Language[];
-  calculationItems: ArticleCalculationItem[];
   onSaveProperties?: (articleId: string, articleData: any) => void;
   onSaveContent?: (articleId: string, contentData: any[]) => void;
+  onSaveCalculations?: (articleId: string, calculations: any[]) => void;
 };
 
 const ArticleDetail: FC<ArticleDetailProps> = ({
-  article,
+  article: initialArticle,
   languages,
-  calculationItems,
   onSaveProperties,
   onSaveContent,
+  onSaveCalculations,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [tab, setTab] = useState('beschreibungen');
+  const [article, setArticle] = useState(initialArticle);
   
+  // Update article state when initialArticle prop changes
+  useEffect(() => {
+    setArticle(initialArticle);
+  }, [initialArticle]);
+
   // Content editing state - similar to BlockDetail
   const [editedArticleContents, setEditedArticleContents] = useState<
     Record<string, { title: string; content: string; languageId: string }>
@@ -164,10 +170,42 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
           number: propertiesData.allgemeine.nr,
           price: propertiesData.allgemeine.einzelpreis,
           hideTitle: propertiesData.allgemeine.ueberschriftNichtDrucken,
-          // Note: kalkulation data could be saved to article_calculations table
-          // For now just saving the basic article properties
         };
         await onSaveProperties(article.id, articleData);
+        
+        // Update local article state immediately to reflect changes in UI
+        setArticle(prev => ({
+          ...prev,
+          name: articleData.name,
+          number: articleData.number,
+          price: articleData.price,
+          hideTitle: articleData.hideTitle,
+          updatedAt: new Date()
+        }));
+      }
+
+      // Save calculation items if handler provided and data available
+      if (onSaveCalculations && propertiesData?.kalkulation) {
+        const calculationsToSave = article.calculations.map(item => ({
+          name: item.name,
+          type: item.type,
+          value: propertiesData.kalkulation[item.id] || item.value,
+          articleId: article.id,
+          order: item.order,
+        }));
+        
+        await onSaveCalculations(article.id, calculationsToSave);
+        
+        // Update local article state with new calculation values
+        setArticle(prev => ({
+          ...prev,
+          calculations: prev.calculations.map(item => ({
+            ...item,
+            value: propertiesData.kalkulation[item.id] || item.value,
+            updatedAt: new Date()
+          })),
+          updatedAt: new Date()
+        }));
       }
 
       // Save content if handler provided
@@ -180,6 +218,13 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
           languageId: lang.id,
         }));
         await onSaveContent(article.id, contentToSave);
+        
+        // Update local article state with new content
+        // Note: We keep the existing content structure but update the updatedAt
+        setArticle(prev => ({
+          ...prev,
+          updatedAt: new Date()
+        }));
       }
 
       setIsEditing(false);
@@ -404,6 +449,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
         <TabsContent value="eigenschaften" className="mt-4">
           <ArticleProperties 
             article={article}
+            calculationItems={article.calculations || []}
             isEditing={isEditing} 
             onDataChange={handlePropertiesDataChange}
           />

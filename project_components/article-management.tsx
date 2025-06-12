@@ -8,6 +8,7 @@ import {
   fetchCalculationItems,
   saveArticlePropertiesAPI,
   saveArticleContentAPI,
+  saveArticleCalculationsAPI,
   deleteArticleAPI,
   createNewArticleAPI,
 } from '@/lib/api/articles';
@@ -63,6 +64,18 @@ const ArticleManagement = () => {
     } catch (error) {
       console.error('Error saving article content:', error);
       toast.error('Fehler beim Speichern der Artikel-Inhalte');
+    }
+  };
+
+  const handleSaveArticleCalculations = async (articleId: string, calculations: any[]) => {
+    try {
+      await saveArticleCalculationsAPI(articleId, calculations);
+      toast.success('Artikel-Kalkulationen gespeichert');
+      // Reload data to reflect changes
+      await loadData();
+    } catch (error) {
+      console.error('Error saving article calculations:', error);
+      toast.error('Fehler beim Speichern der Artikel-Kalkulationen');
     }
   };
 
@@ -122,6 +135,7 @@ const ArticleManagement = () => {
         calculationItems={calculationItems}
         onSaveArticleProperties={handleSaveArticleProperties}
         onSaveArticleContent={handleSaveArticleContent}
+        onSaveArticleCalculations={handleSaveArticleCalculations}
         onDeleteArticle={handleDeleteArticle}
         onCreateArticle={handleCreateArticle}
       />

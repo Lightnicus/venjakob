@@ -21,6 +21,7 @@ type ArticleListTableProps = {
   calculationItems: ArticleCalculationItem[];
   onSaveArticleProperties?: (articleId: string, articleData: any) => void;
   onSaveArticleContent?: (articleId: string, contentData: any[]) => void;
+  onSaveArticleCalculations?: (articleId: string, calculations: any[]) => void;
   onDeleteArticle?: (articleId: string) => void;
   onCreateArticle?: () => Promise<ArticleWithCalculations>;
 };
@@ -31,6 +32,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
   calculationItems,
   onSaveArticleProperties,
   onSaveArticleContent,
+  onSaveArticleCalculations,
   onDeleteArticle,
   onCreateArticle
 }) => {
@@ -67,9 +69,9 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
           <ArticleDetail 
             article={fullArticle} 
             languages={languages}
-            calculationItems={calculationItems}
             onSaveProperties={onSaveArticleProperties}
             onSaveContent={onSaveArticleContent}
+            onSaveCalculations={onSaveArticleCalculations}
           />
         ),
         closable: true,
@@ -104,9 +106,9 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
           <ArticleDetail 
             article={fullArticle} 
             languages={languages}
-            calculationItems={calculationItems}
             onSaveProperties={onSaveArticleProperties}
             onSaveContent={onSaveArticleContent}
+            onSaveCalculations={onSaveArticleCalculations}
           />
         ),
         closable: true,

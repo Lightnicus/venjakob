@@ -1,24 +1,18 @@
-import { eq, desc, asc, and, count } from 'drizzle-orm';
+import { eq, desc, asc, and, count, isNull } from 'drizzle-orm';
 import { db } from './index';
 import { 
   articles, 
-  articleCalculations, 
   articleCalculationItem, 
   blockContent,
   type Article, 
-  type ArticleCalculation, 
   type ArticleCalculationItem,
   type InsertArticleCalculationItem,
   type BlockContent
 } from './schema';
 import articleCalculationConfig from '@/data/article-calculation-config.json';
 
-export type ArticleCalculationWithItem = ArticleCalculation & {
-  calculationItem: ArticleCalculationItem;
-};
-
 export type ArticleWithCalculations = Article & {
-  calculations: ArticleCalculationWithItem[];
+  calculations: ArticleCalculationItem[];
   content?: BlockContent[];
 };
 
@@ -39,30 +33,12 @@ export async function getArticleWithCalculations(articleId: string): Promise<Art
     const [article] = await db.select().from(articles).where(eq(articles.id, articleId));
     if (!article) return null;
     
-    // Fetch calculations with calculation items, ordered by the order column
-    const calculationsWithItems = await db
-      .select({
-        // ArticleCalculation fields
-        id: articleCalculations.id,
-        articleId: articleCalculations.articleId,
-        articleCalculationItemId: articleCalculations.articleCalculationItemId,
-        order: articleCalculations.order,
-        createdAt: articleCalculations.createdAt,
-        updatedAt: articleCalculations.updatedAt,
-        // ArticleCalculationItem fields
-        calculationItem: {
-          id: articleCalculationItem.id,
-          name: articleCalculationItem.name,
-          type: articleCalculationItem.type,
-          value: articleCalculationItem.value,
-          createdAt: articleCalculationItem.createdAt,
-          updatedAt: articleCalculationItem.updatedAt,
-        }
-      })
-      .from(articleCalculations)
-      .innerJoin(articleCalculationItem, eq(articleCalculations.articleCalculationItemId, articleCalculationItem.id))
-      .where(eq(articleCalculations.articleId, articleId))
-      .orderBy(asc(articleCalculations.order));
+    // Fetch calculation items for this article, ordered by the order column
+    const calculationItems = await db
+      .select()
+      .from(articleCalculationItem)
+      .where(eq(articleCalculationItem.articleId, articleId))
+      .orderBy(asc(articleCalculationItem.order));
     
     // Fetch article content (block_content where articleId is set)
     const articleContent = await db
@@ -72,7 +48,7 @@ export async function getArticleWithCalculations(articleId: string): Promise<Art
     
     return {
       ...article,
-      calculations: calculationsWithItems,
+      calculations: calculationItems,
       content: articleContent
     };
   } catch (error) {
@@ -90,9 +66,9 @@ export async function getArticlesWithCalculationCounts(): Promise<(Article & { c
     const articlesWithCounts = await Promise.all(
       allArticles.map(async (article) => {
         const [countResult] = await db
-          .select({ count: count(articleCalculations.id) })
-          .from(articleCalculations)
-          .where(eq(articleCalculations.articleId, article.id));
+          .select({ count: count(articleCalculationItem.id) })
+          .from(articleCalculationItem)
+          .where(eq(articleCalculationItem.articleId, article.id));
         
         return {
           ...article,
@@ -137,15 +113,15 @@ export async function saveArticle(
 // Save article calculations (replace all)
 export async function saveArticleCalculations(
   articleId: string,
-  calculations: Omit<ArticleCalculation, 'id' | 'createdAt' | 'updatedAt'>[]
+  calculations: Omit<ArticleCalculationItem, 'id' | 'createdAt' | 'updatedAt'>[]
 ): Promise<void> {
   try {
-    // Delete existing calculations for this article
-    await db.delete(articleCalculations).where(eq(articleCalculations.articleId, articleId));
+    // Delete existing calculation items for this article
+    await db.delete(articleCalculationItem).where(eq(articleCalculationItem.articleId, articleId));
     
-    // Insert new calculations
+    // Insert new calculation items
     if (calculations.length > 0) {
-      await db.insert(articleCalculations).values(calculations);
+      await db.insert(articleCalculationItem).values(calculations);
     }
   } catch (error) {
     console.error('Error saving article calculations:', error);
@@ -156,13 +132,17 @@ export async function saveArticleCalculations(
 // Add a single calculation item to an article
 export async function addCalculationToArticle(
   articleId: string,
-  calculationItemId: string,
+  name: string,
+  type: 'time' | 'cost',
+  value: string,
   order: number
 ): Promise<void> {
   try {
-    await db.insert(articleCalculations).values({
+    await db.insert(articleCalculationItem).values({
+      name,
+      type,
+      value,
       articleId,
-      articleCalculationItemId: calculationItemId,
       order
     });
   } catch (error) {
@@ -173,30 +153,21 @@ export async function addCalculationToArticle(
 
 // Remove a calculation from an article
 export async function removeCalculationFromArticle(
-  articleId: string,
   calculationItemId: string
 ): Promise<void> {
   try {
-    await db.delete(articleCalculations)
-      .where(
-        and(
-          eq(articleCalculations.articleId, articleId),
-          eq(articleCalculations.articleCalculationItemId, calculationItemId)
-        )
-      );
+    await db.delete(articleCalculationItem)
+      .where(eq(articleCalculationItem.id, calculationItemId));
   } catch (error) {
     console.error('Error removing calculation from article:', error);
     throw new Error('Failed to remove calculation from article');
   }
 }
 
-// Delete an article and all its calculations
+// Delete an article (related content and calculations will be deleted automatically via CASCADE)
 export async function deleteArticle(articleId: string): Promise<void> {
   try {
-    // Delete article calculations first (foreign key constraint)
-    await db.delete(articleCalculations).where(eq(articleCalculations.articleId, articleId));
-    
-    // Delete the article
+    // Delete the article - CASCADE will automatically delete related records
     await db.delete(articles).where(eq(articles.id, articleId));
   } catch (error) {
     console.error('Error deleting article:', error);
@@ -204,17 +175,19 @@ export async function deleteArticle(articleId: string): Promise<void> {
   }
 }
 
-// Fetch all calculation items (for dropdown/selection purposes)
+// Get calculation items that are not tied to any article (global items)
 export async function getCalculationItems(): Promise<ArticleCalculationItem[]> {
   try {
-    return await db.select().from(articleCalculationItem).orderBy(articleCalculationItem.name);
+    return await db.select().from(articleCalculationItem)
+      .where(isNull(articleCalculationItem.articleId))
+      .orderBy(articleCalculationItem.name);
   } catch (error) {
     console.error('Error fetching calculation items:', error);
     throw new Error('Failed to fetch calculation items');
   }
 }
 
-// Create a calculation item
+// Create a global calculation item (not tied to any article)
 export async function createCalculationItem(itemData: Omit<InsertArticleCalculationItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<ArticleCalculationItem> {
   try {
     const [newItem] = await db.insert(articleCalculationItem).values(itemData).returning();
@@ -225,72 +198,23 @@ export async function createCalculationItem(itemData: Omit<InsertArticleCalculat
   }
 }
 
-// Create a new article with default calculation items (improved version)
+// Create an article with default calculation items from config
 export async function createArticleWithDefaults(articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>): Promise<ArticleWithCalculations> {
-  let newArticle: Article | null = null;
-  
   try {
-    // Create the article first
-    [newArticle] = await db.insert(articles).values(articleData).returning();
-    
-    // Get existing calculation items to avoid duplicates
-    const existingItems = await getCalculationItems();
-    
-    // Create default calculation items and link them to the article
-    const calculationsWithItems: ArticleCalculationWithItem[] = [];
-    
-    for (const configItem of articleCalculationConfig) {
-      // Check if calculation item already exists with same name and type
-      let calculationItem = existingItems.find(
-        item => item.name === configItem.name && item.type === configItem.type
-      );
-      
-      // If not found, create new calculation item
-      if (!calculationItem) {
-        calculationItem = await createCalculationItem({
-          name: configItem.name,
-          type: configItem.type as 'time' | 'cost',
-          value: configItem.value
-        });
-      }
-      
-      // Link it to the article
-      const [articleCalculation] = await db.insert(articleCalculations).values({
-        articleId: newArticle.id,
-        articleCalculationItemId: calculationItem.id,
-        order: configItem.order
-      }).returning();
-      
-      calculationsWithItems.push({
-        ...articleCalculation,
-        calculationItem
-      });
-    }
-    
-    // Sort by order and return the complete article
-    calculationsWithItems.sort((a, b) => a.order - b.order);
-    
-    return {
-      ...newArticle,
-      calculations: calculationsWithItems
-    };
+    return await createNewArticle({
+      name: articleData.name,
+      number: articleData.number,
+      description: articleData.description || '',
+      price: articleData.price || '0.00',
+      hideTitle: articleData.hideTitle || false
+    });
   } catch (error) {
     console.error('Error creating article with defaults:', error);
-    
-    // Clean up: if article was created but calculation items failed, delete the article
-    try {
-      if (newArticle?.id) {
-        await deleteArticle(newArticle.id);
-      }
-    } catch (cleanupError) {
-      console.error('Error during cleanup:', cleanupError);
-    }
-    
     throw new Error('Failed to create article with defaults');
   }
 }
 
-// Update/Save a calculation item
+// Update a calculation item
 export async function saveCalculationItem(
   itemId: string,
   itemData: Partial<Omit<ArticleCalculationItem, 'id' | 'createdAt' | 'updatedAt'>>
@@ -305,28 +229,17 @@ export async function saveCalculationItem(
   }
 }
 
-// Delete a calculation item (with cascade check)
+// Delete a calculation item
 export async function deleteCalculationItem(itemId: string): Promise<void> {
   try {
-    // Check if item is used in any article calculations
-    const usageCount = await db
-      .select({ count: count(articleCalculations.id) })
-      .from(articleCalculations)
-      .where(eq(articleCalculations.articleCalculationItemId, itemId));
-    
-    if (Number(usageCount[0]?.count || 0) > 0) {
-      throw new Error('Cannot delete calculation item: it is currently in use by one or more articles');
-    }
-    
-    // Delete the calculation item
     await db.delete(articleCalculationItem).where(eq(articleCalculationItem.id, itemId));
   } catch (error) {
     console.error('Error deleting calculation item:', error);
-    throw error; // Re-throw to preserve custom error messages
+    throw new Error('Failed to delete calculation item');
   }
 }
 
-// Create a new article with sensible defaults for required fields
+// Create a new article with calculation items from config
 export async function createNewArticle(
   articleData: {
     name: string;
@@ -336,18 +249,42 @@ export async function createNewArticle(
     hideTitle?: boolean;
   }
 ): Promise<ArticleWithCalculations> {
-  const defaultArticleData = {
-    name: articleData.name,
-    number: articleData.number,
-    description: articleData.description || null,
-    price: articleData.price || '0.00',
-    hideTitle: articleData.hideTitle ?? false,
-  };
-  
-  return await createArticleWithDefaults(defaultArticleData);
+  try {
+    const [newArticle] = await db.insert(articles).values({
+      name: articleData.name,
+      number: articleData.number,
+      description: articleData.description || '',
+      price: articleData.price || '0.00',
+      hideTitle: articleData.hideTitle || false
+    }).returning();
+
+    // Create calculation items for this article based on the config
+    const calculationItems: ArticleCalculationItem[] = [];
+    
+    for (const configItem of articleCalculationConfig) {
+      const [calculationItem] = await db.insert(articleCalculationItem).values({
+        name: configItem.name,
+        type: configItem.type as 'time' | 'cost',
+        value: configItem.value,
+        articleId: newArticle.id,
+        order: configItem.order
+      }).returning();
+      
+      calculationItems.push(calculationItem);
+    }
+
+    return {
+      ...newArticle,
+      calculations: calculationItems,
+      content: []
+    };
+  } catch (error) {
+    console.error('Error creating new article:', error);
+    throw new Error('Failed to create new article');
+  }
 }
 
-// Save article content (block_content records)
+// Save article content
 export async function saveArticleContent(
   articleId: string,
   contentData: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[]

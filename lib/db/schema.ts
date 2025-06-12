@@ -61,7 +61,7 @@ export const articles = pgTable('articles', {
 export const blockContent = pgTable('block_content', {
   id: uuid('id').primaryKey().defaultRandom(),
   blockId: uuid('block_id').references(() => blocks.id),
-  articleId: uuid('article_id').references(() => articles.id),
+  articleId: uuid('article_id').references(() => articles.id, { onDelete: 'cascade' }),
   title: text('title').notNull(),
   content: text('content').notNull(),
   languageId: uuid('language_id').notNull().references(() => languages.id),
@@ -80,16 +80,8 @@ export const articleCalculationItem = pgTable('article_calculation_item', {
   name: text('name').notNull(),
   type: articleCalculationItemTypeEnum('type').notNull(),
   value: numeric('value').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
-});
-
-// Article Calculations (Many-to-Many junction table)
-export const articleCalculations = pgTable('article_calculations', {
-  id: uuid('id').primaryKey().defaultRandom(),
-  articleId: uuid('article_id').notNull().references(() => articles.id),
-  articleCalculationItemId: uuid('article_calculation_item_id').notNull().references(() => articleCalculationItem.id),
-  order: integer('order').notNull(),
+  articleId: uuid('article_id').references(() => articles.id, { onDelete: 'cascade' }),
+  order: integer('order'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -114,7 +106,4 @@ export type ArticleCalculationItem = typeof articleCalculationItem.$inferSelect;
 export type InsertArticleCalculationItem = typeof articleCalculationItem.$inferInsert;
 
 export type Article = typeof articles.$inferSelect;
-export type InsertArticle = typeof articles.$inferInsert;
-
-export type ArticleCalculation = typeof articleCalculations.$inferSelect;
-export type InsertArticleCalculation = typeof articleCalculations.$inferInsert; 
+export type InsertArticle = typeof articles.$inferInsert; 
