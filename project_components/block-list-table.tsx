@@ -4,6 +4,7 @@ import { Pencil, Copy, Trash2 } from 'lucide-react';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import BlockDetail from './block-detail';
 import { FilterableTable } from './filterable-table';
+import IconButton from './icon-button';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
@@ -234,10 +235,8 @@ const BlockListTable: FC<BlockListTableProps> = ({
       header: 'Aktion',
       cell: ({ row }) => (
         <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
+          <IconButton
+            icon={<Pencil size={16} />}
             aria-label="Bearbeiten"
             onClick={e => {
               e.stopPropagation();
@@ -249,38 +248,31 @@ const BlockListTable: FC<BlockListTableProps> = ({
                 handleOpenBlockDetail(row.original);
               }
             }}
-          >
-            <Pencil size={16} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
+          />
+          <IconButton
+            icon={<Copy size={16} />}
             aria-label="Kopieren"
             disabled={!onCopyBlock}
-            onClick={e => {
+            onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
-              handleCopyBlock(row.original);
+              await handleCopyBlock(row.original);
             }}
-            onKeyDown={e => {
+            onKeyDown={async (e) => {
               if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
                 e.stopPropagation();
-                handleCopyBlock(row.original);
+                await handleCopyBlock(row.original);
               }
             }}
             onMouseDown={e => {
               e.stopPropagation();
             }}
-          >
-            <Copy size={16} />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-100"
+          />
+          <IconButton
+            icon={<Trash2 size={16} />}
             aria-label="Löschen"
+            className="text-red-600 hover:text-red-700 hover:bg-red-100"
             onClick={e => {
               e.stopPropagation();
               handleInitiateDelete(row.original);
@@ -291,9 +283,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
                 handleInitiateDelete(row.original);
               }
             }}
-          >
-            <Trash2 size={16} />
-          </Button>
+          />
         </div>
       ),
     },
