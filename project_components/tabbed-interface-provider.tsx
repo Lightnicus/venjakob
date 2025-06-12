@@ -24,6 +24,7 @@ interface TabbedInterfaceContextType {
   openNewTab: (tab: Tab) => void;
   closeTab: (tabId: string) => void;
   setActiveTab: (tabId: string) => void;
+  updateTabTitle: (tabId: string, newTitle: string) => void;
   triggerReload: (reloadKey: string) => void;
   getReloadSignal: (reloadKey: string) => ReloadSignal | undefined;
 }
@@ -96,6 +97,14 @@ export const TabbedInterfaceProvider: React.FC<TabbedInterfaceProviderProps> = (
     }
   }, [openTabs]);
 
+  const updateTabTitle = useCallback((tabId: string, newTitle: string) => {
+    setOpenTabs(prevTabs => 
+      prevTabs.map(tab => 
+        tab.id === tabId ? { ...tab, title: newTitle } : tab
+      )
+    );
+  }, []);
+
   const triggerReload = useCallback((reloadKey: string) => {
     const signal: ReloadSignal = {
       key: reloadKey,
@@ -114,9 +123,10 @@ export const TabbedInterfaceProvider: React.FC<TabbedInterfaceProviderProps> = (
     openNewTab,
     closeTab,
     setActiveTab,
+    updateTabTitle,
     triggerReload,
     getReloadSignal,
-  }), [openTabs, activeTabId, openNewTab, closeTab, setActiveTab, triggerReload, getReloadSignal]);
+  }), [openTabs, activeTabId, openNewTab, closeTab, setActiveTab, updateTabTitle, triggerReload, getReloadSignal]);
 
   return (
     <TabbedInterfaceContext.Provider value={contextValue}>
@@ -151,5 +161,14 @@ export const useTabReload = (reloadKey: string, onReload: () => void) => {
   // Return function to trigger reload for other tabs
   return {
     triggerReload: () => triggerReload(reloadKey)
+  };
+};
+
+// Custom hook for components to update their tab title
+export const useTabTitle = (tabId: string) => {
+  const { updateTabTitle } = useTabbedInterface();
+  
+  return {
+    updateTitle: (newTitle: string) => updateTabTitle(tabId, newTitle)
   };
 }; 

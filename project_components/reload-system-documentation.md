@@ -23,7 +23,16 @@ const { triggerReload } = useTabReload('articles', onReload);
 - `onReload`: Callback function to execute when a reload is triggered
 - Returns: `{ triggerReload }` function to trigger reloads for other tabs
 
-### 3. Tab Interface Types
+### 3. useTabTitle Hook
+
+```typescript
+const { updateTitle } = useTabTitle('article-detail-123');
+```
+
+- `tabId`: The unique identifier of the tab to update
+- Returns: `{ updateTitle }` function to update the tab's title
+
+### 4. Tab Interface Types
 
 ```typescript
 export interface Tab {
@@ -66,23 +75,31 @@ const ArticleManagement = () => {
 
 ### Detail Components (Editors)
 
-Detail components trigger reloads when data is saved:
+Detail components trigger reloads and update tab titles when data is saved:
 
 ```typescript
 // ArticleDetail.tsx
-import { useTabReload } from './tabbed-interface-provider';
+import { useTabReload, useTabTitle } from './tabbed-interface-provider';
 
-const ArticleDetail = () => {
+const ArticleDetail = ({ articleId }) => {
   // ... existing state ...
 
   // Set up reload functionality - no callback needed as this component loads its own data
   const { triggerReload } = useTabReload('articles', () => {});
+  
+  // Set up tab title functionality
+  const { updateTitle } = useTabTitle(`article-detail-${articleId}`);
 
   const handleSaveChanges = async () => {
     try {
       // Save data...
       
       toast.success('Artikel gespeichert');
+      
+      // Update tab title if article name changed
+      if (editedAllgemeineData.name !== article.name) {
+        updateTitle(`Artikel: ${editedAllgemeineData.name}`);
+      }
       
       // Trigger reload for other tabs (like ArticleManagement)
       triggerReload();
@@ -108,26 +125,32 @@ const ArticleDetail = () => {
 ## Benefits
 
 1. **Real-time Synchronization**: Changes in one tab immediately reflect in other open tabs
-2. **Performance**: Only affected components reload, not the entire interface
-3. **Scalability**: Easy to add new reload groups for different data types
-4. **Type Safety**: TypeScript interfaces ensure proper usage
+2. **Dynamic Tab Titles**: Tab names automatically update when entity names change
+3. **Performance**: Only affected components reload, not the entire interface
+4. **Scalability**: Easy to add new reload groups for different data types
+5. **Type Safety**: TypeScript interfaces ensure proper usage
 
 ## Usage Workflow
 
 1. User opens ArticleManagement tab (loads article list)
-2. User opens ArticleDetail tab for a specific article
-3. User edits and saves the article in ArticleDetail
-4. ArticleDetail triggers a reload signal for 'articles'
-5. ArticleManagement automatically reloads its data
-6. Updated article information is now visible in the management tab
+2. User opens ArticleDetail tab for a specific article (tab shows "Artikel: Original Name")
+3. User edits the article name and other properties in ArticleDetail
+4. User saves the changes
+5. ArticleDetail updates its tab title to "Artikel: New Name"
+6. ArticleDetail triggers a reload signal for 'articles'
+7. ArticleManagement automatically reloads its data
+8. Updated article information is now visible in the management tab
 
 ## Extension
 
-To add reload functionality to new components:
+To add reload and tab title functionality to new components:
 
-1. Import `useTabReload` hook
+1. Import `useTabReload` and `useTabTitle` hooks
 2. For management components: Use `useTabReload(reloadKey, loadDataFunction)`
-3. For detail components: Use `const { triggerReload } = useTabReload(reloadKey, () => {})`
+3. For detail components: 
+   - Use `const { triggerReload } = useTabReload(reloadKey, () => {})`
+   - Use `const { updateTitle } = useTabTitle(tabId)`
 4. Call `triggerReload()` after successful save operations
+5. Call `updateTitle(newTitle)` when entity names change
 
-This system provides seamless data synchronization across the tabbed interface without requiring manual refreshes or complex state management. 
+This system provides seamless data synchronization and dynamic tab titles across the tabbed interface without requiring manual refreshes or complex state management. 

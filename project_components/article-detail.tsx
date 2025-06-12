@@ -10,7 +10,7 @@ import QuillRichTextEditor from '@/project_components/quill-rich-text-editor';
 import ArticleProperties from '@/project_components/article-properties';
 import { fetchArticleWithCalculations } from '@/lib/api/articles';
 import type { ArticleWithCalculations } from '@/lib/db/articles';
-import { useTabReload } from './tabbed-interface-provider';
+import { useTabReload, useTabTitle } from './tabbed-interface-provider';
 
 // Types
 interface Language {
@@ -72,6 +72,9 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
 
   // Set up reload functionality - no callback needed as this component loads its own data
   const { triggerReload } = useTabReload('articles', () => {});
+  
+  // Set up tab title functionality
+  const { updateTitle } = useTabTitle(`article-detail-${articleId}`);
 
   // Load article data
   const loadArticleData = async () => {
@@ -298,6 +301,11 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
 
       setIsEditing(false);
       toast.success('Artikel gespeichert');
+      
+      // Update tab title if article name changed
+      if (editedAllgemeineData.name !== article.name) {
+        updateTitle(`Artikel: ${editedAllgemeineData.name}`);
+      }
       
       // Trigger reload for other tabs (like ArticleManagement)
       triggerReload();

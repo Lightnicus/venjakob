@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { Block, BlockContent, Language } from '@/lib/db/schema';
 import { fetchBlockWithContent } from '@/lib/api/blocks';
-import { useTabReload } from './tabbed-interface-provider';
+import { useTabReload, useTabTitle } from './tabbed-interface-provider';
 
 type BlockWithContent = Block & {
   blockContents: BlockContent[];
@@ -69,6 +69,9 @@ const BlockDetail: FC<BlockDetailProps> = ({
 
   // Set up reload functionality - no callback needed as this component loads its own data
   const { triggerReload } = useTabReload('blocks', () => {});
+  
+  // Set up tab title functionality
+  const { updateTitle } = useTabTitle(`block-detail-${blockId}`);
 
   // Load block data
   const loadBlockData = async () => {
@@ -242,6 +245,11 @@ const BlockDetail: FC<BlockDetailProps> = ({
 
       setIsEditing(false);
       toast.success('Block gespeichert');
+      
+      // Update tab title if block name changed
+      if (editedBlockProperties.name && editedBlockProperties.name !== block.name) {
+        updateTitle(`Block: ${editedBlockProperties.name}`);
+      }
       
       // Trigger reload for other tabs (like BlockManagement)
       triggerReload();
