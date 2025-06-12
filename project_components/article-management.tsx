@@ -11,6 +11,7 @@ import {
   saveArticleCalculationsAPI,
   deleteArticleAPI,
   createNewArticleAPI,
+  copyArticleAPI,
 } from '@/lib/api/articles';
 import { fetchLanguages } from '@/lib/api/blocks';
 
@@ -115,6 +116,20 @@ const ArticleManagement = () => {
     }
   };
 
+  const handleCopyArticle = async (article: ArticleWithCalculations & { calculationCount?: number }): Promise<ArticleWithCalculations> => {
+    try {
+      const copiedArticle = await copyArticleAPI(article);
+      toast.success(`Artikel "${article.name}" wurde kopiert`);
+      // Add to local state immediately
+      setArticles(prev => [...prev, { ...copiedArticle, calculationCount: copiedArticle.calculations.length }]);
+      return copiedArticle;
+    } catch (error) {
+      console.error('Error copying article:', error);
+      toast.error('Fehler beim Kopieren des Artikels');
+      throw error;
+    }
+  };
+
   if (loading) {
     return (
       <div className="p-4">
@@ -138,6 +153,7 @@ const ArticleManagement = () => {
         onSaveArticleCalculations={handleSaveArticleCalculations}
         onDeleteArticle={handleDeleteArticle}
         onCreateArticle={handleCreateArticle}
+        onCopyArticle={handleCopyArticle}
       />
     </div>
   );

@@ -111,4 +111,19 @@ export async function saveArticleCalculationsAPI(
   if (!response.ok) {
     throw new Error('Failed to save article calculations');
   }
+}
+
+// Copy an article
+export async function copyArticleAPI(originalArticle: ArticleWithCalculations & { calculationCount?: number }): Promise<ArticleWithCalculations> {
+  const response = await fetch('/api/articles/copy', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ originalArticleId: originalArticle.id }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to copy article');
+  }
+  return response.json();
 } 

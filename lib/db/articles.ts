@@ -301,4 +301,63 @@ export async function saveArticleContent(
     console.error('Error saving article content:', error);
     throw new Error('Failed to save article content');
   }
+}
+
+// Copy an article
+export async function copyArticle(originalArticleId: string): Promise<ArticleWithCalculations> {
+  try {
+    // Get the original article with content and calculations
+    const originalArticle = await getArticleWithCalculations(originalArticleId);
+    if (!originalArticle) {
+      throw new Error('Original article not found');
+    }
+    
+    // Create new article with "(Kopie)" appended to the name and number
+    const [newArticle] = await db.insert(articles).values({
+      name: `${originalArticle.name} (Kopie)`,
+      number: `${originalArticle.number} (Kopie)`,
+      description: originalArticle.description,
+      price: originalArticle.price,
+      hideTitle: originalArticle.hideTitle,
+    }).returning();
+    
+    // Copy all calculations
+    const copiedCalculations = [];
+    if (originalArticle.calculations.length > 0) {
+      const calculationsToInsert = originalArticle.calculations.map(calc => ({
+        name: calc.name,
+        type: calc.type,
+        value: calc.value,
+        articleId: newArticle.id,
+        order: calc.order,
+      }));
+      
+      const insertedCalculations = await db.insert(articleCalculationItem).values(calculationsToInsert).returning();
+      copiedCalculations.push(...insertedCalculations);
+    }
+    
+    // Copy all article content (block_content where articleId is set)
+    const copiedContent = [];
+    if (originalArticle.content && originalArticle.content.length > 0) {
+      const contentToInsert = originalArticle.content.map(content => ({
+        blockId: content.blockId,
+        articleId: newArticle.id,
+        title: content.title,
+        content: content.content,
+        languageId: content.languageId,
+      }));
+      
+      const insertedContent = await db.insert(blockContent).values(contentToInsert).returning();
+      copiedContent.push(...insertedContent);
+    }
+    
+    return {
+      ...newArticle,
+      calculations: copiedCalculations,
+      content: copiedContent
+    };
+  } catch (error) {
+    console.error('Error copying article:', error);
+    throw new Error('Failed to copy article');
+  }
 } 

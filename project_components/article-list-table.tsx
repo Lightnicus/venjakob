@@ -24,6 +24,7 @@ type ArticleListTableProps = {
   onSaveArticleCalculations?: (articleId: string, calculations: any[]) => void;
   onDeleteArticle?: (articleId: string) => void;
   onCreateArticle?: () => Promise<ArticleWithCalculations>;
+  onCopyArticle?: (article: ArticleWithCalculationCount) => Promise<ArticleWithCalculations>;
 };
 
 const ArticleListTable: FC<ArticleListTableProps> = ({ 
@@ -34,7 +35,8 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
   onSaveArticleContent,
   onSaveArticleCalculations,
   onDeleteArticle,
-  onCreateArticle
+  onCreateArticle,
+  onCopyArticle
 }) => {
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
   const { openNewTab } = useTabbedInterface();
@@ -119,10 +121,40 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     }
   };
 
-  const handleCopyArticle = (article: ArticleWithCalculationCount) => {
-    console.log('Kopiere Artikel:', article.name);
-    toast('Artikel wurde kopiert');
-    // TODO: Implement article copying logic
+  const handleCopyArticle = async (article: ArticleWithCalculationCount) => {
+    if (!onCopyArticle) {
+      toast.error('Artikel-Kopierung nicht verfügbar');
+      return;
+    }
+
+    try {
+      const copiedArticle = await onCopyArticle(article);
+      
+      // Update the table data with the new copied article
+      setTableData(prevData => [...prevData, copiedArticle]);
+      
+      toast.success(`Artikel "${article.name}" wurde kopiert`);
+      
+      // Optionally open the copied article in a new tab
+      const copiedArticleId = `article-detail-${copiedArticle.id}`;
+      openNewTab({
+        id: copiedArticleId,
+        title: `Artikel: ${copiedArticle.name}`,
+        content: (
+          <ArticleDetail 
+            article={copiedArticle} 
+            languages={languages}
+            onSaveProperties={onSaveArticleProperties}
+            onSaveContent={onSaveArticleContent}
+            onSaveCalculations={onSaveArticleCalculations}
+          />
+        ),
+        closable: true,
+      });
+    } catch (error) {
+      console.error('Fehler beim Kopieren des Artikels:', error);
+      toast.error('Fehler beim Kopieren des Artikels');
+    }
   };
 
   const handleInitiateDelete = (article: ArticleWithCalculationCount) => {
@@ -236,15 +268,21 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
             size="sm"
             className="h-8 w-8 p-0"
             aria-label="Kopieren"
+            disabled={!onCopyArticle}
             onClick={e => {
+              e.preventDefault();
               e.stopPropagation();
               handleCopyArticle(row.original);
             }}
             onKeyDown={e => {
               if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
                 e.stopPropagation();
                 handleCopyArticle(row.original);
               }
+            }}
+            onMouseDown={e => {
+              e.stopPropagation();
             }}
           >
             <Copy size={16} />
