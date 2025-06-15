@@ -35,6 +35,14 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Protected API routes - return 401 if not authenticated
+  if (!user && request.nextUrl.pathname.startsWith('/api')) {
+    return NextResponse.json(
+      { error: 'Unauthorized', message: 'Authentication required' },
+      { status: 401 }
+    );
+  }
+
   // Protected routes - redirect to login if not authenticated
   if (!user && request.nextUrl.pathname.startsWith('/portal')) {
     const url = request.nextUrl.clone();
