@@ -93,7 +93,7 @@ export async function deleteBlockAPI(blockId: string): Promise<void> {
 }
 
 // Copy a block
-export async function copyBlockAPI(originalBlock: BlockWithContent): Promise<BlockWithContent> {
+export async function copyBlockAPI(originalBlock: { id: string }): Promise<BlockWithContent> {
   const response = await fetch('/api/blocks/copy', {
     method: 'POST',
     headers: {
@@ -103,6 +103,24 @@ export async function copyBlockAPI(originalBlock: BlockWithContent): Promise<Blo
   });
   if (!response.ok) {
     throw new Error('Failed to copy block');
+  }
+  return response.json();
+}
+
+// Fetch minimal block list data
+export async function fetchBlockList(): Promise<{
+  id: string;
+  name: string;
+  standard: boolean;
+  mandatory: boolean;
+  position: number;
+  firstContentTitle: string | null;
+  languages: string;
+  lastModified: string;
+}[]> {
+  const response = await fetch('/api/blocks/list');
+  if (!response.ok) {
+    throw new Error('Failed to fetch block list');
   }
   return response.json();
 } 

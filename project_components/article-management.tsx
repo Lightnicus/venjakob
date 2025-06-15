@@ -4,7 +4,7 @@ import type { Language } from '@/lib/db/schema';
 import type { ArticleWithCalculations } from '@/lib/db/articles';
 import { toast } from 'sonner';
 import {
-  fetchArticlesWithCalculations,
+  fetchArticleList,
   saveArticlePropertiesAPI,
   saveArticleContentAPI,
   saveArticleCalculationsAPI,
@@ -15,8 +15,19 @@ import {
 import { fetchLanguages } from '@/lib/api/blocks';
 import { useTabReload } from './tabbed-interface-provider';
 
+type ArticleListItem = {
+  id: string;
+  number: string;
+  name: string;
+  description: string | null;
+  price: string | null;
+  hideTitle: boolean;
+  updatedAt: string;
+  calculationCount: number;
+};
+
 const ArticleManagement = () => {
-  const [articles, setArticles] = useState<(ArticleWithCalculations & { calculationCount?: number })[]>([]);
+  const [articles, setArticles] = useState<ArticleListItem[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,7 +35,7 @@ const ArticleManagement = () => {
     try {
       setLoading(true);
       const [articlesData, languagesData] = await Promise.all([
-        fetchArticlesWithCalculations(),
+        fetchArticleList(),
         fetchLanguages()
       ]);
       setArticles(articlesData);
@@ -94,9 +105,8 @@ const ArticleManagement = () => {
     }
   };
 
-  const handleCreateArticle = async (): Promise<ArticleWithCalculations> => {
+  const handleCreateArticle = async (): Promise<ArticleListItem> => {
     try {
-      // Generate a default article number - in real app this might be more sophisticated
       const articleCount = articles.length;
       const defaultNumber = `ART-${String(articleCount + 1).padStart(3, '0')}`;
       
@@ -108,9 +118,21 @@ const ArticleManagement = () => {
         hideTitle: false
       });
       toast.success('Neuer Artikel erstellt');
-      // Add to local state immediately
-      setArticles(prev => [...prev, { ...newArticle, calculationCount: newArticle.calculations.length }]);
-      return newArticle;
+      
+      // Convert to ArticleListItem format
+      const articleListItem: ArticleListItem = {
+        id: newArticle.id,
+        number: newArticle.number,
+        name: newArticle.name,
+        description: newArticle.description,
+        price: newArticle.price,
+        hideTitle: newArticle.hideTitle,
+        updatedAt: newArticle.updatedAt.toISOString(),
+        calculationCount: newArticle.calculations.length
+      };
+      
+      setArticles(prev => [...prev, articleListItem]);
+      return articleListItem;
     } catch (error) {
       console.error('Error creating article:', error);
       toast.error('Fehler beim Erstellen des Artikels');
@@ -118,13 +140,25 @@ const ArticleManagement = () => {
     }
   };
 
-  const handleCopyArticle = async (article: ArticleWithCalculations & { calculationCount?: number }): Promise<ArticleWithCalculations> => {
+  const handleCopyArticle = async (article: ArticleListItem): Promise<ArticleListItem> => {
     try {
       const copiedArticle = await copyArticleAPI(article);
       toast.success(`Artikel "${article.name}" wurde kopiert`);
-      // Add to local state immediately
-      setArticles(prev => [...prev, { ...copiedArticle, calculationCount: copiedArticle.calculations.length }]);
-      return copiedArticle;
+      
+      // Convert to ArticleListItem format
+      const articleListItem: ArticleListItem = {
+        id: copiedArticle.id,
+        number: copiedArticle.number,
+        name: copiedArticle.name,
+        description: copiedArticle.description,
+        price: copiedArticle.price,
+        hideTitle: copiedArticle.hideTitle,
+        updatedAt: copiedArticle.updatedAt.toISOString(),
+        calculationCount: copiedArticle.calculations.length
+      };
+      
+      setArticles(prev => [...prev, articleListItem]);
+      return articleListItem;
     } catch (error) {
       console.error('Error copying article:', error);
       toast.error('Fehler beim Kopieren des Artikels');

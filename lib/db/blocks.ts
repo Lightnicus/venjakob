@@ -185,4 +185,74 @@ export async function deleteBlock(blockId: string): Promise<void> {
     console.error('Error deleting block:', error);
     throw new Error('Failed to delete block');
   }
+}
+
+// Fetch minimal block list data
+export async function getBlockList(): Promise<{
+  id: string;
+  name: string;
+  standard: boolean;
+  mandatory: boolean;
+  position: number;
+  firstContentTitle: string | null;
+  languages: string;
+  lastModified: string;
+}[]> {
+  try {
+    // Fetch all blocks
+    const allBlocks = await db.select().from(blocks).orderBy(blocks.position, blocks.name);
+    
+    // Fetch all block content with language info
+    const allBlockContent = await db
+      .select({
+        blockId: blockContent.blockId,
+        title: blockContent.title,
+        updatedAt: blockContent.updatedAt,
+        languageId: blockContent.languageId,
+      })
+      .from(blockContent);
+    
+    // Fetch all languages
+    const allLanguages = await db.select().from(languages);
+    
+    // Process the data
+    const blockList = allBlocks.map(block => {
+      const blockContents = allBlockContent.filter(content => content.blockId === block.id);
+      
+      // Get first content title
+      const firstContentTitle = blockContents.length > 0 ? blockContents[0].title : null;
+      
+      // Get languages for this block
+      const blockLanguages = blockContents.map(bc => {
+        const lang = allLanguages.find(l => l.id === bc.languageId);
+        return lang?.label || 'Unknown';
+      });
+      const languagesString = blockLanguages.join(', ') || 'Keine Sprachen';
+      
+      // Get last modified date
+      let lastModified = 'Nie';
+      if (blockContents.length > 0) {
+        const latestUpdate = blockContents.reduce((latest, current) => 
+          new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
+        );
+        lastModified = latestUpdate.updatedAt.toISOString();
+      }
+      
+      return {
+        id: block.id,
+        name: block.name,
+        standard: block.standard,
+        mandatory: block.mandatory,
+        position: block.position,
+        firstContentTitle,
+        languages: languagesString,
+        lastModified
+      };
+    });
+    
+    return blockList;
+  } catch (error) {
+    console.error('Error fetching block list:', error);
+    throw new Error('Failed to fetch block list');
+  }
 } 

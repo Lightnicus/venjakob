@@ -59,10 +59,11 @@ function LoginFormContent() {
       setLoading('microsoft-oauth', true);
       setError(null);
       
-      const result = await signInWithProvider('azure');
-      if (result?.error) {
-        setError('Microsoft-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
-      }
+      // const result = await signInWithProvider('azure');
+      const result = null;
+      // if (result?.error) {
+      //   setError('Microsoft-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
+      // }
     } catch (err) {
       setError('Microsoft-Anmeldung fehlgeschlagen. Bitte versuchen Sie es erneut.');
     } finally {

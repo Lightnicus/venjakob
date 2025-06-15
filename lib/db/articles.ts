@@ -360,4 +360,46 @@ export async function copyArticle(originalArticleId: string): Promise<ArticleWit
     console.error('Error copying article:', error);
     throw new Error('Failed to copy article');
   }
+}
+
+// Fetch minimal article list data
+export async function getArticleList(): Promise<{
+  id: string;
+  number: string;
+  name: string;
+  description: string | null;
+  price: string | null;
+  hideTitle: boolean;
+  updatedAt: string;
+  calculationCount: number;
+}[]> {
+  try {
+    const allArticles = await db.select().from(articles).orderBy(articles.name);
+    
+    // Get calculation counts for each article
+    const articlesWithCounts = await Promise.all(
+      allArticles.map(async (article) => {
+        const [countResult] = await db
+          .select({ count: count(articleCalculationItem.id) })
+          .from(articleCalculationItem)
+          .where(eq(articleCalculationItem.articleId, article.id));
+        
+        return {
+          id: article.id,
+          number: article.number,
+          name: article.name,
+          description: article.description,
+          price: article.price,
+          hideTitle: article.hideTitle,
+          updatedAt: article.updatedAt.toISOString(),
+          calculationCount: Number(countResult?.count || 0)
+        };
+      })
+    );
+    
+    return articlesWithCounts;
+  } catch (error) {
+    console.error('Error fetching article list:', error);
+    throw new Error('Failed to fetch article list');
+  }
 } 

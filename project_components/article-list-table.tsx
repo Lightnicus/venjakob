@@ -17,16 +17,27 @@ type ArticleWithCalculationCount = ArticleWithCalculations & {
   calculationCount?: number;
 };
 
-type ArticleListTableProps = {
-  data: ArticleWithCalculationCount[];
-  languages: Language[];
-  onSaveArticleProperties?: (articleId: string, articleData: any, reloadData?: boolean) => void;
-  onSaveArticleContent?: (articleId: string, contentData: any[]) => void;
-  onSaveArticleCalculations?: (articleId: string, calculations: any[]) => void;
-  onDeleteArticle?: (articleId: string) => void;
-  onCreateArticle?: () => Promise<ArticleWithCalculations>;
-  onCopyArticle?: (article: ArticleWithCalculationCount) => Promise<ArticleWithCalculations>;
+type ArticleListItem = {
+  id: string;
+  number: string;
+  name: string;
+  description: string | null;
+  price: string | null;
+  hideTitle: boolean;
+  updatedAt: string;
+  calculationCount: number;
 };
+
+interface ArticleListTableProps {
+  data: ArticleListItem[];
+  languages: Language[];
+  onSaveArticleProperties?: (articleId: string, data: any, reloadData?: boolean) => Promise<void>;
+  onSaveArticleContent?: (articleId: string, content: any[]) => Promise<void>;
+  onSaveArticleCalculations?: (articleId: string, calculations: any[]) => Promise<void>;
+  onDeleteArticle?: (articleId: string) => Promise<void>;
+  onCreateArticle?: () => Promise<ArticleListItem>;
+  onCopyArticle?: (article: ArticleListItem) => Promise<ArticleListItem>;
+}
 
 const ArticleListTable: FC<ArticleListTableProps> = ({ 
   data, 
@@ -40,14 +51,14 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
 }) => {
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
   const { openNewTab } = useTabbedInterface();
-  const [articleToDelete, setArticleToDelete] = useState<ArticleWithCalculationCount | null>(null);
-  const [tableData, setTableData] = useState<ArticleWithCalculationCount[]>(data);
+  const [articleToDelete, setArticleToDelete] = useState<ArticleListItem | null>(null);
+  const [tableData, setTableData] = useState<ArticleListItem[]>(data);
 
   useEffect(() => {
     setTableData(data);
   }, [data]);
 
-  const handleOptimisticUpdate = (articleId: string, updates: Partial<ArticleWithCalculationCount>) => {
+  const handleOptimisticUpdate = (articleId: string, updates: Partial<ArticleListItem>) => {
     setTableData(prevData =>
       prevData.map(article =>
         article.id === articleId
@@ -61,15 +72,15 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     }
   };
 
-  const getCalculationCount = (article: ArticleWithCalculationCount): number => {
-    return article.calculationCount || article.calculations?.length || 0;
+  const getCalculationCount = (article: ArticleListItem): number => {
+    return article.calculationCount;
   };
 
-  const getLastModified = (article: ArticleWithCalculationCount): string => {
+  const getLastModified = (article: ArticleListItem): string => {
     return new Date(article.updatedAt).toLocaleDateString('de-DE');
   };
 
-  const handleOpenArticleDetail = async (article: ArticleWithCalculationCount) => {
+  const handleOpenArticleDetail = async (article: ArticleListItem) => {
     // Create wrapper functions to match ArticleDetail's expected signatures
     const handleSaveProperties = onSaveArticleProperties 
       ? async (articleId: string, data: any) => {
@@ -154,7 +165,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     }
   };
 
-  const handleCopyArticle = async (article: ArticleWithCalculationCount) => {
+  const handleCopyArticle = async (article: ArticleListItem) => {
     if (!onCopyArticle) {
       toast.error('Artikel-Kopierung nicht verfügbar');
       return;
@@ -209,7 +220,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     }
   };
 
-  const handleInitiateDelete = (article: ArticleWithCalculationCount) => {
+  const handleInitiateDelete = (article: ArticleListItem) => {
     setArticleToDelete(article);
   };
 
@@ -226,7 +237,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     setArticleToDelete(null);
   };
 
-  const columns: ColumnDef<ArticleWithCalculationCount>[] = [
+  const columns: ColumnDef<ArticleListItem>[] = [
     {
       accessorKey: 'number',
       header: 'Nr.',
@@ -351,7 +362,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     },
   ];
 
-  const getRowClassName = (row: Row<ArticleWithCalculationCount>) => {
+  const getRowClassName = (row: Row<ArticleListItem>) => {
     let className = 'cursor-pointer hover:bg-blue-100';
     if (selectedRow === row.id) {
       className += ' bg-blue-200';
@@ -361,7 +372,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     return className;
   };
 
-  const handleRowClick = async (row: Row<ArticleWithCalculationCount>) => {
+  const handleRowClick = async (row: Row<ArticleListItem>) => {
     setSelectedRow(row.id);
     await handleOpenArticleDetail(row.original);
   };

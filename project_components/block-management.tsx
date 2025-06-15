@@ -3,7 +3,7 @@ import BlockListTable from './block-list-table';
 import type { Language } from '@/lib/db/schema';
 import { toast } from 'sonner';
 import {
-  fetchBlocksWithContent,
+  fetchBlockList,
   fetchLanguages,
   saveBlockContentAPI,
   saveBlockPropertiesAPI,
@@ -14,8 +14,19 @@ import {
 import type { BlockWithContent } from '@/lib/db/blocks';
 import { useTabReload } from './tabbed-interface-provider';
 
+type BlockListItem = {
+  id: string;
+  name: string;
+  standard: boolean;
+  mandatory: boolean;
+  position: number;
+  firstContentTitle: string | null;
+  languages: string;
+  lastModified: string;
+};
+
 const BlockManagement = () => {
-  const [blocks, setBlocks] = useState<BlockWithContent[]>([]);
+  const [blocks, setBlocks] = useState<BlockListItem[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -23,7 +34,7 @@ const BlockManagement = () => {
     try {
       setLoading(true);
       const [blocksData, languagesData] = await Promise.all([
-        fetchBlocksWithContent(),
+        fetchBlockList(),
         fetchLanguages()
       ]);
       setBlocks(blocksData);
@@ -81,13 +92,25 @@ const BlockManagement = () => {
     }
   };
 
-  const handleCreateBlock = async (): Promise<BlockWithContent> => {
+  const handleCreateBlock = async (): Promise<BlockListItem> => {
     try {
       const newBlock = await createNewBlock();
       toast.success('Neuer Block erstellt');
-      // Add to local state immediately
-      setBlocks(prev => [...prev, newBlock]);
-      return newBlock;
+      
+      // Convert to BlockListItem format
+      const blockListItem: BlockListItem = {
+        id: newBlock.id,
+        name: newBlock.name,
+        standard: newBlock.standard,
+        mandatory: newBlock.mandatory,
+        position: newBlock.position,
+        firstContentTitle: null,
+        languages: 'Keine Sprachen',
+        lastModified: 'Nie'
+      };
+      
+      setBlocks(prev => [...prev, blockListItem]);
+      return blockListItem;
     } catch (error) {
       console.error('Error creating block:', error);
       toast.error('Fehler beim Erstellen des Blocks');
@@ -95,13 +118,25 @@ const BlockManagement = () => {
     }
   };
 
-  const handleCopyBlock = async (originalBlock: BlockWithContent): Promise<BlockWithContent> => {
+  const handleCopyBlock = async (originalBlock: BlockListItem): Promise<BlockListItem> => {
     try {
       const copiedBlock = await copyBlockAPI(originalBlock);
       toast.success(`Block "${originalBlock.name}" wurde kopiert`);
-      // Add to local state immediately
-      setBlocks(prev => [...prev, copiedBlock]);
-      return copiedBlock;
+      
+      // Convert to BlockListItem format
+      const blockListItem: BlockListItem = {
+        id: copiedBlock.id,
+        name: copiedBlock.name,
+        standard: copiedBlock.standard,
+        mandatory: copiedBlock.mandatory,
+        position: copiedBlock.position,
+        firstContentTitle: copiedBlock.blockContents?.[0]?.title || null,
+        languages: copiedBlock.blockContents?.length > 0 ? 'Kopiert' : 'Keine Sprachen',
+        lastModified: new Date().toISOString()
+      };
+      
+      setBlocks(prev => [...prev, blockListItem]);
+      return blockListItem;
     } catch (error) {
       console.error('Error copying block:', error);
       toast.error('Fehler beim Kopieren des Blocks');

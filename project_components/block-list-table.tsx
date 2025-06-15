@@ -11,21 +11,26 @@ import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 import type { Block, BlockContent, Language } from '@/lib/db/schema';
 
-type BlockWithContent = Block & {
-  blockContents: BlockContent[];
-  languageCount?: number;
-  lastModified?: Date;
+type BlockListItem = {
+  id: string;
+  name: string;
+  standard: boolean;
+  mandatory: boolean;
+  position: number;
+  firstContentTitle: string | null;
+  languages: string;
+  lastModified: string;
 };
 
-type BlockListTableProps = {
-  data: BlockWithContent[];
+interface BlockListTableProps {
+  data: BlockListItem[];
   languages: Language[];
-  onSaveBlockChanges?: (blockId: string, blockContents: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[]) => void;
-  onSaveBlockProperties?: (blockId: string, blockData: Partial<Block>, reloadData?: boolean) => void;
-  onDeleteBlock?: (blockId: string) => void;
-  onCreateBlock?: () => Promise<BlockWithContent>;
-  onCopyBlock?: (originalBlock: BlockWithContent) => Promise<BlockWithContent>;
-};
+  onSaveBlockChanges?: (blockId: string, blockContents: any[]) => Promise<void>;
+  onSaveBlockProperties?: (blockId: string, blockData: any, reloadData?: boolean) => Promise<void>;
+  onDeleteBlock?: (blockId: string) => Promise<void>;
+  onCreateBlock?: () => Promise<BlockListItem>;
+  onCopyBlock?: (block: BlockListItem) => Promise<BlockListItem>;
+}
 
 const BlockListTable: FC<BlockListTableProps> = ({ 
   data, 
@@ -38,14 +43,14 @@ const BlockListTable: FC<BlockListTableProps> = ({
 }) => {
   const [selectedRow, setSelectedRow] = useState<string | null>(null);
   const { openNewTab } = useTabbedInterface();
-  const [blockToDelete, setBlockToDelete] = useState<BlockWithContent | null>(null);
-  const [tableData, setTableData] = useState<BlockWithContent[]>(data);
+  const [blockToDelete, setBlockToDelete] = useState<BlockListItem | null>(null);
+  const [tableData, setTableData] = useState<BlockListItem[]>(data);
 
   useEffect(() => {
     setTableData(data);
   }, [data]);
 
-  const handleOptimisticUpdate = (blockId: string, updates: Partial<BlockWithContent>) => {
+  const handleOptimisticUpdate = (blockId: string, updates: Partial<BlockListItem>) => {
     setTableData(prevData =>
       prevData.map(block =>
         block.id === blockId
@@ -59,23 +64,16 @@ const BlockListTable: FC<BlockListTableProps> = ({
     }
   };
 
-  const getLanguagesForBlock = (block: BlockWithContent): string => {
-    const blockLanguages = block.blockContents.map(bc => {
-      const lang = languages.find(l => l.id === bc.languageId);
-      return lang?.label || 'Unknown';
-    });
-    return blockLanguages.join(', ') || 'Keine Sprachen';
+  const getLanguagesForBlock = (block: BlockListItem): string => {
+    return block.languages;
   };
 
-  const getLastModified = (block: BlockWithContent): string => {
-    if (block.blockContents.length === 0) return 'Nie';
-    const latestUpdate = block.blockContents.reduce((latest, current) => 
-      new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
-    );
-    return new Date(latestUpdate.updatedAt).toLocaleDateString('de-DE');
+  const getLastModified = (block: BlockListItem): string => {
+    if (block.lastModified === 'Nie') return 'Nie';
+    return new Date(block.lastModified).toLocaleDateString('de-DE');
   };
 
-  const handleOpenBlockDetail = (block: BlockWithContent) => {
+  const handleOpenBlockDetail = (block: BlockListItem) => {
     // Create wrapper functions to match BlockDetail's expected signatures
     const handleSaveChanges = onSaveBlockChanges
       ? async (blockId: string, blockContents: any[]) => {
@@ -145,7 +143,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
     }
   };
 
-  const handleCopyBlock = async (block: BlockWithContent) => {
+  const handleCopyBlock = async (block: BlockListItem) => {
     if (!onCopyBlock) {
       toast.error('Block-Kopierung nicht verfügbar');
       return;
@@ -193,7 +191,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
     }
   };
 
-  const handleInitiateDelete = (block: BlockWithContent) => {
+  const handleInitiateDelete = (block: BlockListItem) => {
     setBlockToDelete(block);
   };
 
@@ -211,7 +209,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
     setBlockToDelete(null);
   };
 
-  const columns: ColumnDef<BlockWithContent>[] = [
+  const columns: ColumnDef<BlockListItem>[] = [
     {
       accessorKey: 'name',
       header: 'Bezeichnung',
@@ -239,10 +237,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
     {
       accessorKey: 'title',
       header: 'Titel',
-      cell: ({ row }) => {
-        const firstContent = row.original.blockContents[0];
-        return firstContent?.title || '-';
-      },
+      cell: ({ row }) => row.original.firstContentTitle || '-',
       enableColumnFilter: true,
     },
     {
@@ -346,7 +341,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
     },
   ];
 
-  const getRowClassName = (row: Row<BlockWithContent>) => {
+  const getRowClassName = (row: Row<BlockListItem>) => {
     let className = 'cursor-pointer hover:bg-blue-100';
     if (selectedRow === row.id) {
       className += ' bg-blue-200';
@@ -356,7 +351,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
     return className;
   };
 
-  const handleRowClick = (row: Row<BlockWithContent>) => {
+  const handleRowClick = (row: Row<BlockListItem>) => {
     setSelectedRow(row.id);
     handleOpenBlockDetail(row.original);
   };

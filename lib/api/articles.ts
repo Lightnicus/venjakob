@@ -107,7 +107,7 @@ export async function saveArticleCalculationsAPI(
 }
 
 // Copy an article
-export async function copyArticleAPI(originalArticle: ArticleWithCalculations & { calculationCount?: number }): Promise<ArticleWithCalculations> {
+export async function copyArticleAPI(originalArticle: { id: string }): Promise<ArticleWithCalculations> {
   const response = await fetch('/api/articles/copy', {
     method: 'POST',
     headers: {
@@ -117,6 +117,24 @@ export async function copyArticleAPI(originalArticle: ArticleWithCalculations & 
   });
   if (!response.ok) {
     throw new Error('Failed to copy article');
+  }
+  return response.json();
+}
+
+// Fetch minimal article list data
+export async function fetchArticleList(): Promise<{
+  id: string;
+  number: string;
+  name: string;
+  description: string | null;
+  price: string | null;
+  hideTitle: boolean;
+  updatedAt: string;
+  calculationCount: number;
+}[]> {
+  const response = await fetch('/api/articles/list');
+  if (!response.ok) {
+    throw new Error('Failed to fetch article list');
   }
   return response.json();
 } 
