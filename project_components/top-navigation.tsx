@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { signOut } from '@/lib/auth/actions';
 import { useLoading } from './loading-provider';
+import { useUser } from './use-user';
 
 // Import tab content components - no longer needed here as they are imported in menu.tsx
 
@@ -39,6 +40,7 @@ const TopNavigation: FC = () => {
   const { openNewTab } = useTabbedInterface();
   const router = useRouter();
   const { setLoading, isLoading } = useLoading();
+  const { user, loading: userLoading } = useUser();
 
   const handleMenuClick = (menuItemHref: string) => {
     const tabDef = tabMappings[menuItemHref];
@@ -153,9 +155,13 @@ const TopNavigation: FC = () => {
               >
                 <Avatar>
                   <AvatarImage src="/avatar.png" alt="Benutzeravatar" />
-                  <AvatarFallback>MM</AvatarFallback>
+                  <AvatarFallback>
+                    {user?.email ? user.email.substring(0, 2).toUpperCase() : 'MM'}
+                  </AvatarFallback>
                 </Avatar>
-                <span className="text-sm font-medium text-gray-700">Max Mustermann</span>
+                <span className="text-sm font-medium text-gray-700">
+                  {userLoading ? 'Laden...' : user?.email || 'Nicht angemeldet'}
+                </span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
