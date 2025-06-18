@@ -127,7 +127,7 @@ const ArticleManagement = () => {
         description: newArticle.description,
         price: newArticle.price,
         hideTitle: newArticle.hideTitle,
-        updatedAt: newArticle.updatedAt.toISOString(),
+        updatedAt: newArticle.updatedAt instanceof Date ? newArticle.updatedAt.toISOString() : newArticle.updatedAt,
         calculationCount: newArticle.calculations.length
       };
       
@@ -153,7 +153,7 @@ const ArticleManagement = () => {
         description: copiedArticle.description,
         price: copiedArticle.price,
         hideTitle: copiedArticle.hideTitle,
-        updatedAt: copiedArticle.updatedAt.toISOString(),
+        updatedAt: copiedArticle.updatedAt instanceof Date ? copiedArticle.updatedAt.toISOString() : copiedArticle.updatedAt,
         calculationCount: copiedArticle.calculations.length
       };
       
