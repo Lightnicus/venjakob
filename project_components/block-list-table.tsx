@@ -1,5 +1,7 @@
 import { FC, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Pencil, Copy, Trash2 } from 'lucide-react';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import BlockDetail from './block-detail';
@@ -45,10 +47,16 @@ const BlockListTable: FC<BlockListTableProps> = ({
   const { openNewTab } = useTabbedInterface();
   const [blockToDelete, setBlockToDelete] = useState<BlockListItem | null>(null);
   const [tableData, setTableData] = useState<BlockListItem[]>(data);
+  const [showStandardOnly, setShowStandardOnly] = useState<boolean>(false);
 
   useEffect(() => {
     setTableData(data);
   }, [data]);
+
+  // Filter data based on showStandardOnly checkbox
+  const filteredData = showStandardOnly 
+    ? tableData.filter(block => block.standard) 
+    : tableData;
 
   const handleOptimisticUpdate = (blockId: string, updates: Partial<BlockListItem>) => {
     setTableData(prevData =>
@@ -393,8 +401,20 @@ const BlockListTable: FC<BlockListTableProps> = ({
         </Button>
       </div>
       <div className="overflow-x-auto">
+        <div className="mb-4 flex items-center gap-4 justify-end">
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="standard-filter" 
+              checked={showStandardOnly}
+              onCheckedChange={(checked) => setShowStandardOnly(checked as boolean)}
+            />
+            <Label htmlFor="standard-filter" className="text-sm font-medium">
+              Standard Blöcke
+            </Label>
+          </div>
+        </div>
         <FilterableTable
-          data={tableData}
+          data={filteredData}
           columns={columns}
           getRowClassName={getRowClassName}
           onRowClick={handleRowClick}
