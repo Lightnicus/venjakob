@@ -28,8 +28,25 @@ import {
 } from '@/components/ui/table';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 export interface DateFilterConfig {
   getValidDates?: (data: any[]) => Date[];
@@ -52,6 +69,10 @@ export interface FilterableTableProps<TData> {
   ContextProvider?: React.FC<{ value: any; children: React.ReactNode }>;
   dateFilterColumns?: Record<string, DateFilterConfig>;
   onRowClick?: (row: Row<TData>) => void;
+  // Drag & Drop props
+  enableDragSort?: boolean;
+  sortField?: keyof TData;
+  onDragSortEnd?: (reorderedData: TData[]) => void;
 }
 
 function DateFilterHeader<TData>({ 
@@ -189,6 +210,64 @@ function DateFilterHeader<TData>({
   );
 }
 
+// SortableRow component for drag and drop
+const SortableTableRow: React.FC<{
+  row: Row<any>;
+  children: React.ReactNode;
+  className?: string;
+  onClick?: () => void;
+  onKeyDown?: (e: React.KeyboardEvent) => void;
+  tabIndex?: number;
+  enableDragSort: boolean;
+}> = ({ row, children, className, onClick, onKeyDown, tabIndex, enableDragSort }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: String((row.original as any).id),
+    disabled: !enableDragSort,
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  if (!enableDragSort) {
+    return (
+      <TableRow 
+        className={className}
+        onClick={onClick}
+        tabIndex={tabIndex}
+        onKeyDown={onKeyDown}
+      >
+        {children}
+      </TableRow>
+    );
+  }
+
+  return (
+    <TableRow 
+      ref={setNodeRef}
+      style={style}
+      className={className}
+      onClick={onClick}
+      onKeyDown={onKeyDown}
+      {...attributes}
+    >
+      <TableCell className="p-2 cursor-grab active:cursor-grabbing" {...listeners}>
+        <GripVertical size={16} className="text-gray-400" />
+      </TableCell>
+      {children}
+    </TableRow>
+  );
+};
+
 export function FilterableTable<TData>({
   data,
   columns: initialColumns,
@@ -204,13 +283,80 @@ export function FilterableTable<TData>({
   ContextProvider,
   dateFilterColumns = {},
   onRowClick,
+  enableDragSort = false,
+  sortField,
+  onDragSortEnd,
 }: FilterableTableProps<TData>) {
   const [sorting, setSorting] = React.useState<SortingState>(defaultSorting);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(defaultColumnFilters);
   const [globalFilter, setGlobalFilter] = React.useState<string>('');
+  const [internalData, setInternalData] = React.useState<TData[]>(data);
+
+  // Update internal data when external data changes
+  React.useEffect(() => {
+    let updatedData = [...data];
+    
+    // If drag sort is enabled, sort by the sort field
+    if (enableDragSort && sortField) {
+      updatedData = updatedData.sort((a, b) => {
+        const aValue = (a as any)[sortField] || 0;
+        const bValue = (b as any)[sortField] || 0;
+        return aValue - bValue;
+      });
+    }
+    
+    setInternalData(updatedData);
+  }, [data, enableDragSort, sortField]);
+
+  // Set up sensors for drag and drop
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end for sorting
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id && enableDragSort && sortField) {
+      const sortedData = [...internalData].sort((a, b) => {
+        const aValue = (a as any)[sortField] || 0;
+        const bValue = (b as any)[sortField] || 0;
+        return aValue - bValue;
+      });
+
+      const oldIndex = sortedData.findIndex(item => String((item as any).id) === String(active.id));
+      const newIndex = sortedData.findIndex(item => String((item as any).id) === String(over?.id));
+
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedItems = arrayMove(sortedData, oldIndex, newIndex);
+        
+        // Update the sort field values
+        const updatedItems = reorderedItems.map((item, index) => ({
+          ...item,
+          [sortField]: index + 1,
+        }));
+
+        // Update all internal data, not just the sorted subset
+        const newInternalData = internalData.map(item => {
+          const updatedItem = updatedItems.find(updated => (updated as any).id === (item as any).id);
+          return updatedItem || item;
+        });
+        
+        setInternalData(newInternalData);
+
+        // Call parent callback with only the reordered items
+        if (onDragSortEnd) {
+          onDragSortEnd(updatedItems);
+        }
+      }
+    }
+  };
 
   const columns = React.useMemo(() => {
-    return initialColumns.map(colDef => {
+    let processedColumns = initialColumns.map(colDef => {
       let enableGlobally = true; 
       if (globalFilterColumnIds && globalFilterColumnIds.length > 0) {
         const effectiveId = colDef.id ?? (typeof (colDef as any).accessorKey === 'string' ? (colDef as any).accessorKey : undefined);
@@ -221,17 +367,33 @@ export function FilterableTable<TData>({
         enableGlobalFilter: enableGlobally,
       };
     });
-  }, [initialColumns, globalFilterColumnIds]);
+
+    // Add drag handle column if drag sort is enabled
+    if (enableDragSort) {
+      processedColumns = [
+        {
+          id: 'drag-handle',
+          header: '',
+          cell: () => null, // Rendered in SortableTableRow
+          enableSorting: false,
+          enableGlobalFilter: false,
+        },
+        ...processedColumns,
+      ];
+    }
+
+    return processedColumns;
+  }, [initialColumns, globalFilterColumnIds, enableDragSort]);
 
   const table = useReactTable({
-    data,
+    data: internalData,
     columns,
     state: { sorting, columnFilters, globalFilter },
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
     onGlobalFilterChange: setGlobalFilter,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
+    getSortedRowModel: enableDragSort ? getCoreRowModel() : getSortedRowModel(), // Disable sorting when drag sort is enabled
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
@@ -240,6 +402,91 @@ export function FilterableTable<TData>({
       },
     },
   });
+
+  const tableContent = (
+    <Table className={tableClassName}>
+      <TableHeader>
+        {table.getHeaderGroups().map((headerGroup: HeaderGroup<TData>) => (
+          <TableRow key={headerGroup.id}>
+            {headerGroup.headers.map((header: Header<TData, unknown>) => {
+              const isSortable = header.column.getCanSort();
+              const sortState = header.column.getIsSorted();
+              let sortIcon = null;
+              if (isSortable) {
+                if (sortState === 'asc') sortIcon = <span className="ml-1">▲</span>;
+                else if (sortState === 'desc') sortIcon = <span className="ml-1">▼</span>;
+                else sortIcon = <span className="ml-1">⇅</span>;
+              }
+              
+              // Check if this column has a date filter
+              const columnId = header.column.id;
+              const isDateFilter = columnId in dateFilterColumns;
+              
+              return (
+                <TableHead
+                  key={header.id}
+                  className={headerClassName}
+                  onClick={isSortable && !isDateFilter ? header.column.getToggleSortingHandler() : undefined}
+                  aria-sort={sortState ? (sortState === 'asc' ? 'ascending' : 'descending') : 'none'}
+                  tabIndex={isSortable && !isDateFilter ? 0 : undefined}
+                  onKeyDown={(e: React.KeyboardEvent<HTMLTableCellElement>) => {
+                    if ((e.key === 'Enter' || e.key === ' ') && isSortable && !isDateFilter) {
+                      header.column.toggleSorting();
+                    }
+                  }}
+                >
+                  <span className="flex items-center">
+                                          {isDateFilter ? (
+                        <DateFilterHeader 
+                          column={header.column}
+                          title={header.column.columnDef.header as string || columnId}
+                          data={internalData}
+                          config={dateFilterColumns[columnId]}
+                        />
+                      ) : (
+                      <>
+                        {flexRender(header.column.columnDef.header, header.getContext())}
+                        {isSortable && sortIcon}
+                      </>
+                    )}
+                  </span>
+                </TableHead>
+              );
+            })}
+          </TableRow>
+        ))}
+      </TableHeader>
+      <TableBody>
+        {table.getRowModel().rows.map((row: Row<TData>) => (
+          <SortableTableRow
+            key={row.id}
+            row={row}
+            className={getRowClassName ? getRowClassName(row) : ''}
+            onClick={() => onRowClick?.(row)}
+            onKeyDown={(e) => {
+              if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
+                e.preventDefault();
+                onRowClick(row);
+              }
+            }}
+            enableDragSort={enableDragSort}
+          >
+            {row.getVisibleCells().map((cell: Cell<TData, unknown>) => {
+              // Skip rendering drag handle cell content as it's handled in SortableTableRow
+              if (enableDragSort && cell.column.id === 'drag-handle') {
+                return null;
+              }
+              return (
+                <TableCell key={cell.id} className={cellClassName}>
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              );
+            })}
+          </SortableTableRow>
+        ))}
+      </TableBody>
+    </Table>
+  );
 
   const content = (
     <div className="overflow-x-auto w-full">
@@ -252,81 +499,23 @@ export function FilterableTable<TData>({
           aria-label={filterPlaceholder}
         />
       </div>
-      <Table className={tableClassName}>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup: HeaderGroup<TData>) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header: Header<TData, unknown>) => {
-                const isSortable = header.column.getCanSort();
-                const sortState = header.column.getIsSorted();
-                let sortIcon = null;
-                if (isSortable) {
-                  if (sortState === 'asc') sortIcon = <span className="ml-1">▲</span>;
-                  else if (sortState === 'desc') sortIcon = <span className="ml-1">▼</span>;
-                  else sortIcon = <span className="ml-1">⇅</span>;
-                }
-                
-                // Check if this column has a date filter
-                const columnId = header.column.id;
-                const isDateFilter = columnId in dateFilterColumns;
-                
-                return (
-                  <TableHead
-                    key={header.id}
-                    className={headerClassName}
-                    onClick={isSortable && !isDateFilter ? header.column.getToggleSortingHandler() : undefined}
-                    aria-sort={sortState ? (sortState === 'asc' ? 'ascending' : 'descending') : 'none'}
-                    tabIndex={isSortable && !isDateFilter ? 0 : undefined}
-                    onKeyDown={(e: React.KeyboardEvent<HTMLTableCellElement>) => {
-                      if ((e.key === 'Enter' || e.key === ' ') && isSortable && !isDateFilter) {
-                        header.column.toggleSorting();
-                      }
-                    }}
-                  >
-                    <span className="flex items-center">
-                      {isDateFilter ? (
-                        <DateFilterHeader 
-                          column={header.column}
-                          title={header.column.columnDef.header as string || columnId}
-                          data={data}
-                          config={dateFilterColumns[columnId]}
-                        />
-                      ) : (
-                        <>
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {isSortable && sortIcon}
-                        </>
-                      )}
-                    </span>
-                  </TableHead>
-                );
-              })}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.map((row: Row<TData>) => (
-            <TableRow 
-              key={row.id} 
-              className={getRowClassName ? getRowClassName(row) : ''}
-              onClick={() => onRowClick?.(row)}
-              tabIndex={onRowClick ? 0 : undefined}
-              onKeyDown={(e) => {
-                if (onRowClick && (e.key === 'Enter' || e.key === ' ')) {
-                  e.preventDefault();
-                  onRowClick(row);
-                }
-              }}
-            >
-              {row.getVisibleCells().map((cell: Cell<TData, unknown>) => (
-                <TableCell key={cell.id} className={cellClassName}>
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </TableCell>
-              ))}
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      
+      {enableDragSort ? (
+        <DndContext 
+          sensors={sensors} 
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext 
+            items={table.getRowModel().rows.map(row => String((row.original as any).id))}
+            strategy={verticalListSortingStrategy}
+          >
+            {tableContent}
+          </SortableContext>
+        </DndContext>
+      ) : (
+        tableContent
+      )}
       
       {/* Pagination Controls */}
       <div className="flex items-center justify-between space-x-2 py-4">

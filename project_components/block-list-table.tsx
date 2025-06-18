@@ -13,6 +13,8 @@ import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 import type { Block, BlockContent, Language } from '@/lib/db/schema';
 
+
+
 type BlockListItem = {
   id: string;
   name: string;
@@ -90,6 +92,35 @@ const BlockListTable: FC<BlockListTableProps> = ({
     }
 
     handleOptimisticUpdate(blockId, updates);
+  };
+
+  const handleDragSortEnd = (reorderedData: BlockListItem[]) => {
+    // Update local state with reordered data
+    setTableData(prevData => {
+      const updatedData = [...prevData];
+      reorderedData.forEach(reorderedItem => {
+        const index = updatedData.findIndex(item => item.id === reorderedItem.id);
+        if (index !== -1) {
+          updatedData[index] = reorderedItem;
+        }
+      });
+      return updatedData;
+    });
+
+    // Save updated positions to the backend in parallel
+    if (onSaveBlockProperties) {
+      const savePromises = reorderedData.map(item => 
+        onSaveBlockProperties(item.id, { position: item.position }, false)
+      );
+      
+      Promise.allSettled(savePromises).then(results => {
+        const failed = results.filter(result => result.status === 'rejected');
+        if (failed.length > 0) {
+          console.error('Some position updates failed:', failed);
+          toast.error(`${failed.length} Position${failed.length > 1 ? 'en' : ''} konnte${failed.length > 1 ? 'n' : ''} nicht gespeichert werden`);
+        }
+      });
+    }
   };
 
   const getLanguagesForBlock = (block: BlockListItem): string => {
@@ -413,6 +444,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
             </Label>
           </div>
         </div>
+        
         <FilterableTable
           data={filteredData}
           columns={columns}
@@ -420,6 +452,9 @@ const BlockListTable: FC<BlockListTableProps> = ({
           onRowClick={handleRowClick}
           globalFilterColumnIds={['name', 'title']}
           filterPlaceholder="Filtern..."
+          enableDragSort={showStandardOnly}
+          sortField="position"
+          onDragSortEnd={handleDragSortEnd}
         />
       </div>
       <DeleteConfirmationDialog
