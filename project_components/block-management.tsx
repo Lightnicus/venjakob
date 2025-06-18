@@ -19,7 +19,7 @@ type BlockListItem = {
   name: string;
   standard: boolean;
   mandatory: boolean;
-  position: number;
+  position: number | null;
   firstContentTitle: string | null;
   languages: string;
   lastModified: string;

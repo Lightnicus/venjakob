@@ -1,0 +1,1 @@
+ALTER TABLE "blocks" ALTER COLUMN "position" DROP NOT NULL;

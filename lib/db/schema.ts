@@ -38,7 +38,7 @@ export const blocks = pgTable('blocks', {
   name: text('name').notNull(),
   standard: boolean('standard').notNull(),
   mandatory: boolean('mandatory').notNull(),
-  position: integer('position').notNull(),
+  position: integer('position'),
   hideTitle: boolean('hide_title').notNull(),
   pageBreakAbove: boolean('page_break_above').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),

@@ -93,20 +93,12 @@ export async function saveBlockProperties(
 // Create a new block
 export async function createBlock(): Promise<BlockWithContent> {
   try {
-    // Get the next position
-    const maxPositionResult = await db.select({ maxPosition: blocks.position })
-      .from(blocks)
-      .orderBy(desc(blocks.position))
-      .limit(1);
-    
-    const nextPosition = (maxPositionResult[0]?.maxPosition || 0) + 1;
-    
-    // Create new block
+    // Create new block with position set to null since standard defaults to false
     const [newBlock] = await db.insert(blocks).values({
       name: 'Neuer Block',
       standard: false,
       mandatory: false,
-      position: nextPosition,
+      position: null, // Position is null when standard is false
       hideTitle: false,
       pageBreakAbove: false,
     }).returning();
@@ -130,20 +122,23 @@ export async function copyBlock(originalBlockId: string): Promise<BlockWithConte
       throw new Error('Original block not found');
     }
     
-    // Get the next position
-    const maxPositionResult = await db.select({ maxPosition: blocks.position })
-      .from(blocks)
-      .orderBy(desc(blocks.position))
-      .limit(1);
-    
-    const nextPosition = (maxPositionResult[0]?.maxPosition || 0) + 1;
+    // Get position for the copy - only if the original is standard
+    let copyPosition = null;
+    if (originalBlock.standard) {
+      const maxPositionResult = await db.select({ maxPosition: blocks.position })
+        .from(blocks)
+        .orderBy(desc(blocks.position))
+        .limit(1);
+      
+      copyPosition = (maxPositionResult[0]?.maxPosition || 0) + 1;
+    }
     
     // Create new block with "(Kopie)" appended to the name
     const [newBlock] = await db.insert(blocks).values({
       name: `${originalBlock.name} (Kopie)`,
       standard: originalBlock.standard,
       mandatory: originalBlock.mandatory,
-      position: nextPosition,
+      position: copyPosition,
       hideTitle: originalBlock.hideTitle,
       pageBreakAbove: originalBlock.pageBreakAbove,
     }).returning();
@@ -193,7 +188,7 @@ export async function getBlockList(): Promise<{
   name: string;
   standard: boolean;
   mandatory: boolean;
-  position: number;
+  position: number | null;
   firstContentTitle: string | null;
   languages: string;
   lastModified: string;

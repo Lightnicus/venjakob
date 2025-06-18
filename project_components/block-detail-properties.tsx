@@ -65,11 +65,36 @@ const BlockDetailProperties = forwardRef<BlockDetailPropertiesRef, BlockDetailPr
   const handleInputChange = (field: keyof typeof editedBlock, value: string | number | boolean) => {
     if (!isEditing) return;
     
+    let finalValue: string | number | boolean | null = value;
+    
+    // Special handling for the standard checkbox
+    if (field === 'standard') {
+      if (!value) {
+        // If standard is being unchecked, set position to null
+        if (onPropertyChange) {
+          onPropertyChange('position', null as any);
+        } else {
+          setLocalEditedBlock(prev => ({ ...prev, position: null }));
+        }
+      } else {
+        // If standard is being checked and position is null, set a default position
+        const currentPosition = editedProperties?.position || localEditedBlock.position;
+        if (currentPosition === null || currentPosition === undefined) {
+          const defaultPosition = 1; // You might want to calculate the next available position
+          if (onPropertyChange) {
+            onPropertyChange('position', defaultPosition);
+          } else {
+            setLocalEditedBlock(prev => ({ ...prev, position: defaultPosition }));
+          }
+        }
+      }
+    }
+    
     // Use external handler if provided, otherwise use local state
     if (onPropertyChange) {
-      onPropertyChange(field, value);
+      onPropertyChange(field, finalValue);
     } else {
-      setLocalEditedBlock(prev => ({ ...prev, [field]: value }));
+      setLocalEditedBlock(prev => ({ ...prev, [field]: finalValue }));
     }
   };
 
@@ -128,10 +153,11 @@ const BlockDetailProperties = forwardRef<BlockDetailPropertiesRef, BlockDetailPr
           <Input 
             id="position" 
             type="number" 
-            value={editedBlock.position || 0} 
+            value={editedBlock.position || ''} 
             onChange={(e) => handleInputChange('position', parseInt(e.target.value) || 0)}
             readOnly={!isEditing}
-            className="w-20 text-sm read-only:bg-gray-100 read-only:cursor-not-allowed" 
+            disabled={!isEditing || !editedBlock.standard}
+            className="w-20 text-sm read-only:bg-gray-100 read-only:cursor-not-allowed disabled:bg-gray-100 disabled:cursor-not-allowed" 
           />
         </div>
 

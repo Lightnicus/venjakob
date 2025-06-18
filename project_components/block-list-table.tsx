@@ -16,7 +16,7 @@ type BlockListItem = {
   name: string;
   standard: boolean;
   mandatory: boolean;
-  position: number;
+  position: number | null;
   firstContentTitle: string | null;
   languages: string;
   lastModified: string;
@@ -62,6 +62,26 @@ const BlockListTable: FC<BlockListTableProps> = ({
     if (onSaveBlockProperties) {
       onSaveBlockProperties(blockId, updates, false);
     }
+  };
+
+  const handleStandardChange = (blockId: string, checked: boolean) => {
+    const block = tableData.find(b => b.id === blockId);
+    if (!block) return;
+
+    let updates: Partial<BlockListItem> = { standard: checked };
+
+    if (!checked) {
+      // If standard is being unchecked, set position to null
+      updates.position = null;
+    } else {
+      // If standard is being checked and position is null, set a default position
+      if (block.position === null || block.position === undefined) {
+        const maxPosition = Math.max(...tableData.map(b => b.position || 0), 0);
+        updates.position = maxPosition + 1;
+      }
+    }
+
+    handleOptimisticUpdate(blockId, updates);
   };
 
   const getLanguagesForBlock = (block: BlockListItem): string => {
@@ -257,7 +277,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
         <InlineRowCheckbox
           checked={row.original.standard}
           onClick={async (checked) => {
-            handleOptimisticUpdate(row.original.id, { standard: checked });
+            handleStandardChange(row.original.id, checked);
           }}
           aria-label="Standard"
           disabled={!onSaveBlockProperties}
@@ -281,6 +301,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
     {
       accessorKey: 'position',
       header: 'Position',
+      cell: ({ row }) => row.original.position ?? '-',
     },
     {
       id: 'aktionen',
