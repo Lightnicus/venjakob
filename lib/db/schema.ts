@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, uuid, boolean, integer, pgEnum, numeric, check } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, uuid, boolean, integer, pgEnum, numeric, check, unique } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // Enums
@@ -90,6 +90,50 @@ export const articleCalculationItem = pgTable('article_calculation_item', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// Roles table
+export const roles = pgTable('roles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// Permissions table
+export const permissions = pgTable('permissions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  name: text('name').notNull().unique(),
+  description: text('description'),
+  resource: text('resource').notNull(),
+  action: text('action').notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+});
+
+// User Roles junction table
+export const userRoles = pgTable('user_roles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  roleId: uuid('role_id').notNull().references(() => roles.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  // Ensure a user can only have each role once
+  userRoleUnique: unique('user_role_unique').on(table.userId, table.roleId),
+}));
+
+// Role Permissions junction table
+export const rolePermissions = pgTable('role_permissions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  roleId: uuid('role_id').notNull().references(() => roles.id, { onDelete: 'cascade' }),
+  permissionId: uuid('permission_id').notNull().references(() => permissions.id, { onDelete: 'cascade' }),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => ({
+  // Ensure a role can only have each permission once
+  rolePermissionUnique: unique('role_permission_unique').on(table.roleId, table.permissionId),
+}));
+
 // Export types for TypeScript
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert; 
@@ -110,4 +154,16 @@ export type ArticleCalculationItem = typeof articleCalculationItem.$inferSelect;
 export type InsertArticleCalculationItem = typeof articleCalculationItem.$inferInsert;
 
 export type Article = typeof articles.$inferSelect;
-export type InsertArticle = typeof articles.$inferInsert; 
+export type InsertArticle = typeof articles.$inferInsert;
+
+export type Role = typeof roles.$inferSelect;
+export type InsertRole = typeof roles.$inferInsert;
+
+export type Permission = typeof permissions.$inferSelect;
+export type InsertPermission = typeof permissions.$inferInsert;
+
+export type UserRole = typeof userRoles.$inferSelect;
+export type InsertUserRole = typeof userRoles.$inferInsert;
+
+export type RolePermission = typeof rolePermissions.$inferSelect;
+export type InsertRolePermission = typeof rolePermissions.$inferInsert; 
