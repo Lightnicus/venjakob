@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { upsertUser, cleanupOrphanedUsers } from '@/lib/db/queries';
 
 export async function getCurrentUser() {
   const supabase = await createClient();
@@ -13,6 +14,35 @@ export async function getCurrentUser() {
   }
   
   return user;
+}
+
+async function syncUserToDatabase() {
+  const supabase = await createClient();
+  
+  try {
+    // Get current user
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    
+    if (userError || !user) {
+      return;
+    }
+
+    // Upsert current user to local database
+    await upsertUser(user.id, user.email!, user.user_metadata?.name);
+
+    // Get all users from Supabase Auth (admin operation)
+    const { data: { users: allAuthUsers }, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (!listError && allAuthUsers) {
+      // Extract user IDs that exist in Supabase Auth
+      const validUserIds = allAuthUsers.map(authUser => authUser.id);
+      
+      // Clean up orphaned users in local database
+      await cleanupOrphanedUsers(validUserIds);
+    }
+  } catch (error) {
+    console.error('Error syncing user to database:', error);
+  }
 }
 
 export async function signIn(formData: FormData) {
@@ -28,6 +58,9 @@ export async function signIn(formData: FormData) {
   if (error) {
     redirect(`/?error=${encodeURIComponent('Ungültige E-Mail oder Passwort. Bitte versuchen Sie es erneut.')}`);
   }
+
+  // Sync user to local database after successful login
+  await syncUserToDatabase();
 
   revalidatePath('/', 'layout');
   redirect('/portal');
@@ -46,6 +79,9 @@ export async function signUp(formData: FormData) {
   if (error) {
     redirect(`/?error=${encodeURIComponent(error.message)}`);
   }
+
+  // Sync user to local database after successful signup
+  await syncUserToDatabase();
 
   revalidatePath('/', 'layout');
   redirect('/portal');

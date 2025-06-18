@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, notInArray } from 'drizzle-orm';
 import { db } from './index';
 import { users, type InsertUser, type User, languages, type InsertLanguage, type Language } from './schema';
 
@@ -66,4 +66,36 @@ export const updateLanguage = async (id: string, languageData: Partial<InsertLan
 
 export const deleteLanguage = async (id: string): Promise<void> => {
   await db.delete(languages).where(eq(languages.id, id));
+};
+
+// User synchronization operations
+export const upsertUser = async (authUserId: string, email: string, name?: string): Promise<User> => {
+  // Try to find existing user
+  const existingUser = await getUserById(authUserId);
+  
+  if (existingUser) {
+    // Update existing user if needed
+    const updatedUser = await updateUser(authUserId, { 
+      email, 
+      name: name || existingUser.name 
+    });
+    return updatedUser!;
+  } else {
+    // Create new user
+    const newUser = await createUser({ 
+      id: authUserId,
+      email, 
+      name 
+    });
+    return newUser;
+  }
+};
+
+export const cleanupOrphanedUsers = async (validUserIds: string[]): Promise<void> => {
+  if (validUserIds.length === 0) {
+    // If no valid users, don't delete anything to prevent accidental data loss
+    return;
+  }
+  
+  await db.delete(users).where(notInArray(users.id, validUserIds));
 }; 

@@ -41,6 +41,8 @@ export const blocks = pgTable('blocks', {
   position: integer('position'),
   hideTitle: boolean('hide_title').notNull(),
   pageBreakAbove: boolean('page_break_above').notNull(),
+  blocked: timestamp('blocked'),
+  blockedBy: uuid('blocked_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
@@ -53,6 +55,8 @@ export const articles = pgTable('articles', {
   description: text('description'),
   price: numeric('price').notNull(),
   hideTitle: boolean('hide_title').notNull().default(false),
+  blocked: timestamp('blocked'),
+  blockedBy: uuid('blocked_by').references(() => users.id),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

@@ -85,6 +85,13 @@
       "when": 1750250672651,
       "tag": "0011_ancient_dazzler",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1750255438251,
+      "tag": "0012_wealthy_riptide",
+      "breakpoints": true
     }
   ]
 }
