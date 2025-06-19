@@ -40,7 +40,7 @@ const TopNavigation: FC = () => {
   const { openNewTab } = useTabbedInterface();
   const router = useRouter();
   const { setLoading, isLoading } = useLoading();
-  const { user, loading: userLoading } = useUser();
+  const { user, dbUser, loading: userLoading } = useUser();
 
   const handleMenuClick = (menuItemHref: string) => {
     const tabDef = tabMappings[menuItemHref];
@@ -69,6 +69,25 @@ const TopNavigation: FC = () => {
   };
 
   const isLoggingOut = isLoading('logout');
+
+  // Get display name: prefer dbUser.name, fallback to user.email
+  const getDisplayName = () => {
+    if (userLoading) return 'Laden...';
+    if (dbUser?.name) return dbUser.name;
+    if (user?.email) return user.email;
+    return 'Nicht angemeldet';
+  };
+
+  // Get avatar initials: prefer dbUser.name, fallback to user.email
+  const getAvatarInitials = () => {
+    if (dbUser?.name) {
+      return dbUser.name.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2);
+    }
+    if (user?.email) {
+      return user.email.substring(0, 2).toUpperCase();
+    }
+    return 'MM';
+  };
 
   return (
     <div className="w-full bg-white shadow-md">
@@ -156,11 +175,11 @@ const TopNavigation: FC = () => {
                 <Avatar>
                   <AvatarImage src="/avatar.png" alt="Benutzeravatar" />
                   <AvatarFallback>
-                    {user?.email ? user.email.substring(0, 2).toUpperCase() : 'MM'}
+                    {getAvatarInitials()}
                   </AvatarFallback>
                 </Avatar>
                 <span className="text-sm font-medium text-gray-700">
-                  {userLoading ? 'Laden...' : user?.email || 'Nicht angemeldet'}
+                  {getDisplayName()}
                 </span>
               </Button>
             </DropdownMenuTrigger>

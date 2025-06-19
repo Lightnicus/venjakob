@@ -2,11 +2,32 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
-import type { User } from '@supabase/supabase-js';
+import type { User as AuthUser } from '@supabase/supabase-js';
+import type { User as DbUser } from '@/lib/db/schema';
 
 export const useUser = () => {
-  const [user, setUser] = useState<User | null>(null);
+  const [authUser, setAuthUser] = useState<AuthUser | null>(null);
+  const [dbUser, setDbUser] = useState<DbUser | null>(null);
   const [loading, setLoading] = useState(true);
+
+  const fetchDbUser = async () => {
+    try {
+      const response = await fetch('/api/users/current');
+      if (response.ok) {
+        const userData = await response.json();
+        setDbUser(userData);
+      } else if (response.status === 404) {
+        // User not found in database, this is okay
+        setDbUser(null);
+      } else {
+        console.error('Error fetching database user:', response.statusText);
+        setDbUser(null);
+      }
+    } catch (error) {
+      console.error('Error fetching database user:', error);
+      setDbUser(null);
+    }
+  };
 
   useEffect(() => {
     const supabase = createClient();
@@ -15,14 +36,23 @@ export const useUser = () => {
       try {
         const { data: { user }, error } = await supabase.auth.getUser();
         if (error) {
-          console.error('Error getting user:', error);
-          setUser(null);
+          console.error('Error getting auth user:', error);
+          setAuthUser(null);
+          setDbUser(null);
         } else {
-          setUser(user);
+          setAuthUser(user);
+          
+          // If we have an auth user, fetch the database user
+          if (user) {
+            await fetchDbUser();
+          } else {
+            setDbUser(null);
+          }
         }
       } catch (error) {
         console.error('Error getting user:', error);
-        setUser(null);
+        setAuthUser(null);
+        setDbUser(null);
       } finally {
         setLoading(false);
       }
@@ -34,12 +64,25 @@ export const useUser = () => {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
-      setUser(session?.user ?? null);
+      setAuthUser(session?.user ?? null);
+      
+      // Fetch database user when auth state changes
+      if (session?.user) {
+        await fetchDbUser();
+      } else {
+        setDbUser(null);
+      }
+      
       setLoading(false);
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  return { user, loading };
+  return { 
+    user: authUser, // Keep backward compatibility
+    authUser,
+    dbUser,
+    loading 
+  };
 }; 
