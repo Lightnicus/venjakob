@@ -238,7 +238,7 @@ export const getUserPermissions = async (userId: string): Promise<Permission[]> 
   return result.map(r => r.permission);
 };
 
-export const checkUserPermission = async (userId: string, resource: string, action: string): Promise<boolean> => {
+export const checkUserPermission = async (userId: string, resource: string): Promise<boolean> => {
   const result = await db
     .select({ count: permissions.id })
     .from(userRoles)
@@ -247,8 +247,7 @@ export const checkUserPermission = async (userId: string, resource: string, acti
     .where(
       and(
         eq(userRoles.userId, userId),
-        eq(permissions.resource, resource),
-        eq(permissions.action, action)
+        eq(permissions.resource, resource)
       )
     );
   

@@ -3,7 +3,84 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { upsertUser, cleanupOrphanedUsers } from '@/lib/db/queries';
+
+// Create Supabase admin client for admin operations
+function createAdminClient() {
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  
+  if (!serviceRoleKey) {
+    throw new Error('SUPABASE_SERVICE_ROLE_KEY is not configured');
+  }
+  
+  return createServiceClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    serviceRoleKey,
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+}
+
+export async function updateUserInSupabase(userId: string, userData: { email?: string; name?: string }) {
+  try {
+    // Check if service role key is available
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.warn('SUPABASE_SERVICE_ROLE_KEY not configured - skipping Supabase user update');
+      return null;
+    }
+    
+    const adminClient = createAdminClient();
+    
+    // First, get the current user to preserve existing metadata
+    const { data: currentUser, error: getUserError } = await adminClient.auth.admin.getUserById(userId);
+    
+    if (getUserError) {
+      console.error('Error fetching current user from Supabase:', getUserError);
+      throw new Error(`Failed to fetch current user: ${getUserError.message}`);
+    }
+    
+    // Update user in Supabase Auth
+    const updateData: any = {};
+    
+    if (userData.email) {
+      updateData.email = userData.email;
+    }
+    
+    if (userData.name !== undefined) {
+      // Preserve existing user metadata and update the name
+      updateData.user_metadata = {
+        ...currentUser.user.user_metadata,
+        name: userData.name
+      };
+    }
+    
+    // Only proceed if there's something to update
+    if (Object.keys(updateData).length === 0) {
+      console.log('No updates needed for user:', userId);
+      return null;
+    }
+    
+    console.log('Updating user in Supabase with data:', { userId, updateData });
+    
+    const { data, error } = await adminClient.auth.admin.updateUserById(userId, updateData);
+    
+    if (error) {
+      console.error('Error updating user in Supabase:', error);
+      throw new Error(`Failed to update user in Supabase: ${error.message}`);
+    }
+    
+    console.log('Successfully updated user in Supabase:', userId, data.user);
+    return data;
+  } catch (error) {
+    console.error('Error in updateUserInSupabase:', error);
+    throw error;
+  }
+}
 
 export async function getCurrentUser() {
   const supabase = await createClient();
