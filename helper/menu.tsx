@@ -14,6 +14,8 @@ import EinstellungenPlaceholder from '@/project_components/einstellungen-placeho
 import { SalesOpportunityDetail } from '@/project_components/sales-opportunity-detail';
 import BlockManagement from '@/project_components/block-management';
 import ArticleManagement from '@/project_components/article-management';
+import RoleManagement from '@/project_components/role-management';
+import PermissionManagement from '@/project_components/permission-management';
 
 export interface TabDefinition extends Omit<Tab, 'content'> {
   content: () => ReactNode; // Use a function to render content to avoid immediate rendering
@@ -88,6 +90,18 @@ export const tabMappings: Record<string, TabDefinition> = {
     id: 'artikelverwaltung',
     title: 'Artikelverwaltung',
     content: () => <ArticleManagement />,
+    closable: true,
+  },
+  '/einstellungen/rollenverwaltung': {
+    id: 'einstellungen-rollenverwaltung',
+    title: 'Rollenverwaltung',
+    content: () => <RoleManagement />,
+    closable: true,
+  },
+  '/einstellungen/berechtigungsverwaltung': {
+    id: 'einstellungen-berechtigungsverwaltung',
+    title: 'Berechtigungsverwaltung',
+    content: () => <PermissionManagement />,
     closable: true,
   },
 };

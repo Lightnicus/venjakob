@@ -10,5 +10,12 @@
       { "label": "Artikelverwaltung", "href": "/stammdaten/artikelverwaltung" }
     ]
   },
-  { "label": "Einstellungen", "href": "/einstellungen" }
+  {
+    "label": "Einstellungen",
+    "href": "/einstellungen",
+    "children": [
+      { "label": "Rollenverwaltung", "href": "/einstellungen/rollenverwaltung" },
+      { "label": "Berechtigungsverwaltung", "href": "/einstellungen/berechtigungsverwaltung" }
+    ]
+  }
 ] 

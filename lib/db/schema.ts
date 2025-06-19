@@ -105,7 +105,6 @@ export const permissions = pgTable('permissions', {
   name: text('name').notNull().unique(),
   description: text('description'),
   resource: text('resource').notNull(),
-  action: text('action').notNull(),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
