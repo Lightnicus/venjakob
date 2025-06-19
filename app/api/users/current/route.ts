@@ -9,7 +9,23 @@ export async function GET() {
     // Get current user from Supabase auth
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (authError || !user) {
+    if (authError) {
+      // Handle auth session missing error gracefully
+      if (authError.message?.includes('Auth session missing') || authError.name === 'AuthSessionMissingError') {
+        return NextResponse.json(
+          { error: 'Not authenticated' },
+          { status: 401 }
+        );
+      } else {
+        console.error('Auth error:', authError);
+        return NextResponse.json(
+          { error: 'Authentication failed' },
+          { status: 401 }
+        );
+      }
+    }
+    
+    if (!user) {
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
@@ -34,11 +50,19 @@ export async function GET() {
       ...dbUser,
       permissions,
     });
-  } catch (error) {
-    console.error('Error fetching current user:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch user' },
-      { status: 500 }
-    );
+  } catch (error: any) {
+    // Handle AuthSessionMissingError and other auth errors gracefully
+    if (error.message?.includes('Auth session missing') || error.name === 'AuthSessionMissingError') {
+      return NextResponse.json(
+        { error: 'Not authenticated' },
+        { status: 401 }
+      );
+    } else {
+      console.error('Error fetching current user:', error);
+      return NextResponse.json(
+        { error: 'Failed to fetch user' },
+        { status: 500 }
+      );
+    }
   }
 } 

@@ -97,7 +97,14 @@ const TopNavigation: FC = () => {
 
   // Filter menu items based on permissions
   const getFilteredMenuConfig = () => {
-    if (userLoading) return []; // Don't show menu while loading
+    // Allow menu to show while loading, but with reduced filtering
+    // This prevents the menu from disappearing during permission checks
+    
+    if (userLoading) {
+      // While loading, show all menu items to prevent blank menu
+      // Once permissions load, proper filtering will apply
+      return menuConfig as MenuConfigItem[];
+    }
 
     return (menuConfig as MenuConfigItem[]).filter(menuItem => {
       const tabDef = tabMappings[menuItem.href];

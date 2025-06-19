@@ -83,14 +83,30 @@ export async function updateUserInSupabase(userId: string, userData: { email?: s
 }
 
 export async function getCurrentUser() {
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-  
-  if (error || !user) {
-    return null;
+  try {
+    const supabase = await createClient();
+    const { data: { user }, error } = await supabase.auth.getUser();
+    
+    if (error) {
+      // Handle auth session missing error gracefully
+      if (error.message?.includes('Auth session missing') || error.name === 'AuthSessionMissingError') {
+        return null; // This is expected when user is not logged in
+      } else {
+        console.error('Auth error in getCurrentUser:', error);
+        return null;
+      }
+    }
+    
+    return user;
+  } catch (error: any) {
+    // Handle AuthSessionMissingError and other auth errors gracefully
+    if (error.message?.includes('Auth session missing') || error.name === 'AuthSessionMissingError') {
+      return null; // This is expected when user is not logged in
+    } else {
+      console.error('Error in getCurrentUser:', error);
+      return null;
+    }
   }
-  
-  return user;
 }
 
 async function syncUserToDatabase() {
@@ -100,7 +116,17 @@ async function syncUserToDatabase() {
     // Get current user
     const { data: { user }, error: userError } = await supabase.auth.getUser();
     
-    if (userError || !user) {
+    if (userError) {
+      // Handle auth session missing error gracefully
+      if (userError.message?.includes('Auth session missing') || userError.name === 'AuthSessionMissingError') {
+        return; // This is expected when user is not logged in
+      } else {
+        console.error('Auth error in syncUserToDatabase:', userError);
+        return;
+      }
+    }
+    
+    if (!user) {
       return;
     }
 
@@ -117,8 +143,13 @@ async function syncUserToDatabase() {
       // Clean up orphaned users in local database
       await cleanupOrphanedUsers(validUserIds);
     }
-  } catch (error) {
-    console.error('Error syncing user to database:', error);
+  } catch (error: any) {
+    // Handle AuthSessionMissingError and other auth errors gracefully
+    if (error.message?.includes('Auth session missing') || error.name === 'AuthSessionMissingError') {
+      return; // This is expected when user is not logged in
+    } else {
+      console.error('Error syncing user to database:', error);
+    }
   }
 }
 
