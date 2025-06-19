@@ -13,6 +13,7 @@ import {
 } from '@/lib/api/blocks';
 import type { BlockWithContent } from '@/lib/db/blocks';
 import { useTabReload } from './tabbed-interface-provider';
+import { usePermissionGuard } from './use-permission-guard';
 
 type BlockListItem = {
   id: string;
@@ -26,6 +27,7 @@ type BlockListItem = {
 };
 
 const BlockManagement = () => {
+  const { isLoading: permissionLoading, hasAccess, AccessDeniedComponent } = usePermissionGuard('blocks');
   const [blocks, setBlocks] = useState<BlockListItem[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,8 +53,27 @@ const BlockManagement = () => {
   useTabReload('blocks', loadData);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    // Only load data if user has access
+    if (hasAccess && !permissionLoading) {
+      loadData();
+    }
+  }, [hasAccess, permissionLoading]);
+
+  // Permission checking in render
+  if (permissionLoading) {
+    return (
+      <div className="p-4">
+        <h2 className="text-2xl font-bold mb-2">Blockverwaltung</h2>
+        <div className="flex items-center justify-center py-8">
+          <div className="text-gray-500">Prüfe Berechtigungen...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!hasAccess) {
+    return <AccessDeniedComponent />;
+  }
 
   const handleSaveBlockChanges = async (blockId: string, blockContents: Parameters<typeof saveBlockContentAPI>[1]) => {
     try {
