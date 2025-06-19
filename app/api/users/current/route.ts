@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getUserByEmail } from '@/lib/db/queries';
+import { getUserByEmail, getUserPermissions } from '@/lib/db/queries';
 
 export async function GET() {
   try {
@@ -26,7 +26,14 @@ export async function GET() {
       );
     }
 
-    return NextResponse.json(dbUser);
+    // Fetch user permissions
+    const permissions = await getUserPermissions(dbUser.id);
+
+    // Return user data with permissions
+    return NextResponse.json({
+      ...dbUser,
+      permissions,
+    });
   } catch (error) {
     console.error('Error fetching current user:', error);
     return NextResponse.json(

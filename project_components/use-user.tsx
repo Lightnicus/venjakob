@@ -3,11 +3,16 @@
 import { useState, useEffect } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import type { User as AuthUser } from '@supabase/supabase-js';
-import type { User as DbUser } from '@/lib/db/schema';
+import type { User as DbUser, Permission } from '@/lib/db/schema';
+
+// Extended user type that includes permissions
+export type UserWithPermissions = DbUser & {
+  permissions: Permission[];
+};
 
 export const useUser = () => {
   const [authUser, setAuthUser] = useState<AuthUser | null>(null);
-  const [dbUser, setDbUser] = useState<DbUser | null>(null);
+  const [dbUser, setDbUser] = useState<UserWithPermissions | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchDbUser = async () => {
@@ -83,6 +88,14 @@ export const useUser = () => {
     user: authUser, // Keep backward compatibility
     authUser,
     dbUser,
+    permissions: dbUser?.permissions || [], // Easy access to permissions
+    hasPermission: (permissionName?: string, resource?: string) => {
+      if (!dbUser?.permissions) return false;
+      return dbUser.permissions.some(permission => 
+        (permissionName && permission.name === permissionName) ||
+        (resource && permission.resource === resource)
+      );
+    },
     loading 
   };
 }; 
