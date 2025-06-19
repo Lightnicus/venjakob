@@ -15,7 +15,8 @@
     "href": "/einstellungen",
     "children": [
       { "label": "Rollenverwaltung", "href": "/einstellungen/rollenverwaltung" },
-      { "label": "Berechtigungsverwaltung", "href": "/einstellungen/berechtigungsverwaltung" }
+      { "label": "Berechtigungsverwaltung", "href": "/einstellungen/berechtigungsverwaltung" },
+      { "label": "Benutzerverwaltung", "href": "/einstellungen/benutzerverwaltung" }
     ]
   }
 ] 

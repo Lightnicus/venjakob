@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Edit3, Save, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Permission } from '@/lib/db/schema';
 
@@ -24,6 +25,7 @@ const PermissionDetail: React.FC<PermissionDetailProps> = ({
   const [permission, setPermission] = useState<Permission | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -59,6 +61,18 @@ const PermissionDetail: React.FC<PermissionDetailProps> = ({
     loadPermission();
   }, [permissionId]);
 
+  const handleToggleEdit = () => {
+    if (isEditing && permission) {
+      // Reset to original data
+      setFormData({
+        name: permission.name || '',
+        description: permission.description || '',
+        resource: permission.resource || '',
+      });
+    }
+    setIsEditing(!isEditing);
+  };
+
   const handleSave = async () => {
     try {
       setSaving(true);
@@ -72,6 +86,7 @@ const PermissionDetail: React.FC<PermissionDetailProps> = ({
       }
       
       toast.success('Berechtigung gespeichert');
+      setIsEditing(false);
     } catch (error) {
       console.error('Error saving permission:', error);
       toast.error('Fehler beim Speichern der Berechtigung');
@@ -89,8 +104,8 @@ const PermissionDetail: React.FC<PermissionDetailProps> = ({
 
   if (loading) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center py-8">
+      <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
+        <div className="flex items-center justify-center py-12">
           <div className="text-gray-500">Lade Berechtigung...</div>
         </div>
       </div>
@@ -99,8 +114,8 @@ const PermissionDetail: React.FC<PermissionDetailProps> = ({
 
   if (!permission) {
     return (
-      <div className="p-6">
-        <div className="flex items-center justify-center py-8">
+      <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
+        <div className="text-center py-12">
           <div className="text-red-500">Berechtigung nicht gefunden</div>
         </div>
       </div>
@@ -108,16 +123,44 @@ const PermissionDetail: React.FC<PermissionDetailProps> = ({
   }
 
   return (
-    <div className="p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Berechtigung Details</h2>
-        <Button 
-          onClick={handleSave} 
-          disabled={saving}
-          className="bg-blue-600 hover:bg-blue-700"
+    <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
+      <h2 className="text-2xl font-bold mb-4">{permission.name}</h2>
+      <div className="flex gap-2 mb-4">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleToggleEdit}
+          aria-label={isEditing ? 'Abbrechen' : 'Bearbeiten'}
         >
-          {saving ? 'Speichern...' : 'Speichern'}
+          {isEditing ? (
+            'Abbrechen'
+          ) : (
+            <>
+              <Edit3 size={14} className="inline-block" /> Bearbeiten
+            </>
+          )}
         </Button>
+        {isEditing && (
+          <Button 
+            onClick={handleSave} 
+            disabled={saving}
+            size="sm"
+            className="bg-blue-600 hover:bg-blue-700"
+            aria-label="Änderungen speichern"
+          >
+            {saving ? (
+              <>
+                <Loader2 size={14} className="inline-block animate-spin mr-1" />
+                Speichern...
+              </>
+            ) : (
+              <>
+                <Save size={14} className="inline-block mr-1" />
+                Speichern
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
       <Card>
@@ -133,6 +176,8 @@ const PermissionDetail: React.FC<PermissionDetailProps> = ({
                 value={formData.name}
                 onChange={(e) => handleInputChange('name', e.target.value)}
                 placeholder="z.B. artikel.lesen"
+                readOnly={!isEditing}
+                className="read-only:bg-gray-100 read-only:cursor-not-allowed"
               />
             </div>
             
@@ -143,12 +188,12 @@ const PermissionDetail: React.FC<PermissionDetailProps> = ({
                 value={formData.resource}
                 onChange={(e) => handleInputChange('resource', e.target.value)}
                 placeholder="z.B. artikel"
+                readOnly={!isEditing}
+                className="read-only:bg-gray-100 read-only:cursor-not-allowed"
               />
             </div>
           </div>
           
-
-
           <div className="space-y-2">
             <Label htmlFor="description">Beschreibung</Label>
             <Textarea
@@ -157,7 +202,14 @@ const PermissionDetail: React.FC<PermissionDetailProps> = ({
               onChange={(e) => handleInputChange('description', e.target.value)}
               placeholder="Beschreibung der Berechtigung..."
               rows={3}
+              readOnly={!isEditing}
+              className="read-only:bg-gray-100 read-only:cursor-not-allowed"
             />
+          </div>
+          
+          <div className="text-sm text-gray-500">
+            <div>Erstellt am: {new Date(permission.createdAt).toLocaleDateString('de-DE')}</div>
+            <div>Zuletzt geändert: {new Date(permission.updatedAt).toLocaleDateString('de-DE')}</div>
           </div>
         </CardContent>
       </Card>

@@ -16,6 +16,7 @@ import BlockManagement from '@/project_components/block-management';
 import ArticleManagement from '@/project_components/article-management';
 import RoleManagement from '@/project_components/role-management';
 import PermissionManagement from '@/project_components/permission-management';
+import UserManagement from '@/project_components/user-management';
 
 export interface TabDefinition extends Omit<Tab, 'content'> {
   content: () => ReactNode; // Use a function to render content to avoid immediate rendering
@@ -102,6 +103,12 @@ export const tabMappings: Record<string, TabDefinition> = {
     id: 'einstellungen-berechtigungsverwaltung',
     title: 'Berechtigungsverwaltung',
     content: () => <PermissionManagement />,
+    closable: true,
+  },
+  '/einstellungen/benutzerverwaltung': {
+    id: 'einstellungen-benutzerverwaltung',
+    title: 'Benutzerverwaltung',
+    content: () => <UserManagement />,
     closable: true,
   },
 };
