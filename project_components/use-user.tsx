@@ -91,6 +91,14 @@ export const useUser = () => {
     permissions: dbUser?.permissions || [], // Easy access to permissions
     hasPermission: (permissionName?: string, resource?: string) => {
       if (!dbUser?.permissions) return false;
+      
+      // Admin users have access to everything
+      const hasAdminPermission = dbUser.permissions.some(permission => 
+        permission.resource === 'admin'
+      );
+      if (hasAdminPermission) return true;
+      
+      // Check specific permissions
       return dbUser.permissions.some(permission => 
         (permissionName && permission.name === permissionName) ||
         (resource && permission.resource === resource)

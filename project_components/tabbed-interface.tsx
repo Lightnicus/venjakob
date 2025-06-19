@@ -3,14 +3,52 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { X } from 'lucide-react';
 import { useTabbedInterface } from './tabbed-interface-provider';
-import { Button } from '@/components/ui/button';
+import { tabMappings, hasTabPermissions } from '@/helper/menu';
+import { useUser } from './use-user';
+import { useEffect } from 'react';
+
 export function TabbedInterface() {
   const { openTabs, activeTabId, setActiveTab, closeTab } =
     useTabbedInterface();
+  const { hasPermission, loading: userLoading } = useUser();
+
+  // Filter tabs based on permissions
+  const getAccessibleTabs = () => {
+    if (userLoading) return openTabs; // Show all tabs while loading to avoid flicker
+    
+    return openTabs.filter(tab => {
+      // Find the corresponding tab definition by ID
+      const tabDefinition = Object.values(tabMappings).find(def => def.id === tab.id);
+      
+      if (!tabDefinition) {
+        // If no tab definition found, allow the tab (might be a dynamic tab)
+        return true;
+      }
+      
+      return hasTabPermissions(tabDefinition, hasPermission);
+    });
+  };
+
+  // Close tabs that user no longer has permission to access
+  useEffect(() => {
+    if (!userLoading) {
+      const accessibleTabs = getAccessibleTabs();
+      const accessibleTabIds = accessibleTabs.map(tab => tab.id);
+      
+      // Close tabs that are no longer accessible
+      openTabs.forEach(tab => {
+        if (!accessibleTabIds.includes(tab.id)) {
+          closeTab(tab.id);
+        }
+      });
+    }
+  }, [userLoading, hasPermission, openTabs, closeTab]);
+
+  const accessibleTabs = getAccessibleTabs();
 
   return (
     <div className="w-full">
-      {openTabs.length > 0 ? (
+      {accessibleTabs.length > 0 ? (
         <div className="w-full border rounded">
           <div className="flex-1 overflow-x-auto border-b last:border-b-0">
             <Tabs
@@ -21,7 +59,7 @@ export function TabbedInterface() {
               className="w-full"
             >
               <TabsList className="h-auto bg-white p-0 rounded-tl-none">
-                {openTabs.map(tab => (
+                {accessibleTabs.map(tab => (
                   <TabsTrigger
                     key={tab.id}
                     value={tab.id}
@@ -50,7 +88,7 @@ export function TabbedInterface() {
                 ))}
               </TabsList>
 
-              {openTabs.map(tab => (
+              {accessibleTabs.map(tab => (
                 <TabsContent 
                   key={tab.id} 
                   value={tab.id} 

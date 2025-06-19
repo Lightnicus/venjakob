@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/navigation-menu';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
-import { tabMappings } from '@/helper/menu';
+import { tabMappings, hasTabPermissions } from '@/helper/menu';
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
@@ -40,17 +40,23 @@ const TopNavigation: FC = () => {
   const { openNewTab } = useTabbedInterface();
   const router = useRouter();
   const { setLoading, isLoading } = useLoading();
-  const { user, dbUser, loading: userLoading } = useUser();
+  const { user, dbUser, hasPermission, loading: userLoading } = useUser();
 
   const handleMenuClick = (menuItemHref: string) => {
     const tabDef = tabMappings[menuItemHref];
     if (tabDef) {
-      openNewTab({
-        id: tabDef.id,
-        title: tabDef.title,
-        content: tabDef.content(),
-        closable: tabDef.closable,
-      });
+      // Check permissions before opening tab
+      if (hasTabPermissions(tabDef, hasPermission)) {
+        openNewTab({
+          id: tabDef.id,
+          title: tabDef.title,
+          content: tabDef.content(),
+          closable: tabDef.closable,
+        });
+      } else {
+        console.warn(`User does not have permission to access: ${menuItemHref}`);
+        // Optionally show a toast notification here
+      }
     }
   };
 
@@ -89,6 +95,51 @@ const TopNavigation: FC = () => {
     return 'MM';
   };
 
+  // Filter menu items based on permissions
+  const getFilteredMenuConfig = () => {
+    if (userLoading) return []; // Don't show menu while loading
+
+    return (menuConfig as MenuConfigItem[]).filter(menuItem => {
+      const tabDef = tabMappings[menuItem.href];
+      
+      if (menuItem.children && menuItem.children.length > 0) {
+        // For parent items, show if at least one child is accessible
+        const accessibleChildren = menuItem.children.filter(child => {
+          const childTabDef = tabMappings[child.href];
+          return childTabDef && hasTabPermissions(childTabDef, hasPermission);
+        });
+        
+        // Update the menu item to only include accessible children
+        if (accessibleChildren.length > 0) {
+          return {
+            ...menuItem,
+            children: accessibleChildren
+          };
+        }
+        return false;
+      } else {
+        // For leaf items, check direct permission
+        return tabDef && hasTabPermissions(tabDef, hasPermission);
+      }
+    }).map(menuItem => {
+      // Filter children for parent items
+      if (menuItem.children && menuItem.children.length > 0) {
+        const accessibleChildren = menuItem.children.filter(child => {
+          const childTabDef = tabMappings[child.href];
+          return childTabDef && hasTabPermissions(childTabDef, hasPermission);
+        });
+        
+        return {
+          ...menuItem,
+          children: accessibleChildren
+        };
+      }
+      return menuItem;
+    });
+  };
+
+  const filteredMenuConfig = getFilteredMenuConfig();
+
   return (
     <div className="w-full bg-white shadow-md">
       <div className="max-w-screen-2xl mx-auto flex items-center justify-between px-6 py-2">
@@ -100,7 +151,7 @@ const TopNavigation: FC = () => {
         </span>
         <NavigationMenu className="flex-1 justify-end" aria-label="Hauptnavigation" viewport={false}>
           <NavigationMenuList>
-            {(menuConfig as MenuConfigItem[]).map(({ label, href, children }) =>
+            {filteredMenuConfig.map(({ label, href, children }) =>
               children && children.length > 0 ? (
                 <NavigationMenuItem key={href}>
                   <NavigationMenuTrigger

@@ -20,6 +20,7 @@ import UserManagement from '@/project_components/user-management';
 
 export interface TabDefinition extends Omit<Tab, 'content'> {
   content: () => ReactNode; // Use a function to render content to avoid immediate rendering
+  requiredPermissions?: string | string[]; // Permission(s) required to access this tab
 }
 
 export const tabMappings: Record<string, TabDefinition> = {
@@ -33,6 +34,7 @@ export const tabMappings: Record<string, TabDefinition> = {
       </>
     ),
     closable: true,
+    requiredPermissions: 'angebote',
   },
   '/verkaufschancen': {
     id: 'verkaufschancen',
@@ -47,6 +49,7 @@ export const tabMappings: Record<string, TabDefinition> = {
       </>
     ),
     closable: true,
+    requiredPermissions: 'angebote',
   },
   '/auftragsbestaetigungen': {
     id: 'auftragsbestaetigungen',
@@ -60,24 +63,28 @@ export const tabMappings: Record<string, TabDefinition> = {
       </>
     ),
     closable: true,
+    requiredPermissions: 'angebote',
   },
   '/stammdaten': {
     id: 'stammdaten',
     title: 'Stammdaten',
     content: () => <StammdatenPlaceholder />,
     closable: true,
+    requiredPermissions: ['artikel', 'blocks'], // Show if user has any of the child permissions
   },
   '/einstellungen': {
     id: 'einstellungen',
     title: 'Einstellungen',
     content: () => <EinstellungenPlaceholder />,
     closable: true,
+    requiredPermissions: 'admin', // Show if user has admin permissions
   },
   '/stammdaten/blockverwaltung': {
     id: 'stammdaten-blockverwaltung',
     title: 'Blockverwaltung',
     content: () => <BlockManagement />,
     closable: true,
+    requiredPermissions: 'blocks',
   },
   // '/stammdaten/positionsverwaltung': {
   //   id: 'stammdaten-positionsverwaltung',
@@ -92,23 +99,44 @@ export const tabMappings: Record<string, TabDefinition> = {
     title: 'Artikelverwaltung',
     content: () => <ArticleManagement />,
     closable: true,
+    requiredPermissions: 'artikel',
   },
   '/einstellungen/rollenverwaltung': {
     id: 'einstellungen-rollenverwaltung',
     title: 'Rollenverwaltung',
     content: () => <RoleManagement />,
     closable: true,
+    requiredPermissions: 'admin',
   },
   '/einstellungen/berechtigungsverwaltung': {
     id: 'einstellungen-berechtigungsverwaltung',
     title: 'Berechtigungsverwaltung',
     content: () => <PermissionManagement />,
     closable: true,
+    requiredPermissions: 'admin',
   },
   '/einstellungen/benutzerverwaltung': {
     id: 'einstellungen-benutzerverwaltung',
     title: 'Benutzerverwaltung',
     content: () => <UserManagement />,
     closable: true,
+    requiredPermissions: 'admin',
   },
+};
+
+// Helper function to check if user has required permissions for a tab
+export const hasTabPermissions = (
+  tabDefinition: TabDefinition,
+  hasPermission: (permissionName?: string, resource?: string) => boolean
+): boolean => {
+  if (!tabDefinition.requiredPermissions) {
+    return true; // No permissions required
+  }
+
+  const permissions = Array.isArray(tabDefinition.requiredPermissions)
+    ? tabDefinition.requiredPermissions
+    : [tabDefinition.requiredPermissions];
+
+  // For arrays of permissions (like stammdaten), user needs at least one
+  return permissions.some(permission => hasPermission(undefined, permission));
 };
