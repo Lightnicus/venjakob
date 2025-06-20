@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { useLoading } from './loading-provider';
+import { useLoading } from '@/project_components/loading-provider';
 
 type AsyncActionOptions = {
   loadingKey: string;

@@ -14,7 +14,7 @@ import {
 } from '@/lib/api/articles';
 import { fetchLanguages } from '@/lib/api/blocks';
 import { useTabReload } from './tabbed-interface-provider';
-import { usePermissionGuard } from './use-permission-guard';
+import { usePermissionGuard } from '@/hooks/use-permission-guard';
 
 type ArticleListItem = {
   id: string;

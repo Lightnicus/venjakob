@@ -3,7 +3,7 @@ import RoleListTable from './role-list-table';
 import type { Role, Permission } from '@/lib/db/schema';
 import { toast } from 'sonner';
 import { useTabReload } from './tabbed-interface-provider';
-import { usePermissionGuard } from './use-permission-guard';
+import { usePermissionGuard } from '@/hooks/use-permission-guard';
 
 type RoleListItem = {
   id: string;

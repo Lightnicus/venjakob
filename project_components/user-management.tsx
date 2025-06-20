@@ -3,7 +3,7 @@ import UserListTable from './user-list-table';
 import type { User, Role } from '@/lib/db/schema';
 import { toast } from 'sonner';
 import { useTabReload } from './tabbed-interface-provider';
-import { usePermissionGuard } from './use-permission-guard';
+import { usePermissionGuard } from '@/hooks/use-permission-guard';
 
 type UserListItem = {
   id: string;

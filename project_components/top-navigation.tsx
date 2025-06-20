@@ -26,7 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { signOut } from '@/lib/auth/actions';
 import { useLoading } from './loading-provider';
-import { useUser } from './use-user';
+import { useUser } from '@/hooks/use-user';
 
 // Import tab content components - no longer needed here as they are imported in menu.tsx
 

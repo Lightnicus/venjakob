@@ -4,7 +4,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { X } from 'lucide-react';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import { tabMappings, hasTabPermissions } from '@/helper/menu';
-import { useUser } from './use-user';
+import { useUser } from '@/hooks/use-user';
 import { useEffect } from 'react';
 
 export function TabbedInterface() {
