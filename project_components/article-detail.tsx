@@ -20,13 +20,10 @@ interface Language {
 }
 
 interface AllgemeineData {
-  name: string;
   nr: string;
   einzelpreis: string;
   ueberschriftNichtDrucken: boolean;
 }
-
-
 
 interface ArticleDetailProps {
   articleId: string;
@@ -52,7 +49,6 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
   
   // Add state for article properties
   const [editedAllgemeineData, setEditedAllgemeineData] = useState<AllgemeineData>({
-    name: '',
     nr: '',
     einzelpreis: '0.00',
     ueberschriftNichtDrucken: false,
@@ -69,6 +65,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
   const [currentLanguages, setCurrentLanguages] = useState<Language[]>([]);
   const [selectedPreviewLanguage, setSelectedPreviewLanguage] = useState('');
   const [selectedLanguageToAdd, setSelectedLanguageToAdd] = useState('');
+  const [displayTitle, setDisplayTitle] = useState('');
 
   // Set up reload functionality - no callback needed as this component loads its own data
   const { triggerReload } = useTabReload('articles', () => {});
@@ -92,7 +89,6 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
       
       // Initialize properties state
       setEditedAllgemeineData({
-        name: articleData.name || '',
         nr: articleData.number || '',
         einzelpreis: articleData.price || '0.00',
         ueberschriftNichtDrucken: articleData.hideTitle || false,
@@ -135,6 +131,17 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
       }
 
       setSelectedLanguageToAdd('');
+      
+      // Set initial display title
+      const defaultLanguage = languages.find(lang => (lang as any).default === true);
+      let initialTitle = articleData.name; // fallback
+      if (defaultLanguage && articleData.content) {
+        const defaultContent = articleData.content.find(content => content.languageId === defaultLanguage.id);
+        if (defaultContent?.title) {
+          initialTitle = defaultContent.title;
+        }
+      }
+      setDisplayTitle(initialTitle);
       
     } catch (error) {
       console.error('Error loading article:', error);
@@ -188,7 +195,6 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
     if (isEditing && article) {
       // Reset to original data
       setEditedAllgemeineData({
-        name: article.name || '',
         nr: article.number || '',
         einzelpreis: article.price || '0.00',
         ueberschriftNichtDrucken: article.hideTitle || false,
@@ -245,7 +251,6 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
       // Save properties if handler provided
       if (onSaveProperties) {
         const articleData = {
-          name: editedAllgemeineData.name,
           number: editedAllgemeineData.nr,
           price: editedAllgemeineData.einzelpreis,
           hideTitle: editedAllgemeineData.ueberschriftNichtDrucken,
@@ -255,7 +260,6 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
         // Update local article state immediately to reflect changes in UI
         setArticle(prev => prev ? ({
           ...prev,
-          name: articleData.name,
           number: articleData.number,
           price: articleData.price,
           hideTitle: articleData.hideTitle,
@@ -263,29 +267,29 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
         }) : null);
       }
 
-              // Save calculation items if handler provided
-        if (onSaveCalculations) {
-          const calculationsToSave = article.calculations.map(item => ({
-            name: item.name,
-            type: item.type,
+      // Save calculation items if handler provided
+      if (onSaveCalculations) {
+        const calculationsToSave = article.calculations.map(item => ({
+          name: item.name,
+          type: item.type,
+          value: editedKalkulationData[item.id] || item.value,
+          articleId: article.id,
+          order: item.order,
+        }));
+        
+        await onSaveCalculations(article.id, calculationsToSave);
+        
+        // Update local article state with new calculation values
+        setArticle(prev => prev ? ({
+          ...prev,
+          calculations: prev.calculations.map(item => ({
+            ...item,
             value: editedKalkulationData[item.id] || item.value,
-            articleId: article.id,
-            order: item.order,
-          }));
-          
-          await onSaveCalculations(article.id, calculationsToSave);
-          
-          // Update local article state with new calculation values
-          setArticle(prev => prev ? ({
-            ...prev,
-            calculations: prev.calculations.map(item => ({
-              ...item,
-              value: editedKalkulationData[item.id] || item.value,
-              updatedAt: new Date()
-            })),
             updatedAt: new Date()
-          }) : null);
-        }
+          })),
+          updatedAt: new Date()
+        }) : null);
+      }
 
       // Save content if handler provided
       if (onSaveContent) {
@@ -302,10 +306,14 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
       setIsEditing(false);
       toast.success('Artikel gespeichert');
       
-      // Update tab title if article name changed
-      if (editedAllgemeineData.name !== article.name) {
-        updateTitle(`Artikel: ${editedAllgemeineData.name}`);
+      // Update tab title and header with new title from default language using edited content
+      const defaultLanguage = languages.find(lang => (lang as any).default === true);
+      let newTitle = article.name; // fallback
+      if (defaultLanguage && editedArticleContents[defaultLanguage.value]?.title) {
+        newTitle = editedArticleContents[defaultLanguage.value].title;
       }
+      setDisplayTitle(newTitle);
+      updateTitle(`Artikel: ${newTitle}`);
       
       // Trigger reload for other tabs (like ArticleManagement)
       triggerReload();
@@ -388,9 +396,9 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
     );
   }
 
-  return (
-    <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
-      <h2 className="text-2xl font-bold mb-4">{article.name}</h2>
+    return (
+      <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
+        <h2 className="text-2xl font-bold mb-4">{displayTitle}</h2>
       <div className="flex gap-2 mb-4">
         <Button
           variant="outline"

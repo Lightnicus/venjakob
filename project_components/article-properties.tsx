@@ -9,7 +9,6 @@ import type { ArticleCalculationItem } from '@/lib/db/schema';
 
 // Define types for the data structures
 interface AllgemeineData {
-  name: string;
   nr: string;
   einzelpreis: string;
   ueberschriftNichtDrucken: boolean;
@@ -38,7 +37,6 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
 }) => {
   // Use local state only if no external state is provided
   const [localAllgemeineData, setLocalAllgemeineData] = useState<AllgemeineData>(() => ({
-    name: article.name || '',
     nr: article.number || '',
     einzelpreis: article.price || '0.00',
     ueberschriftNichtDrucken: article.hideTitle || false,
@@ -62,7 +60,6 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
     // Only update local state if no external state is provided
     if (!editedAllgemeineData) {
       setLocalAllgemeineData({
-        name: article.name || '',
         nr: article.number || '',
         einzelpreis: article.price || '0.00',
         ueberschriftNichtDrucken: article.hideTitle || false,
@@ -150,21 +147,6 @@ const ArticleProperties: FC<ArticlePropertiesProps> = ({
           Allgemein
         </h3>
         <div className="space-y-4">
-            <div className={gridRowStyles}>
-              <Label htmlFor="name" className={labelStyles}>
-                Name
-              </Label>
-              <Input
-                id="name"
-                type="text"
-                value={allgemeineData.name}
-                readOnly={!isEditing}
-                onChange={(e) => handleAllgemeineInputChange('name', e.target.value)}
-                className={`${getInputStyles(isEditing)} md:col-span-2`}
-                aria-label="Artikelname"
-              />
-            </div>
-
             <div className={gridRowStyles}>
               <Label htmlFor="nr" className={labelStyles}>
                 Nr.
