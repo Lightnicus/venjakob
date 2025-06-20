@@ -420,9 +420,20 @@ export async function getArticleList(): Promise<{
         const articleContents = allArticleContent.filter(content => content.articleId === article.id);
         const articleLanguages = articleContents.map(ac => {
           const lang = allLanguages.find(l => l.id === ac.languageId);
-          return lang?.label || 'Unknown';
+          return lang;
+        }).filter(lang => lang !== undefined);
+        
+        // Sort languages: default first, then alphabetically by label
+        const sortedLanguages = articleLanguages.sort((a, b) => {
+          // If one is default and the other is not, default comes first
+          if (a.default && !b.default) return -1;
+          if (!a.default && b.default) return 1;
+          // If both are default or both are not default, sort alphabetically
+          return a.label.localeCompare(b.label);
         });
-        const languagesString = articleLanguages.length > 0 ? articleLanguages.join(', ') : 'Keine Sprachen';
+        
+        const languageLabels = sortedLanguages.map(lang => lang.label);
+        const languagesString = languageLabels.length > 0 ? languageLabels.join(', ') : 'Keine Sprachen';
         
         return {
           id: article.id,
