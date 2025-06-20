@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Label } from '@/components/ui/label';
 import QuillRichTextEditor from '@/project_components/quill-rich-text-editor';
 import ArticleProperties from '@/project_components/article-properties';
+import EditLockButton from '@/project_components/edit-lock-button';
 import { fetchArticleWithCalculations } from '@/lib/api/articles';
 import type { ArticleWithCalculations } from '@/lib/db/articles';
 import { useTabReload, useTabTitle } from './tabbed-interface-provider';
@@ -399,41 +400,15 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
     return (
       <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
         <h2 className="text-2xl font-bold mb-4">{displayTitle}</h2>
-      <div className="flex gap-2 mb-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleToggleEdit}
-          aria-label={isEditing ? 'Abbrechen' : 'Bearbeiten'}
-        >
-          {isEditing ? (
-            'Abbrechen'
-          ) : (
-            <>
-              <Edit3 size={14} className="inline-block" /> Bearbeiten
-            </>
-          )}
-        </Button>
-        {isEditing && (
-          <Button
-            size="sm"
-            onClick={handleSaveChanges}
-            disabled={isSaving}
-            aria-label="Änderungen speichern"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 size={14} className="inline-block animate-spin mr-1" />
-                Speichern...
-              </>
-            ) : (
-              <>
-                <Save size={14} className="inline-block mr-1" />
-                Speichern
-              </>
-            )}
-          </Button>
-        )}
+      <div className="mb-4">
+        <EditLockButton
+          resourceType="articles"
+          resourceId={articleId}
+          isEditing={isEditing}
+          isSaving={isSaving}
+          onToggleEdit={handleToggleEdit}
+          onSave={handleSaveChanges}
+        />
       </div>
       <Tabs
         value={tab}

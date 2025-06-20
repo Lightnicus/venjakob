@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import type { Block, BlockContent, Language } from '@/lib/db/schema';
 import { fetchBlockWithContent } from '@/lib/api/blocks';
 import { useTabReload, useTabTitle } from './tabbed-interface-provider';
+import EditLockButton from './edit-lock-button';
 
 type BlockWithContent = Block & {
   blockContents: BlockContent[];
@@ -342,41 +343,15 @@ const BlockDetail: FC<BlockDetailProps> = ({
   return (
     <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
       <h2 className="text-2xl font-bold mb-4">{block.name}</h2>
-      <div className="flex gap-2 mb-4">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleToggleEdit}
-          aria-label={isEditing ? 'Abbrechen' : 'Bearbeiten'}
-        >
-          {isEditing ? (
-            'Abbrechen'
-          ) : (
-            <>
-              <Edit3 size={14} className="inline-block" /> Bearbeiten
-            </>
-          )}
-        </Button>
-        {isEditing && (
-          <Button
-            size="sm"
-            onClick={handleSaveChanges}
-            disabled={isSaving}
-            aria-label="Änderungen speichern"
-          >
-            {isSaving ? (
-              <>
-                <Loader2 size={14} className="inline-block animate-spin mr-1" />
-                Speichern...
-              </>
-            ) : (
-              <>
-                <Save size={14} className="inline-block mr-1" />
-                Speichern
-              </>
-            )}
-          </Button>
-        )}
+      <div className="mb-4">
+        <EditLockButton
+          resourceType="blocks"
+          resourceId={blockId}
+          isEditing={isEditing}
+          isSaving={isSaving}
+          onToggleEdit={handleToggleEdit}
+          onSave={handleSaveChanges}
+        />
       </div>
       <Tabs
         value={tab}
