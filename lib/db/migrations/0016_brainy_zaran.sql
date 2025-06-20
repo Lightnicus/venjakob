@@ -1,0 +1,2 @@
+-- Migration 0016: brainy_zaran
+-- Default column already exists (applied via db:push), no changes needed

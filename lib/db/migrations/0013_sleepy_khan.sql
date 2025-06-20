@@ -1,0 +1,1 @@
+ALTER TABLE "permissions" ADD COLUMN "action" text NOT NULL DEFAULT ''; 

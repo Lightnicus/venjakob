@@ -18,6 +18,7 @@ export const languages = pgTable('languages', {
   id: uuid('id').primaryKey().defaultRandom(),
   value: text('value').notNull().unique(),
   label: text('label').notNull(),
+  default: boolean('default').notNull().default(false),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
