@@ -51,9 +51,7 @@ export const blocks = pgTable('blocks', {
 // Articles table
 export const articles = pgTable('articles', {
   id: uuid('id').primaryKey().defaultRandom(),
-  name: text('name').notNull(),
   number: text('number').notNull(),
-  description: text('description'),
   price: numeric('price').notNull(),
   hideTitle: boolean('hide_title').notNull().default(false),
   blocked: timestamp('blocked'),

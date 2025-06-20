@@ -20,7 +20,7 @@ export type ArticleWithCalculations = Article & {
 // Fetch all articles
 export async function getArticles(): Promise<Article[]> {
   try {
-    return await db.select().from(articles).orderBy(articles.name);
+    return await db.select().from(articles).orderBy(articles.number);
   } catch (error) {
     console.error('Error fetching articles:', error);
     throw new Error('Failed to fetch articles');
@@ -61,7 +61,7 @@ export async function getArticleWithCalculations(articleId: string): Promise<Art
 // Fetch all articles with their calculation counts
 export async function getArticlesWithCalculationCounts(): Promise<(Article & { calculationCount: number })[]> {
   try {
-    const allArticles = await db.select().from(articles).orderBy(articles.name);
+    const allArticles = await db.select().from(articles).orderBy(articles.number);
     
     // Get calculation counts for each article
     const articlesWithCounts = await Promise.all(
@@ -203,9 +203,7 @@ export async function createCalculationItem(itemData: Omit<InsertArticleCalculat
 export async function createArticleWithDefaults(articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>): Promise<ArticleWithCalculations> {
   try {
     return await createNewArticle({
-      name: articleData.name,
       number: articleData.number,
-      description: articleData.description || '',
       price: articleData.price || '0.00',
       hideTitle: articleData.hideTitle || false
     });
@@ -243,18 +241,14 @@ export async function deleteCalculationItem(itemId: string): Promise<void> {
 // Create a new article with calculation items from config
 export async function createNewArticle(
   articleData: {
-    name: string;
     number: string;
-    description?: string;
     price?: string;
     hideTitle?: boolean;
   }
 ): Promise<ArticleWithCalculations> {
   try {
     const [newArticle] = await db.insert(articles).values({
-      name: articleData.name,
       number: articleData.number,
-      description: articleData.description || '',
       price: articleData.price || '0.00',
       hideTitle: articleData.hideTitle || false
     }).returning();
@@ -313,11 +307,9 @@ export async function copyArticle(originalArticleId: string): Promise<ArticleWit
       throw new Error('Original article not found');
     }
     
-    // Create new article with "(Kopie)" appended to the name and number
+    // Create new article with "(Kopie)" appended to the number
     const [newArticle] = await db.insert(articles).values({
-      name: `${originalArticle.name} (Kopie)`,
       number: `${originalArticle.number} (Kopie)`,
-      description: originalArticle.description,
       price: originalArticle.price,
       hideTitle: originalArticle.hideTitle,
     }).returning();
@@ -375,7 +367,7 @@ export async function getArticleList(): Promise<{
   languages: string;
 }[]> {
   try {
-    const allArticles = await db.select().from(articles).orderBy(articles.name);
+    const allArticles = await db.select().from(articles).orderBy(articles.number);
     
     // Find the default language
     const [defaultLanguage] = await db
