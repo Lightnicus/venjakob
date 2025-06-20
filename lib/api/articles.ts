@@ -125,9 +125,7 @@ export async function copyArticleAPI(originalArticle: { id: string }): Promise<A
 export async function fetchArticleList(): Promise<{
   id: string;
   number: string;
-  name: string;
   title: string;
-  description: string | null;
   price: string | null;
   hideTitle: boolean;
   updatedAt: string;

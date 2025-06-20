@@ -19,9 +19,7 @@ import { usePermissionGuard } from '@/hooks/use-permission-guard';
 type ArticleListItem = {
   id: string;
   number: string;
-  name: string;
   title: string;
-  description: string | null;
   price: string | null;
   hideTitle: boolean;
   updatedAt: string;
@@ -130,9 +128,7 @@ const ArticleManagement = () => {
       const articleListItem: ArticleListItem = {
         id: newArticle.id,
         number: newArticle.number,
-        name: newArticle.name,
         title: '-', // New articles don't have blockContent yet, so use dash
-        description: newArticle.description,
         price: newArticle.price,
         hideTitle: newArticle.hideTitle,
         updatedAt: newArticle.updatedAt instanceof Date ? newArticle.updatedAt.toISOString() : newArticle.updatedAt,
@@ -158,9 +154,7 @@ const ArticleManagement = () => {
       const articleListItem: ArticleListItem = {
         id: copiedArticle.id,
         number: copiedArticle.number,
-        name: copiedArticle.name,
         title: '-', // Copied articles will get their title when data is reloaded
-        description: copiedArticle.description,
         price: copiedArticle.price,
         hideTitle: copiedArticle.hideTitle,
         updatedAt: copiedArticle.updatedAt instanceof Date ? copiedArticle.updatedAt.toISOString() : copiedArticle.updatedAt,

@@ -134,7 +134,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
       
       // Set initial display title
       const defaultLanguage = languages.find(lang => (lang as any).default === true);
-      let initialTitle = articleData.name; // fallback
+      let initialTitle = 'Artikel'; // fallback
       if (defaultLanguage && articleData.content) {
         const defaultContent = articleData.content.find(content => content.languageId === defaultLanguage.id);
         if (defaultContent?.title) {
@@ -308,7 +308,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
       
       // Update tab title and header with new title from default language using edited content
       const defaultLanguage = languages.find(lang => (lang as any).default === true);
-      let newTitle = article.name; // fallback
+      let newTitle = 'Artikel'; // fallback
       if (defaultLanguage && editedArticleContents[defaultLanguage.value]?.title) {
         newTitle = editedArticleContents[defaultLanguage.value].title;
       }
@@ -609,7 +609,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
                 <div className="p-4 border rounded-md bg-gray-50 min-h-[200px]">
                   {!article.hideTitle && (
                     <h3 className="text-xl font-semibold mb-2 break-words">
-                      {currentPreviewData.title || article.name}
+                      {currentPreviewData.title || 'Artikel'}
                     </h3>
                   )}
                   <div
@@ -631,7 +631,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
             <div className="p-4 border rounded-md bg-gray-50 min-h-[200px]">
               {!article.hideTitle && (
                 <h3 className="text-xl font-semibold mb-2 break-words">
-                  {article.name}
+                  Artikel
                 </h3>
               )}
               <div className="space-y-4">
@@ -641,12 +641,6 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
                 <div>
                   <strong>Preis:</strong> € {article.price}
                 </div>
-                {article.description && (
-                  <div>
-                    <strong>Beschreibung:</strong>
-                    <p className="mt-1">{article.description}</p>
-                  </div>
-                )}
               </div>
             </div>
           )}

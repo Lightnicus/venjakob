@@ -367,9 +367,7 @@ export async function copyArticle(originalArticleId: string): Promise<ArticleWit
 export async function getArticleList(): Promise<{
   id: string;
   number: string;
-  name: string;
   title: string;
-  description: string | null;
   price: string | null;
   hideTitle: boolean;
   updatedAt: string;
@@ -437,9 +435,7 @@ export async function getArticleList(): Promise<{
         return {
           id: article.id,
           number: article.number,
-          name: article.name,
           title: title,
-          description: article.description,
           price: article.price,
           hideTitle: article.hideTitle,
           updatedAt: article.updatedAt.toISOString(),

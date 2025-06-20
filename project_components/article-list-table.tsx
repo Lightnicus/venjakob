@@ -20,9 +20,7 @@ type ArticleWithCalculationCount = ArticleWithCalculations & {
 type ArticleListItem = {
   id: string;
   number: string;
-  name: string;
   title: string;
-  description: string | null;
   price: string | null;
   hideTitle: boolean;
   updatedAt: string;
