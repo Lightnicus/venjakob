@@ -4,6 +4,7 @@ import {
   articles, 
   articleCalculationItem, 
   blockContent,
+  languages,
   type Article, 
   type ArticleCalculationItem,
   type InsertArticleCalculationItem,
@@ -367,16 +368,38 @@ export async function getArticleList(): Promise<{
   id: string;
   number: string;
   name: string;
+  title: string;
   description: string | null;
   price: string | null;
   hideTitle: boolean;
   updatedAt: string;
   calculationCount: number;
+  languages: string;
 }[]> {
   try {
     const allArticles = await db.select().from(articles).orderBy(articles.name);
     
-    // Get calculation counts for each article
+    // Find the default language
+    const [defaultLanguage] = await db
+      .select()
+      .from(languages)
+      .where(eq(languages.default, true))
+      .limit(1);
+    
+    // Fetch all languages for label mapping
+    const allLanguages = await db.select().from(languages);
+    
+    // Fetch all article content with language info
+    const allArticleContent = await db
+      .select({
+        articleId: blockContent.articleId,
+        title: blockContent.title,
+        languageId: blockContent.languageId,
+      })
+      .from(blockContent)
+      .where(isNull(blockContent.blockId)); // Only article content, not block content
+    
+    // Get calculation counts and titles for each article
     const articlesWithCounts = await Promise.all(
       allArticles.map(async (article) => {
         const [countResult] = await db
@@ -384,15 +407,44 @@ export async function getArticleList(): Promise<{
           .from(articleCalculationItem)
           .where(eq(articleCalculationItem.articleId, article.id));
         
+        // Get title from blockContent for default language
+        let title = '';
+        if (defaultLanguage) {
+          const [contentResult] = await db
+            .select({ title: blockContent.title })
+            .from(blockContent)
+            .where(
+              and(
+                eq(blockContent.articleId, article.id),
+                eq(blockContent.languageId, defaultLanguage.id)
+              )
+            )
+            .limit(1);
+          
+          if (contentResult?.title) {
+            title = contentResult.title;
+          }
+        }
+        
+        // Get languages for this article
+        const articleContents = allArticleContent.filter(content => content.articleId === article.id);
+        const articleLanguages = articleContents.map(ac => {
+          const lang = allLanguages.find(l => l.id === ac.languageId);
+          return lang?.label || 'Unknown';
+        });
+        const languagesString = articleLanguages.length > 0 ? articleLanguages.join(', ') : 'Keine Sprachen';
+        
         return {
           id: article.id,
           number: article.number,
           name: article.name,
+          title: title,
           description: article.description,
           price: article.price,
           hideTitle: article.hideTitle,
           updatedAt: article.updatedAt.toISOString(),
-          calculationCount: Number(countResult?.count || 0)
+          calculationCount: Number(countResult?.count || 0),
+          languages: languagesString
         };
       })
     );

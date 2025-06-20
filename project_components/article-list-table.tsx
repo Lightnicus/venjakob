@@ -21,11 +21,13 @@ type ArticleListItem = {
   id: string;
   number: string;
   name: string;
+  title: string;
   description: string | null;
   price: string | null;
   hideTitle: boolean;
   updatedAt: string;
   calculationCount: number;
+  languages: string;
 };
 
 interface ArticleListTableProps {
@@ -100,9 +102,9 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
         }
       : undefined;
 
-    openNewTab({
-      id: `article-detail-${article.id}`,
-      title: `Artikel: ${article.name}`,
+          openNewTab({
+        id: `article-detail-${article.id}`,
+        title: `Artikel: ${article.title}`,
       content: (
         <ArticleDetail 
           articleId={article.id}
@@ -177,7 +179,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
       // Update the table data with the new copied article
       setTableData(prevData => [...prevData, copiedArticle]);
       
-      toast.success(`Artikel "${article.name}" wurde kopiert`);
+      toast.success(`Artikel "${article.title}" wurde kopiert`);
       
       // Create wrapper functions to match ArticleDetail's expected signatures
       const handleSaveProperties = onSaveArticleProperties 
@@ -202,7 +204,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
       const copiedArticleId = `article-detail-${copiedArticle.id}`;
       openNewTab({
         id: copiedArticleId,
-        title: `Artikel: ${copiedArticle.name}`,
+        title: `Artikel: ${copiedArticle.title}`,
         content: (
           <ArticleDetail 
             articleId={copiedArticle.id}
@@ -263,16 +265,15 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
       enableColumnFilter: true,
     },
     {
-      accessorKey: 'name',
-      header: 'Name',
-      cell: ({ row }) => row.original.name,
+      accessorKey: 'title',
+      header: 'Titel',
+      cell: ({ row }) => row.original.title,
       enableColumnFilter: true,
     },
     {
-      accessorKey: 'description',
-      header: 'Beschreibung',
-      cell: ({ row }) => row.original.description || '-',
-      enableColumnFilter: true,
+      accessorKey: 'languages',
+      header: 'Sprachen',
+      cell: ({ row }) => row.original.languages,
     },
     {
       accessorKey: 'price',
@@ -398,7 +399,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
           columns={columns}
           getRowClassName={getRowClassName}
           onRowClick={handleRowClick}
-          globalFilterColumnIds={['number', 'name', 'description']}
+          globalFilterColumnIds={['number', 'title']}
           filterPlaceholder="Filtern..."
         />
       </div>
@@ -407,7 +408,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
         onOpenChange={open => !open && setArticleToDelete(null)}
         onConfirm={handleConfirmDelete}
         title="Artikel löschen"
-        description={`Möchten Sie den Artikel "${articleToDelete?.name || ''}" wirklich löschen?`}
+        description={`Möchten Sie den Artikel "${articleToDelete?.title || ''}" wirklich löschen?`}
       />
     </div>
   );

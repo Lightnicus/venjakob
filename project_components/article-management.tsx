@@ -20,11 +20,13 @@ type ArticleListItem = {
   id: string;
   number: string;
   name: string;
+  title: string;
   description: string | null;
   price: string | null;
   hideTitle: boolean;
   updatedAt: string;
   calculationCount: number;
+  languages: string;
 };
 
 const ArticleManagement = () => {
@@ -129,11 +131,13 @@ const ArticleManagement = () => {
         id: newArticle.id,
         number: newArticle.number,
         name: newArticle.name,
+        title: '-', // New articles don't have blockContent yet, so use dash
         description: newArticle.description,
         price: newArticle.price,
         hideTitle: newArticle.hideTitle,
         updatedAt: newArticle.updatedAt instanceof Date ? newArticle.updatedAt.toISOString() : newArticle.updatedAt,
-        calculationCount: newArticle.calculations.length
+        calculationCount: newArticle.calculations.length,
+        languages: 'Keine Sprachen' // New articles don't have languages yet
       };
       
       setArticles(prev => [...prev, articleListItem]);
@@ -148,18 +152,20 @@ const ArticleManagement = () => {
   const handleCopyArticle = async (article: ArticleListItem): Promise<ArticleListItem> => {
     try {
       const copiedArticle = await copyArticleAPI(article);
-      toast.success(`Artikel "${article.name}" wurde kopiert`);
+      toast.success(`Artikel "${article.title}" wurde kopiert`);
       
       // Convert to ArticleListItem format
       const articleListItem: ArticleListItem = {
         id: copiedArticle.id,
         number: copiedArticle.number,
         name: copiedArticle.name,
+        title: '-', // Copied articles will get their title when data is reloaded
         description: copiedArticle.description,
         price: copiedArticle.price,
         hideTitle: copiedArticle.hideTitle,
         updatedAt: copiedArticle.updatedAt instanceof Date ? copiedArticle.updatedAt.toISOString() : copiedArticle.updatedAt,
-        calculationCount: copiedArticle.calculations.length
+        calculationCount: copiedArticle.calculations.length,
+        languages: 'Keine Sprachen' // Copied articles will get their languages when data is reloaded
       };
       
       setArticles(prev => [...prev, articleListItem]);

@@ -126,11 +126,13 @@ export async function fetchArticleList(): Promise<{
   id: string;
   number: string;
   name: string;
+  title: string;
   description: string | null;
   price: string | null;
   hideTitle: boolean;
   updatedAt: string;
   calculationCount: number;
+  languages: string;
 }[]> {
   const response = await fetch('/api/articles/list');
   if (!response.ok) {
