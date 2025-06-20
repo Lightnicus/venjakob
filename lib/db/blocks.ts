@@ -210,12 +210,21 @@ export async function getBlockList(): Promise<{
     // Fetch all languages
     const allLanguages = await db.select().from(languages);
     
+    // Find the default language
+    const defaultLanguage = allLanguages.find(lang => lang.default);
+    
     // Process the data
     const blockList = allBlocks.map(block => {
       const blockContents = allBlockContent.filter(content => content.blockId === block.id);
       
-      // Get first content title
-      const firstContentTitle = blockContents.length > 0 ? blockContents[0].title : null;
+      // Get content title from default language, or empty string if not found
+      let firstContentTitle = '';
+      if (defaultLanguage) {
+        const defaultContent = blockContents.find(content => content.languageId === defaultLanguage.id);
+        if (defaultContent) {
+          firstContentTitle = defaultContent.title;
+        }
+      }
       
       // Get languages for this block
       const blockLanguages = blockContents.map(bc => {
