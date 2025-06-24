@@ -5,6 +5,10 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { createClient as createServiceClient } from '@supabase/supabase-js';
 import { upsertUser, cleanupOrphanedUsers } from '@/lib/db/queries';
+import { getCurrentUser as getServerCurrentUser } from '@/lib/auth/server';
+import { db } from '@/lib/db/index';
+import { articles, blocks } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
 
 // Create Supabase admin client for admin operations
 function createAdminClient() {
@@ -24,6 +28,37 @@ function createAdminClient() {
       }
     }
   );
+}
+
+// Server-side function to unlock all resources for the current user
+async function unlockAllUserResources(): Promise<void> {
+  try {
+    const user = await getServerCurrentUser();
+    
+    if (!user) {
+      return; // No user to unlock resources for
+    }
+
+    // Unlock all articles locked by this user
+    await db
+      .update(articles)
+      .set({
+        blocked: null,
+        blockedBy: null,
+      })
+      .where(eq(articles.blockedBy, user.dbUser.id));
+
+    // Unlock all blocks locked by this user
+    await db
+      .update(blocks)
+      .set({
+        blocked: null,
+        blockedBy: null,
+      })
+      .where(eq(blocks.blockedBy, user.dbUser.id));
+  } catch (error) {
+    console.warn('Error unlocking user resources during logout:', error);
+  }
 }
 
 export async function updateUserInSupabase(userId: string, userData: { email?: string; name?: string }) {
@@ -196,6 +231,9 @@ export async function signUp(formData: FormData) {
 }
 
 export async function signOut() {
+  // Unlock all resources locked by the current user before signing out
+  await unlockAllUserResources();
+
   const supabase = await createClient();
   await supabase.auth.signOut();
   revalidatePath('/', 'layout');

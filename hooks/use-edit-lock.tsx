@@ -191,12 +191,32 @@ export const useEditLock = (
     }
   }, [resourceType, resourceId, dbUser?.id, refreshLockStatus]);
 
+  // Cleanup function to unlock on unmount
+  const cleanup = useCallback(async () => {
+    if (lockInfo.isLockedByCurrentUser && resourceId && dbUser?.id) {
+      try {
+        await fetch(`/api/${resourceType}/${resourceId}/lock`, {
+          method: 'DELETE',
+        });
+      } catch (error) {
+        console.error('Error unlocking resource during cleanup:', error);
+      }
+    }
+  }, [lockInfo.isLockedByCurrentUser, resourceType, resourceId, dbUser?.id]);
+
   // Load initial lock status
   useEffect(() => {
     if (resourceId && dbUser) {
       refreshLockStatus();
     }
   }, [resourceId, dbUser, refreshLockStatus]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      cleanup();
+    };
+  }, [cleanup]);
 
   const canEdit = !lockInfo.isLocked || lockInfo.isLockedByCurrentUser;
 

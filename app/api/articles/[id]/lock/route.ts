@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { eq, and, isNull, isNotNull } from 'drizzle-orm';
 import { db } from '@/lib/db/index';
 import { articles, users } from '@/lib/db/schema';
-import { createClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth/server';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -48,16 +48,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const { id } = await params;
     
-    // Get current user
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
+    // Get current user using DRY server-side utility
+    const { dbUser } = await requireAuth();
     
     // Check if article exists and is not already locked by someone else
     const [article] = await db
@@ -73,7 +65,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     
     // Check if already locked by someone else
-    if (article.blocked && article.blockedBy !== user.id) {
+    if (article.blocked && article.blockedBy !== dbUser.id) {
       const [blocker] = await db
         .select({ name: users.name })
         .from(users)
@@ -94,12 +86,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .update(articles)
       .set({
         blocked: new Date(),
-        blockedBy: user.id,
+        blockedBy: dbUser.id,
       })
       .where(eq(articles.id, id));
     
     return NextResponse.json({ success: true });
   } catch (error) {
+    // Handle authentication errors (thrown by requireAuth)
+    if (error instanceof Response) {
+      return error;
+    }
+    
     console.error('Error locking article:', error);
     return NextResponse.json(
       { error: 'Failed to lock article' },
@@ -112,16 +109,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   try {
     const { id } = await params;
     
-    // Get current user
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
+    // Get current user using DRY server-side utility
+    const { dbUser } = await requireAuth();
     
     // Check if article exists and is locked by current user
     const [article] = await db
@@ -137,7 +126,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
     
     // Only allow unlocking if the user locked it or it's not locked
-    if (article.blockedBy && article.blockedBy !== user.id) {
+    if (article.blockedBy && article.blockedBy !== dbUser.id) {
       return NextResponse.json(
         { error: 'Can only unlock articles you have locked' },
         { status: 403 }
@@ -155,6 +144,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     
     return NextResponse.json({ success: true });
   } catch (error) {
+    // Handle authentication errors (thrown by requireAuth)
+    if (error instanceof Response) {
+      return error;
+    }
+    
     console.error('Error unlocking article:', error);
     return NextResponse.json(
       { error: 'Failed to unlock article' },

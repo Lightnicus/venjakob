@@ -261,16 +261,30 @@ ALTER TABLE your_table ADD COLUMN blocked_by uuid REFERENCES users(id);
 />
 ```
 
+## Automatic Lock Cleanup
+
+The system provides automatic cleanup in several scenarios:
+
+### 1. Tab Closing
+When a component using `useEditLock` unmounts (e.g., tab is closed), the hook automatically unlocks any resources locked by the current user in that component.
+
+### 2. User Logout
+When a user logs out, all resources locked by that user are automatically unlocked across all articles and blocks.
+
+### 3. Save/Cancel Actions
+- **Save**: Resource is unlocked after successful save
+- **Cancel**: Resource is unlocked immediately when canceling edit mode
+
 ## Best Practices
 
 ### 1. Always Use EditLockButton for Consistency
 Prefer the `EditLockButton` component over manual hook usage for consistent UX.
 
-### 2. Handle Lock Cleanup
-The system automatically unlocks on save/cancel, but consider cleanup on:
-- Component unmount (user navigating away)
-- Tab close (browser events)
-- Session timeout
+### 2. Automatic Cleanup
+The system handles cleanup automatically - no manual intervention needed for:
+- Component unmount (tab closing)
+- User logout
+- Save/cancel operations
 
 ### 3. Refresh Lock Status
 Use `refreshLockStatus()` when:
