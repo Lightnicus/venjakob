@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { saveBlockProperties, deleteBlock, saveBlockContent, getBlockWithContent } from '@/lib/db/blocks';
+import { saveBlockProperties, deleteBlock, saveBlockContent, getBlockWithContent, EditLockError } from '@/lib/db/blocks';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -41,6 +41,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       );
     }
   } catch (error) {
+    if (error instanceof EditLockError) {
+      return NextResponse.json(
+        { 
+          error: error.message,
+          type: 'EDIT_LOCK_ERROR',
+          blockId: error.blockId,
+          lockedBy: error.lockedBy,
+          lockedAt: error.lockedAt?.toISOString()
+        },
+        { status: 409 } // Conflict
+      );
+    }
     console.error('Error updating block:', error);
     return NextResponse.json(
       { error: 'Failed to update block' },
@@ -55,6 +67,18 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     await deleteBlock(id);
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof EditLockError) {
+      return NextResponse.json(
+        { 
+          error: error.message,
+          type: 'EDIT_LOCK_ERROR',
+          blockId: error.blockId,
+          lockedBy: error.lockedBy,
+          lockedAt: error.lockedAt?.toISOString()
+        },
+        { status: 409 } // Conflict
+      );
+    }
     console.error('Error deleting block:', error);
     return NextResponse.json(
       { error: 'Failed to delete block' },

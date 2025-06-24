@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getArticleWithCalculations, saveArticle, deleteArticle } from '@/lib/db/articles';
+import { getArticleWithCalculations, saveArticle, deleteArticle, EditLockError } from '@/lib/db/articles';
 
 export async function GET(
   request: NextRequest,
@@ -37,6 +37,18 @@ export async function PUT(
     await saveArticle(id, articleData);
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof EditLockError) {
+      return NextResponse.json(
+        { 
+          error: error.message,
+          type: 'EDIT_LOCK_ERROR',
+          articleId: error.articleId,
+          lockedBy: error.lockedBy,
+          lockedAt: error.lockedAt?.toISOString()
+        },
+        { status: 409 } // Conflict
+      );
+    }
     console.error('Error updating article:', error);
     return NextResponse.json(
       { error: 'Failed to update article' },
@@ -54,6 +66,18 @@ export async function DELETE(
     await deleteArticle(id);
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof EditLockError) {
+      return NextResponse.json(
+        { 
+          error: error.message,
+          type: 'EDIT_LOCK_ERROR',
+          articleId: error.articleId,
+          lockedBy: error.lockedBy,
+          lockedAt: error.lockedAt?.toISOString()
+        },
+        { status: 409 } // Conflict
+      );
+    }
     console.error('Error deleting article:', error);
     return NextResponse.json(
       { error: 'Failed to delete article' },

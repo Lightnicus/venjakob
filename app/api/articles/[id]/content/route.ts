@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { saveArticleContent } from '@/lib/db/articles';
+import { saveArticleContent, EditLockError } from '@/lib/db/articles';
 
 export async function PUT(
   request: NextRequest,
@@ -12,6 +12,18 @@ export async function PUT(
     await saveArticleContent(id, content);
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof EditLockError) {
+      return NextResponse.json(
+        { 
+          error: error.message,
+          type: 'EDIT_LOCK_ERROR',
+          articleId: error.articleId,
+          lockedBy: error.lockedBy,
+          lockedAt: error.lockedAt?.toISOString()
+        },
+        { status: 409 } // Conflict
+      );
+    }
     console.error('Error updating article content:', error);
     return NextResponse.json(
       { error: 'Failed to update article content' },

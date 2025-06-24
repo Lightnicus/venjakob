@@ -1,10 +1,56 @@
 import { eq, desc } from 'drizzle-orm';
 import { db } from './index';
 import { blocks, blockContent, languages, type Block, type BlockContent, type Language } from './schema';
+import { getCurrentUser } from '@/lib/auth/server';
+
+// Common error type for edit lock conflicts
+export class EditLockError extends Error {
+  constructor(
+    message: string,
+    public readonly blockId: string,
+    public readonly lockedBy: string | null = null,
+    public readonly lockedAt: Date | null = null
+  ) {
+    super(message);
+    this.name = 'EditLockError';
+  }
+}
 
 export type BlockWithContent = Block & {
   blockContents: BlockContent[];
 };
+
+// Check if a block is editable by the current user
+async function checkBlockEditable(blockId: string): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new EditLockError('Benutzer nicht authentifiziert', blockId);
+  }
+
+  // Get block with lock info
+  const [block] = await db
+    .select({
+      id: blocks.id,
+      blocked: blocks.blocked,
+      blockedBy: blocks.blockedBy,
+    })
+    .from(blocks)
+    .where(eq(blocks.id, blockId));
+
+  if (!block) {
+    throw new Error('Block nicht gefunden');
+  }
+
+  // Check if block is locked by another user
+  if (block.blocked && block.blockedBy && block.blockedBy !== user.dbUser.id) {
+    throw new EditLockError(
+      'Block wird bereits von einem anderen Benutzer bearbeitet',
+      blockId,
+      block.blockedBy,
+      block.blocked
+    );
+  }
+}
 
 // Fetch all languages
 export async function getLanguages(): Promise<Language[]> {
@@ -62,6 +108,9 @@ export async function saveBlockContent(
   blockContents: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[]
 ): Promise<void> {
   try {
+    // Check if block is editable by current user
+    await checkBlockEditable(blockId);
+    
     // Delete existing content for this block
     await db.delete(blockContent).where(eq(blockContent.blockId, blockId));
     
@@ -70,6 +119,9 @@ export async function saveBlockContent(
       await db.insert(blockContent).values(blockContents);
     }
   } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error; // Re-throw edit lock errors as-is
+    }
     console.error('Error saving block content:', error);
     throw new Error('Failed to save block content');
   }
@@ -81,10 +133,16 @@ export async function saveBlockProperties(
   blockData: Partial<Block>
 ): Promise<void> {
   try {
+    // Check if block is editable by current user
+    await checkBlockEditable(blockId);
+    
     await db.update(blocks)
       .set({ ...blockData, updatedAt: new Date() })
       .where(eq(blocks.id, blockId));
   } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error; // Re-throw edit lock errors as-is
+    }
     console.error('Error saving block properties:', error);
     throw new Error('Failed to save block properties');
   }
@@ -171,12 +229,18 @@ export async function copyBlock(originalBlockId: string): Promise<BlockWithConte
 // Delete a block and its content
 export async function deleteBlock(blockId: string): Promise<void> {
   try {
+    // Check if block is editable by current user
+    await checkBlockEditable(blockId);
+    
     // Delete block content first (foreign key constraint)
     await db.delete(blockContent).where(eq(blockContent.blockId, blockId));
     
     // Delete the block
     await db.delete(blocks).where(eq(blocks.id, blockId));
   } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error; // Re-throw edit lock errors as-is
+    }
     console.error('Error deleting block:', error);
     throw new Error('Failed to delete block');
   }

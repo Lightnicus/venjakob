@@ -10,7 +10,53 @@ import {
   type InsertArticleCalculationItem,
   type BlockContent
 } from './schema';
+import { getCurrentUser } from '@/lib/auth/server';
 import articleCalculationConfig from '@/data/article-calculation-config.json';
+
+// Common error type for edit lock conflicts
+export class EditLockError extends Error {
+  constructor(
+    message: string,
+    public readonly articleId: string,
+    public readonly lockedBy: string | null = null,
+    public readonly lockedAt: Date | null = null
+  ) {
+    super(message);
+    this.name = 'EditLockError';
+  }
+}
+
+// Check if an article is editable by the current user
+async function checkArticleEditable(articleId: string): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new EditLockError('Benutzer nicht authentifiziert', articleId);
+  }
+
+  // Get article with lock info
+  const [article] = await db
+    .select({
+      id: articles.id,
+      blocked: articles.blocked,
+      blockedBy: articles.blockedBy,
+    })
+    .from(articles)
+    .where(eq(articles.id, articleId));
+
+  if (!article) {
+    throw new Error('Artikel nicht gefunden');
+  }
+
+  // Check if article is locked by another user
+  if (article.blocked && article.blockedBy && article.blockedBy !== user.dbUser.id) {
+    throw new EditLockError(
+      'Artikel wird bereits von einem anderen Benutzer bearbeitet',
+      articleId,
+      article.blockedBy,
+      article.blocked
+    );
+  }
+}
 
 export type ArticleWithCalculations = Article & {
   calculations: ArticleCalculationItem[];
@@ -102,10 +148,16 @@ export async function saveArticle(
   articleData: Partial<Omit<Article, 'id' | 'createdAt' | 'updatedAt'>>
 ): Promise<void> {
   try {
+    // Check if article is editable by current user
+    await checkArticleEditable(articleId);
+    
     await db.update(articles)
       .set({ ...articleData, updatedAt: new Date() })
       .where(eq(articles.id, articleId));
   } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error; // Re-throw edit lock errors as-is
+    }
     console.error('Error saving article:', error);
     throw new Error('Failed to save article');
   }
@@ -117,6 +169,9 @@ export async function saveArticleCalculations(
   calculations: Omit<ArticleCalculationItem, 'id' | 'createdAt' | 'updatedAt'>[]
 ): Promise<void> {
   try {
+    // Check if article is editable by current user
+    await checkArticleEditable(articleId);
+    
     // Delete existing calculation items for this article
     await db.delete(articleCalculationItem).where(eq(articleCalculationItem.articleId, articleId));
     
@@ -125,6 +180,9 @@ export async function saveArticleCalculations(
       await db.insert(articleCalculationItem).values(calculations);
     }
   } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error; // Re-throw edit lock errors as-is
+    }
     console.error('Error saving article calculations:', error);
     throw new Error('Failed to save article calculations');
   }
@@ -168,9 +226,15 @@ export async function removeCalculationFromArticle(
 // Delete an article (related content and calculations will be deleted automatically via CASCADE)
 export async function deleteArticle(articleId: string): Promise<void> {
   try {
+    // Check if article is editable by current user
+    await checkArticleEditable(articleId);
+    
     // Delete the article - CASCADE will automatically delete related records
     await db.delete(articles).where(eq(articles.id, articleId));
   } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error; // Re-throw edit lock errors as-is
+    }
     console.error('Error deleting article:', error);
     throw new Error('Failed to delete article');
   }
@@ -285,6 +349,9 @@ export async function saveArticleContent(
   contentData: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[]
 ): Promise<void> {
   try {
+    // Check if article is editable by current user
+    await checkArticleEditable(articleId);
+    
     // Delete existing content for this article
     await db.delete(blockContent).where(eq(blockContent.articleId, articleId));
     
@@ -293,6 +360,9 @@ export async function saveArticleContent(
       await db.insert(blockContent).values(contentData);
     }
   } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error; // Re-throw edit lock errors as-is
+    }
     console.error('Error saving article content:', error);
     throw new Error('Failed to save article content');
   }
