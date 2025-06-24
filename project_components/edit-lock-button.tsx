@@ -40,20 +40,28 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         // but the UI state change should stay to avoid confusing the user
       }
     } else {
-      // If not editing, try to lock and enter edit mode (optimistic)
-      if (canEdit) {
-        onToggleEdit(); // Enter edit mode immediately
-        const locked = await lockResourceOptimistic();
-        if (locked) {
-          toast.success('Bearbeitung gestartet - für andere gesperrt');
-        } else {
-          toast.error('Fehler beim Sperren für Bearbeitung');
-          onToggleEdit(); // Revert edit mode if lock failed
-        }
-      } else {
+      // If not editing, try to lock and enter edit mode
+      if (!canEdit) {
         toast.error(
           `Wird bereits von ${lockInfo.lockedByName || 'einem anderen Benutzer'} bearbeitet`
         );
+        return;
+      }
+
+      try {
+        // First try to get the lock
+        const locked = await lockResourceOptimistic();
+        if (locked) {
+          // Only enter edit mode if lock was successful
+          onToggleEdit();
+          toast.success('Bearbeitung gestartet - für andere gesperrt');
+        } else {
+          // Lock failed - don't change edit mode
+          toast.error('Fehler beim Sperren für Bearbeitung');
+        }
+      } catch (error) {
+        // Any error during locking - don't change edit mode
+        toast.error('Fehler beim Sperren für Bearbeitung');
       }
     }
   };
