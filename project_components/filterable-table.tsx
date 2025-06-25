@@ -398,7 +398,7 @@ export function FilterableTable<TData>({
     getPaginationRowModel: getPaginationRowModel(),
     initialState: {
       pagination: {
-        pageSize: 10,
+        pageSize: 50,
       },
     },
   });
