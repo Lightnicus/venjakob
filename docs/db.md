@@ -82,14 +82,8 @@ const newUser = await createUser({ email: 'new@example.com', name: 'John Doe' })
 
 ## Database Schema
 
-The current schema includes:
+The current schema is found in /lib/db/schema.ts
 
-### Users Table
-- `id` (UUID, Primary Key)
-- `email` (Text, Unique)
-- `name` (Text, Optional)
-- `createdAt` (Timestamp)
-- `updatedAt` (Timestamp)
 
 ## Adding New Tables
 

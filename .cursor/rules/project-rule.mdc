@@ -3,4 +3,6 @@ description:
 globs: 
 alwaysApply: true
 ---
-All user interface should be in German. The project uses NextJs 15
+All user interface should be in German. The documentation and any comments and the chat with the developer should be in English.
+The project uses NextJs 15
+Before starting any planning and code changes, read through all files found in /docs folder
