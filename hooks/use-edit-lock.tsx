@@ -21,6 +21,7 @@ export interface UseEditLockResult {
   unlockResource: () => Promise<boolean>;
   lockResourceOptimistic: () => Promise<boolean>;
   unlockResourceOptimistic: () => Promise<boolean>;
+  forceOverrideLock: () => Promise<boolean>;
   refreshLockStatus: () => Promise<void>;
 }
 
@@ -191,6 +192,46 @@ export const useEditLock = (
     }
   }, [resourceType, resourceId, dbUser?.id, refreshLockStatus]);
 
+  const forceOverrideLock = useCallback(async (): Promise<boolean> => {
+    if (!resourceId || !dbUser?.id) return false;
+    
+    // Optimistic update - immediately show that current user has the lock
+    setLockInfo(prev => ({
+      ...prev,
+      isLocked: true,
+      lockedBy: dbUser.id,
+      lockedByName: dbUser.name,
+      lockedAt: new Date().toISOString(),
+      isLockedByCurrentUser: true,
+    }));
+    
+    try {
+      const response = await fetch(`/api/${resourceType}/${resourceId}/lock?force=true`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (response.ok) {
+        // Confirm the optimistic update with fresh data
+        await refreshLockStatus();
+        return true;
+      } else {
+        const error = await response.json();
+        console.error('Failed to force override lock:', error.error);
+        // Revert optimistic update
+        await refreshLockStatus();
+        return false;
+      }
+    } catch (error) {
+      console.error('Error force overriding lock:', error);
+      // Revert optimistic update
+      await refreshLockStatus();
+      return false;
+    }
+  }, [resourceType, resourceId, dbUser, refreshLockStatus]);
+
   // Cleanup function to unlock on unmount
   const cleanup = useCallback(async () => {
     if (lockInfo.isLockedByCurrentUser && resourceId && dbUser?.id) {
@@ -228,6 +269,7 @@ export const useEditLock = (
     unlockResource,
     lockResourceOptimistic,
     unlockResourceOptimistic,
+    forceOverrideLock,
     refreshLockStatus,
   };
 }; 

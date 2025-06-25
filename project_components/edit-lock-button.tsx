@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Edit3, Save, Loader2, Lock } from 'lucide-react';
+import { Edit3, Save, Loader2, Lock, AlertTriangle } from 'lucide-react';
 import { useEditLock, type LockableResource } from '@/hooks/use-edit-lock';
 import { toast } from 'sonner';
 
@@ -50,7 +50,7 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
   onToggleEdit,
   onSave,
 }) => {
-  const { lockInfo, canEdit, lockResourceOptimistic, unlockResourceOptimistic, unlockResource } = useEditLock(
+  const { lockInfo, canEdit, lockResourceOptimistic, unlockResourceOptimistic, unlockResource, forceOverrideLock } = useEditLock(
     resourceType,
     resourceId
   );
@@ -94,6 +94,20 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
     }
   };
 
+  const handleForceOverride = async () => {
+    try {
+      const overridden = await forceOverrideLock();
+      if (overridden) {
+        onToggleEdit(); // Enter edit mode
+        toast.success(`Bearbeitung von ${lockInfo.lockedByName || 'anderem Benutzer'} überschrieben`);
+      } else {
+        toast.error('Fehler beim Überschreiben der Sperre');
+      }
+    } catch (error) {
+      toast.error('Fehler beim Überschreiben der Sperre');
+    }
+  };
+
   const handleSave = async () => {
     await onSave();
     // Unlock the resource after saving
@@ -128,6 +142,20 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
           </>
         )}
       </Button>
+      
+      {/* Force Override Button - only show when locked by another user */}
+      {lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && !isEditing && (
+        <Button
+          variant="destructive"
+          size="sm"
+          onClick={handleForceOverride}
+          aria-label="Sperre überschreiben und bearbeiten"
+          className="bg-orange-600 hover:bg-orange-700"
+        >
+          <AlertTriangle size={14} className="inline-block mr-1" />
+          Überschreiben
+        </Button>
+      )}
       
       {isEditing && (
         <Button

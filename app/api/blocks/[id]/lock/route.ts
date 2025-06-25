@@ -47,6 +47,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const url = new URL(request.url);
+    const force = url.searchParams.get('force') === 'true';
     
     // Get current user
     const supabase = await createClient();
@@ -72,8 +74,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       );
     }
     
-    // Check if already locked by someone else
-    if (block.blocked && block.blockedBy !== user.id) {
+    // Check if already locked by someone else (only if not forcing)
+    if (!force && block.blocked && block.blockedBy !== user.id) {
       const [blocker] = await db
         .select({ name: users.name })
         .from(users)
@@ -89,7 +91,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       );
     }
     
-    // Lock the block
+    // Lock the block (this will override any existing lock if force=true)
     await db
       .update(blocks)
       .set({

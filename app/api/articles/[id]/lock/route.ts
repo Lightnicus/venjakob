@@ -47,6 +47,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
+    const url = new URL(request.url);
+    const force = url.searchParams.get('force') === 'true';
     
     // Get current user using DRY server-side utility
     const { dbUser } = await requireAuth();
@@ -64,8 +66,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       );
     }
     
-    // Check if already locked by someone else
-    if (article.blocked && article.blockedBy !== dbUser.id) {
+    // Check if already locked by someone else (only if not forcing)
+    if (!force && article.blocked && article.blockedBy !== dbUser.id) {
       const [blocker] = await db
         .select({ name: users.name })
         .from(users)
@@ -81,7 +83,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       );
     }
     
-    // Lock the article
+    // Lock the article (this will override any existing lock if force=true)
     await db
       .update(articles)
       .set({
