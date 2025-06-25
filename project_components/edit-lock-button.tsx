@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Edit3, Save, Loader2, Lock } from 'lucide-react';
 import { useEditLock, type LockableResource } from '@/hooks/use-edit-lock';
@@ -9,10 +10,37 @@ interface EditLockButtonProps {
   resourceType: LockableResource;
   resourceId: string;
   isEditing: boolean;
-  isSaving: boolean;
+  isSaving?: boolean;
   onToggleEdit: () => void;
-  onSave: () => void;
+  onSave: () => Promise<void>;
 }
+
+// Helper function to format the lock timestamp in German
+const formatLockTime = (timestamp: string | null): string => {
+  if (!timestamp) return '';
+  
+  const date = new Date(timestamp);
+  const now = new Date();
+  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+  
+  if (diffInMinutes < 1) {
+    return 'gerade eben';
+  } else if (diffInMinutes < 60) {
+    return `vor ${diffInMinutes} Min.`;
+  } else if (diffInMinutes < 1440) { // Less than 24 hours
+    const hours = Math.floor(diffInMinutes / 60);
+    return `vor ${hours} Std.`;
+  } else {
+    // Format as German date for older locks
+    return date.toLocaleDateString('de-DE', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+};
 
 const EditLockButton: React.FC<EditLockButtonProps> = ({
   resourceType,
@@ -126,6 +154,11 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         <span className="text-sm text-gray-600">
           wird bearbeitet von{' '}
           <strong>{lockInfo.lockedByName || 'Unbekannt'}</strong>
+          {lockInfo.lockedAt && (
+            <span className="text-gray-500">
+              {' '}({formatLockTime(lockInfo.lockedAt)})
+            </span>
+          )}
         </span>
       )}
     </div>
