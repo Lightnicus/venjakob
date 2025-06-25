@@ -1,6 +1,13 @@
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, sql } from 'drizzle-orm';
 import { db } from './index';
-import { blocks, blockContent, languages, type Block, type BlockContent, type Language } from './schema';
+import {
+  blocks,
+  blockContent,
+  languages,
+  type Block,
+  type BlockContent,
+  type Language,
+} from './schema';
 import { getCurrentUser } from '@/lib/auth/server';
 
 // Common error type for edit lock conflicts
@@ -9,7 +16,7 @@ export class EditLockError extends Error {
     message: string,
     public readonly blockId: string,
     public readonly lockedBy: string | null = null,
-    public readonly lockedAt: Date | null = null
+    public readonly lockedAt: string | null = null,
   ) {
     super(message);
     this.name = 'EditLockError';
@@ -47,7 +54,7 @@ async function checkBlockEditable(blockId: string): Promise<void> {
       'Block wird bereits von einem anderen Benutzer bearbeitet',
       blockId,
       block.blockedBy,
-      block.blocked
+      block.blocked,
     );
   }
 }
@@ -66,17 +73,22 @@ export async function getLanguages(): Promise<Language[]> {
 export async function getBlocksWithContent(): Promise<BlockWithContent[]> {
   try {
     // Fetch all blocks
-    const allBlocks = await db.select().from(blocks).orderBy(blocks.position, blocks.name);
-    
+    const allBlocks = await db
+      .select()
+      .from(blocks)
+      .orderBy(blocks.position, blocks.name);
+
     // Fetch all block content
     const allBlockContent = await db.select().from(blockContent);
-    
+
     // Join the data
     const blocksWithContent: BlockWithContent[] = allBlocks.map(block => ({
       ...block,
-      blockContents: allBlockContent.filter(content => content.blockId === block.id)
+      blockContents: allBlockContent.filter(
+        content => content.blockId === block.id,
+      ),
     }));
-    
+
     return blocksWithContent;
   } catch (error) {
     console.error('Error fetching blocks with content:', error);
@@ -85,16 +97,24 @@ export async function getBlocksWithContent(): Promise<BlockWithContent[]> {
 }
 
 // Get a single block with content
-export async function getBlockWithContent(blockId: string): Promise<BlockWithContent | null> {
+export async function getBlockWithContent(
+  blockId: string,
+): Promise<BlockWithContent | null> {
   try {
-    const [block] = await db.select().from(blocks).where(eq(blocks.id, blockId));
+    const [block] = await db
+      .select()
+      .from(blocks)
+      .where(eq(blocks.id, blockId));
     if (!block) return null;
-    
-    const content = await db.select().from(blockContent).where(eq(blockContent.blockId, blockId));
-    
+
+    const content = await db
+      .select()
+      .from(blockContent)
+      .where(eq(blockContent.blockId, blockId));
+
     return {
       ...block,
-      blockContents: content
+      blockContents: content,
     };
   } catch (error) {
     console.error('Error fetching block:', error);
@@ -104,16 +124,16 @@ export async function getBlockWithContent(blockId: string): Promise<BlockWithCon
 
 // Save block content (create or update)
 export async function saveBlockContent(
-  blockId: string, 
-  blockContents: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[]
+  blockId: string,
+  blockContents: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[],
 ): Promise<void> {
   try {
     // Check if block is editable by current user
     await checkBlockEditable(blockId);
-    
+
     // Delete existing content for this block
     await db.delete(blockContent).where(eq(blockContent.blockId, blockId));
-    
+
     // Insert new content
     if (blockContents.length > 0) {
       await db.insert(blockContent).values(blockContents);
@@ -129,15 +149,16 @@ export async function saveBlockContent(
 
 // Save block properties
 export async function saveBlockProperties(
-  blockId: string, 
-  blockData: Partial<Block>
+  blockId: string,
+  blockData: Partial<Block>,
 ): Promise<void> {
   try {
     // Check if block is editable by current user
     await checkBlockEditable(blockId);
-    
-    await db.update(blocks)
-      .set({ ...blockData, updatedAt: new Date() })
+
+    await db
+      .update(blocks)
+      .set({ ...blockData, updatedAt: sql`NOW()` })
       .where(eq(blocks.id, blockId));
   } catch (error) {
     if (error instanceof EditLockError) {
@@ -152,18 +173,21 @@ export async function saveBlockProperties(
 export async function createBlock(): Promise<BlockWithContent> {
   try {
     // Create new block with position set to null since standard defaults to false
-    const [newBlock] = await db.insert(blocks).values({
-      name: 'Neuer Block',
-      standard: false,
-      mandatory: false,
-      position: null, // Position is null when standard is false
-      hideTitle: false,
-      pageBreakAbove: false,
-    }).returning();
-    
+    const [newBlock] = await db
+      .insert(blocks)
+      .values({
+        name: 'Neuer Block',
+        standard: false,
+        mandatory: false,
+        position: null, // Position is null when standard is false
+        hideTitle: false,
+        pageBreakAbove: false,
+      })
+      .returning();
+
     return {
       ...newBlock,
-      blockContents: []
+      blockContents: [],
     };
   } catch (error) {
     console.error('Error creating block:', error);
@@ -172,35 +196,41 @@ export async function createBlock(): Promise<BlockWithContent> {
 }
 
 // Copy a block
-export async function copyBlock(originalBlockId: string): Promise<BlockWithContent> {
+export async function copyBlock(
+  originalBlockId: string,
+): Promise<BlockWithContent> {
   try {
     // Get the original block with content
     const originalBlock = await getBlockWithContent(originalBlockId);
     if (!originalBlock) {
       throw new Error('Original block not found');
     }
-    
+
     // Get position for the copy - only if the original is standard
     let copyPosition = null;
     if (originalBlock.standard) {
-      const maxPositionResult = await db.select({ maxPosition: blocks.position })
+      const maxPositionResult = await db
+        .select({ maxPosition: blocks.position })
         .from(blocks)
         .orderBy(desc(blocks.position))
         .limit(1);
-      
+
       copyPosition = (maxPositionResult[0]?.maxPosition || 0) + 1;
     }
-    
+
     // Create new block with "(Kopie)" appended to the name
-    const [newBlock] = await db.insert(blocks).values({
-      name: `${originalBlock.name} (Kopie)`,
-      standard: originalBlock.standard,
-      mandatory: originalBlock.mandatory,
-      position: copyPosition,
-      hideTitle: originalBlock.hideTitle,
-      pageBreakAbove: originalBlock.pageBreakAbove,
-    }).returning();
-    
+    const [newBlock] = await db
+      .insert(blocks)
+      .values({
+        name: `${originalBlock.name} (Kopie)`,
+        standard: originalBlock.standard,
+        mandatory: originalBlock.mandatory,
+        position: copyPosition,
+        hideTitle: originalBlock.hideTitle,
+        pageBreakAbove: originalBlock.pageBreakAbove,
+      })
+      .returning();
+
     // Copy all block contents (without modifying titles)
     const copiedContents = [];
     if (originalBlock.blockContents.length > 0) {
@@ -211,14 +241,17 @@ export async function copyBlock(originalBlockId: string): Promise<BlockWithConte
         content: content.content,
         languageId: content.languageId,
       }));
-      
-      const insertedContents = await db.insert(blockContent).values(contentToInsert).returning();
+
+      const insertedContents = await db
+        .insert(blockContent)
+        .values(contentToInsert)
+        .returning();
       copiedContents.push(...insertedContents);
     }
-    
+
     return {
       ...newBlock,
-      blockContents: copiedContents
+      blockContents: copiedContents,
     };
   } catch (error) {
     console.error('Error copying block:', error);
@@ -231,10 +264,10 @@ export async function deleteBlock(blockId: string): Promise<void> {
   try {
     // Check if block is editable by current user
     await checkBlockEditable(blockId);
-    
+
     // Delete block content first (foreign key constraint)
     await db.delete(blockContent).where(eq(blockContent.blockId, blockId));
-    
+
     // Delete the block
     await db.delete(blocks).where(eq(blocks.id, blockId));
   } catch (error) {
@@ -247,20 +280,25 @@ export async function deleteBlock(blockId: string): Promise<void> {
 }
 
 // Fetch minimal block list data
-export async function getBlockList(): Promise<{
-  id: string;
-  name: string;
-  standard: boolean;
-  mandatory: boolean;
-  position: number | null;
-  firstContentTitle: string | null;
-  languages: string;
-  lastModified: string;
-}[]> {
+export async function getBlockList(): Promise<
+  {
+    id: string;
+    name: string;
+    standard: boolean;
+    mandatory: boolean;
+    position: number | null;
+    firstContentTitle: string | null;
+    languages: string;
+    lastModified: string;
+  }[]
+> {
   try {
     // Fetch all blocks
-    const allBlocks = await db.select().from(blocks).orderBy(blocks.position, blocks.name);
-    
+    const allBlocks = await db
+      .select()
+      .from(blocks)
+      .orderBy(blocks.position, blocks.name);
+
     // Fetch all block content with language info
     const allBlockContent = await db
       .select({
@@ -270,32 +308,38 @@ export async function getBlockList(): Promise<{
         languageId: blockContent.languageId,
       })
       .from(blockContent);
-    
+
     // Fetch all languages
     const allLanguages = await db.select().from(languages);
-    
+
     // Find the default language
     const defaultLanguage = allLanguages.find(lang => lang.default);
-    
+
     // Process the data
     const blockList = allBlocks.map(block => {
-      const blockContents = allBlockContent.filter(content => content.blockId === block.id);
-      
+      const blockContents = allBlockContent.filter(
+        content => content.blockId === block.id,
+      );
+
       // Get content title from default language, or empty string if not found
       let firstContentTitle = '';
       if (defaultLanguage) {
-        const defaultContent = blockContents.find(content => content.languageId === defaultLanguage.id);
+        const defaultContent = blockContents.find(
+          content => content.languageId === defaultLanguage.id,
+        );
         if (defaultContent) {
           firstContentTitle = defaultContent.title;
         }
       }
-      
+
       // Get languages for this block
-      const blockLanguages = blockContents.map(bc => {
-        const lang = allLanguages.find(l => l.id === bc.languageId);
-        return lang;
-      }).filter(lang => lang !== undefined);
-      
+      const blockLanguages = blockContents
+        .map(bc => {
+          const lang = allLanguages.find(l => l.id === bc.languageId);
+          return lang;
+        })
+        .filter(lang => lang !== undefined);
+
       // Sort languages: default first, then alphabetically by label
       const sortedLanguages = blockLanguages.sort((a, b) => {
         // If one is default and the other is not, default comes first
@@ -304,19 +348,21 @@ export async function getBlockList(): Promise<{
         // If both are default or both are not default, sort alphabetically
         return a.label.localeCompare(b.label);
       });
-      
+
       const languageLabels = sortedLanguages.map(lang => lang.label);
       const languagesString = languageLabels.join(', ') || 'Keine Sprachen';
-      
+
       // Get last modified date
       let lastModified = 'Nie';
       if (blockContents.length > 0) {
-        const latestUpdate = blockContents.reduce((latest, current) => 
-          new Date(current.updatedAt) > new Date(latest.updatedAt) ? current : latest
+        const latestUpdate = blockContents.reduce((latest, current) =>
+          new Date(current.updatedAt) > new Date(latest.updatedAt)
+            ? current
+            : latest,
         );
-        lastModified = latestUpdate.updatedAt.toISOString();
+        lastModified = latestUpdate.updatedAt;
       }
-      
+
       return {
         id: block.id,
         name: block.name,
@@ -325,13 +371,13 @@ export async function getBlockList(): Promise<{
         position: block.position,
         firstContentTitle,
         languages: languagesString,
-        lastModified
+        lastModified,
       };
     });
-    
+
     return blockList;
   } catch (error) {
     console.error('Error fetching block list:', error);
     throw new Error('Failed to fetch block list');
   }
-} 
+}

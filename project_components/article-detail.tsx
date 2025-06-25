@@ -264,7 +264,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
           number: articleData.number,
           price: articleData.price,
           hideTitle: articleData.hideTitle,
-          updatedAt: new Date()
+          updatedAt: new Date().toISOString()
         }) : null);
       }
 
@@ -286,9 +286,9 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
           calculations: prev.calculations.map(item => ({
             ...item,
             value: editedKalkulationData[item.id] || item.value,
-            updatedAt: new Date()
+            updatedAt: new Date().toISOString()
           })),
-          updatedAt: new Date()
+          updatedAt: new Date().toISOString()
         }) : null);
       }
 
@@ -408,6 +408,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
           isSaving={isSaving}
           onToggleEdit={handleToggleEdit}
           onSave={handleSaveChanges}
+          initialUpdatedAt={article?.updatedAt}
         />
       </div>
       <Tabs

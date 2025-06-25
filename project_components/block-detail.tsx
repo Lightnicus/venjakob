@@ -32,7 +32,10 @@ type BlockDetailProps = {
     blockId: string,
     blockContents: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[],
   ) => Promise<void>;
-  onSaveBlockProperties?: (blockId: string, blockData: Partial<Block>) => Promise<void>;
+  onSaveBlockProperties?: (
+    blockId: string,
+    blockData: Partial<Block>,
+  ) => Promise<void>;
 };
 
 const BlockDetail: FC<BlockDetailProps> = ({
@@ -50,7 +53,9 @@ const BlockDetail: FC<BlockDetailProps> = ({
   const propertiesRef = useRef<BlockDetailPropertiesRef>(null);
 
   // Add state for block properties
-  const [editedBlockProperties, setEditedBlockProperties] = useState<Partial<Block>>({});
+  const [editedBlockProperties, setEditedBlockProperties] = useState<
+    Partial<Block>
+  >({});
 
   const [editedBlockContents, setEditedBlockContents] = useState<
     Record<
@@ -70,7 +75,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
 
   // Set up reload functionality - no callback needed as this component loads its own data
   const { triggerReload } = useTabReload('blocks', () => {});
-  
+
   // Set up tab title functionality
   const { updateTitle } = useTabTitle(`block-detail-${blockId}`);
 
@@ -78,17 +83,18 @@ const BlockDetail: FC<BlockDetailProps> = ({
   const loadBlockData = async () => {
     setIsLoading(true);
     setLoadError(null);
-    
+
     try {
       // Fetch block data using the existing API function
       const blockData = await fetchBlockWithContent(blockId);
-      
+      console.log('Block in block detail', blockData);
+
       if (!blockData) {
         throw new Error('Block not found');
       }
-      
+
       setBlock(blockData);
-      
+
       // Initialize block properties state
       setEditedBlockProperties({
         name: blockData.name,
@@ -117,7 +123,9 @@ const BlockDetail: FC<BlockDetailProps> = ({
       setEditedBlockContents(initial);
 
       const activeLangs = languages.filter(lang =>
-        blockData.blockContents.some((bc: BlockContent) => bc.languageId === lang.id),
+        blockData.blockContents.some(
+          (bc: BlockContent) => bc.languageId === lang.id,
+        ),
       );
       setCurrentLanguages(activeLangs);
 
@@ -128,7 +136,6 @@ const BlockDetail: FC<BlockDetailProps> = ({
       }
 
       setSelectedLanguageToAdd('');
-      
     } catch (error) {
       console.error('Error loading block:', error);
       setLoadError('Fehler beim Laden des Blocks');
@@ -171,7 +178,10 @@ const BlockDetail: FC<BlockDetailProps> = ({
   };
 
   // Add handler for block property changes
-  const handleBlockPropertyChange = (field: keyof typeof editedBlockProperties, value: string | number | boolean) => {
+  const handleBlockPropertyChange = (
+    field: keyof typeof editedBlockProperties,
+    value: string | number | boolean,
+  ) => {
     if (!isEditing) return;
     setEditedBlockProperties(prev => ({ ...prev, [field]: value }));
   };
@@ -246,12 +256,15 @@ const BlockDetail: FC<BlockDetailProps> = ({
 
       setIsEditing(false);
       toast.success('Block gespeichert');
-      
+
       // Update tab title if block name changed
-      if (editedBlockProperties.name && editedBlockProperties.name !== block.name) {
+      if (
+        editedBlockProperties.name &&
+        editedBlockProperties.name !== block.name
+      ) {
         updateTitle(`Block: ${editedBlockProperties.name}`);
       }
-      
+
       // Trigger reload for other tabs (like BlockManagement)
       triggerReload();
     } catch (error) {
@@ -279,11 +292,16 @@ const BlockDetail: FC<BlockDetailProps> = ({
 
   const handleAddLanguage = () => {
     if (!isEditing || !selectedLanguageToAdd) return;
-    
+
     // Find the selected language
-    const langToAdd = languages.find(lang => lang.value === selectedLanguageToAdd);
-    
-    if (langToAdd && !currentLanguages.some(cl => cl.value === langToAdd.value)) {
+    const langToAdd = languages.find(
+      lang => lang.value === selectedLanguageToAdd,
+    );
+
+    if (
+      langToAdd &&
+      !currentLanguages.some(cl => cl.value === langToAdd.value)
+    ) {
       const newCurrentLanguages = [...currentLanguages, langToAdd];
       setCurrentLanguages(newCurrentLanguages);
       setEditedBlockContents(prev => ({
@@ -296,13 +314,15 @@ const BlockDetail: FC<BlockDetailProps> = ({
       // Reset the dropdown selection
       setSelectedLanguageToAdd('');
     } else {
-      toast.error('Die ausgewählte Sprache ist bereits hinzugefügt oder ungültig.');
+      toast.error(
+        'Die ausgewählte Sprache ist bereits hinzugefügt oder ungültig.',
+      );
     }
   };
 
   // Get available languages for the dropdown
   const availableLanguages = languages.filter(
-    lang => !currentLanguages.some(cl => cl.value === lang.value)
+    lang => !currentLanguages.some(cl => cl.value === lang.value),
   );
 
   const currentPreviewData = editedBlockContents[selectedPreviewLanguage];
@@ -331,7 +351,9 @@ const BlockDetail: FC<BlockDetailProps> = ({
     return (
       <div className="w-full max-w-4xl mx-auto bg-white rounded shadow p-6">
         <div className="text-center py-12">
-          <div className="text-red-600 mb-2">{loadError || 'Block nicht gefunden'}</div>
+          <div className="text-red-600 mb-2">
+            {loadError || 'Block nicht gefunden'}
+          </div>
           <Button onClick={loadBlockData} variant="outline">
             Erneut versuchen
           </Button>
@@ -351,6 +373,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
           isSaving={isSaving}
           onToggleEdit={handleToggleEdit}
           onSave={handleSaveChanges}
+          initialUpdatedAt={block?.updatedAt}
         />
       </div>
       <Tabs
@@ -466,8 +489,14 @@ const BlockDetail: FC<BlockDetailProps> = ({
           })}
           {isEditing && availableLanguages.length > 0 && (
             <div className="flex items-center gap-2">
-              <Select value={selectedLanguageToAdd} onValueChange={setSelectedLanguageToAdd}>
-                <SelectTrigger className="w-48" aria-label="Sprache zum Hinzufügen auswählen">
+              <Select
+                value={selectedLanguageToAdd}
+                onValueChange={setSelectedLanguageToAdd}
+              >
+                <SelectTrigger
+                  className="w-48"
+                  aria-label="Sprache zum Hinzufügen auswählen"
+                >
                   <SelectValue placeholder="Sprache auswählen..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -485,7 +514,8 @@ const BlockDetail: FC<BlockDetailProps> = ({
                 disabled={!selectedLanguageToAdd}
                 aria-label="Ausgewählte Sprache hinzufügen"
               >
-                <PlusCircle size={14} className="inline-block" /> Sprache hinzufügen
+                <PlusCircle size={14} className="inline-block" /> Sprache
+                hinzufügen
               </Button>
             </div>
           )}

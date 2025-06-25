@@ -1,4 +1,4 @@
-import { eq, notInArray, and } from 'drizzle-orm';
+import { eq, notInArray, and, sql } from 'drizzle-orm';
 import { db } from './index';
 import { 
   users, type InsertUser, type User, 
@@ -32,7 +32,7 @@ export const getAllUsers = async (): Promise<User[]> => {
 export const updateUser = async (id: string, userData: Partial<InsertUser>): Promise<User | undefined> => {
   const [user] = await db
     .update(users)
-    .set({ ...userData, updatedAt: new Date() })
+          .set({ ...userData, updatedAt: sql`NOW()` })
     .where(eq(users.id, id))
     .returning();
   return user;
@@ -65,7 +65,7 @@ export const getAllLanguages = async (): Promise<Language[]> => {
 export const updateLanguage = async (id: string, languageData: Partial<InsertLanguage>): Promise<Language | undefined> => {
   const [language] = await db
     .update(languages)
-    .set({ ...languageData, updatedAt: new Date() })
+          .set({ ...languageData, updatedAt: sql`NOW()` })
     .where(eq(languages.id, id))
     .returning();
   return language;
@@ -130,7 +130,7 @@ export const getAllRoles = async (): Promise<Role[]> => {
 export const updateRole = async (id: string, roleData: Partial<InsertRole>): Promise<Role | undefined> => {
   const [role] = await db
     .update(roles)
-    .set({ ...roleData, updatedAt: new Date() })
+          .set({ ...roleData, updatedAt: sql`NOW()` })
     .where(eq(roles.id, id))
     .returning();
   return role;
@@ -167,7 +167,7 @@ export const getPermissionsByResource = async (resource: string): Promise<Permis
 export const updatePermission = async (id: string, permissionData: Partial<InsertPermission>): Promise<Permission | undefined> => {
   const [permission] = await db
     .update(permissions)
-    .set({ ...permissionData, updatedAt: new Date() })
+          .set({ ...permissionData, updatedAt: sql`NOW()` })
     .where(eq(permissions.id, id))
     .returning();
   return permission;

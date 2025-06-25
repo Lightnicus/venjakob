@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       name: newRole.name,
       description: newRole.description,
       permissionCount: originalPermissions.length,
-      lastModified: newRole.createdAt.toISOString()
+      lastModified: newRole.createdAt
     };
     
     return NextResponse.json(roleListItem);

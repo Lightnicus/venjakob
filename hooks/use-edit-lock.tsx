@@ -70,13 +70,13 @@ export const useEditLock = (
   const lockResourceOptimistic = useCallback(async (): Promise<boolean> => {
     if (!resourceId || !dbUser?.id) return false;
     
-    // Optimistic update
+    // Optimistic update - don't set lockedAt optimistically to avoid timezone issues
     setLockInfo(prev => ({
       ...prev,
       isLocked: true,
       lockedBy: dbUser.id,
       lockedByName: dbUser.name,
-      lockedAt: new Date().toISOString(),
+      lockedAt: null, // Will be set by server response
       isLockedByCurrentUser: true,
     }));
     
@@ -201,7 +201,7 @@ export const useEditLock = (
       isLocked: true,
       lockedBy: dbUser.id,
       lockedByName: dbUser.name,
-      lockedAt: new Date().toISOString(),
+      lockedAt: null, // Will be set by server response
       isLockedByCurrentUser: true,
     }));
     

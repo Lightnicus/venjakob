@@ -18,7 +18,7 @@ export async function GET() {
           name: role.name,
           description: role.description,
           permissionCount: rolePermissions.length,
-          lastModified: role.updatedAt.toISOString(),
+          lastModified: role.updatedAt,
         };
       })
     );
@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
       name: newRole.name,
       description: newRole.description,
       permissionCount: 0,
-      lastModified: newRole.createdAt.toISOString()
+                lastModified: newRole.createdAt
     };
     
     return NextResponse.json(roleListItem);

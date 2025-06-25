@@ -44,7 +44,7 @@ export async function PUT(
           type: 'EDIT_LOCK_ERROR',
           articleId: error.articleId,
           lockedBy: error.lockedBy,
-          lockedAt: error.lockedAt?.toISOString()
+          lockedAt: error.lockedAt
         },
         { status: 409 } // Conflict
       );
@@ -73,7 +73,7 @@ export async function DELETE(
           type: 'EDIT_LOCK_ERROR',
           articleId: error.articleId,
           lockedBy: error.lockedBy,
-          lockedAt: error.lockedAt?.toISOString()
+          lockedAt: error.lockedAt
         },
         { status: 409 } // Conflict
       );

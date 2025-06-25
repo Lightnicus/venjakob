@@ -1,4 +1,4 @@
-import { eq, desc, asc, and, count, isNull } from 'drizzle-orm';
+import { eq, desc, asc, and, count, isNull, sql } from 'drizzle-orm';
 import { db } from './index';
 import { 
   articles, 
@@ -19,7 +19,7 @@ export class EditLockError extends Error {
     message: string,
     public readonly articleId: string,
     public readonly lockedBy: string | null = null,
-    public readonly lockedAt: Date | null = null
+    public readonly lockedAt: string | null = null
   ) {
     super(message);
     this.name = 'EditLockError';
@@ -152,7 +152,7 @@ export async function saveArticle(
     await checkArticleEditable(articleId);
     
     await db.update(articles)
-      .set({ ...articleData, updatedAt: new Date() })
+      .set({ ...articleData, updatedAt: sql`NOW()` })
       .where(eq(articles.id, articleId));
   } catch (error) {
     if (error instanceof EditLockError) {
@@ -283,9 +283,9 @@ export async function saveCalculationItem(
   itemData: Partial<Omit<ArticleCalculationItem, 'id' | 'createdAt' | 'updatedAt'>>
 ): Promise<void> {
   try {
-    await db.update(articleCalculationItem)
-      .set({ ...itemData, updatedAt: new Date() })
-      .where(eq(articleCalculationItem.id, itemId));
+          await db.update(articleCalculationItem)
+        .set({ ...itemData, updatedAt: sql`NOW()` })
+        .where(eq(articleCalculationItem.id, itemId));
   } catch (error) {
     console.error('Error saving calculation item:', error);
     throw new Error('Failed to save calculation item');
@@ -511,7 +511,7 @@ export async function getArticleList(): Promise<{
           title: title,
           price: article.price,
           hideTitle: article.hideTitle,
-          updatedAt: article.updatedAt.toISOString(),
+          updatedAt: article.updatedAt,
           calculationCount: Number(countResult?.count || 0),
           languages: languagesString
         };

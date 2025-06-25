@@ -9,8 +9,8 @@ export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
   email: text('email').notNull().unique(),
   name: text('name'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
 // Language table
@@ -19,8 +19,8 @@ export const languages = pgTable('languages', {
   value: text('value').notNull().unique(),
   label: text('label').notNull(),
   default: boolean('default').notNull().default(false),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
 // Clients table
@@ -29,8 +29,8 @@ export const clients = pgTable('clients', {
   foreignId: text('foreign_id').notNull().unique(),
   name: text('name').notNull(),
   languageId: uuid('language_id').notNull().references(() => languages.id),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
 // Blocks table
@@ -42,10 +42,10 @@ export const blocks = pgTable('blocks', {
   position: integer('position'),
   hideTitle: boolean('hide_title').notNull(),
   pageBreakAbove: boolean('page_break_above').notNull(),
-  blocked: timestamp('blocked'),
+  blocked: timestamp('blocked', { mode: 'string' }),
   blockedBy: uuid('blocked_by').references(() => users.id),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
 // Articles table
@@ -54,10 +54,10 @@ export const articles = pgTable('articles', {
   number: text('number').notNull(),
   price: numeric('price').notNull(),
   hideTitle: boolean('hide_title').notNull().default(false),
-  blocked: timestamp('blocked'),
+  blocked: timestamp('blocked', { mode: 'string' }),
   blockedBy: uuid('blocked_by').references(() => users.id),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
 // Block Content table
@@ -68,8 +68,8 @@ export const blockContent = pgTable('block_content', {
   title: text('title').notNull(),
   content: text('content').notNull(),
   languageId: uuid('language_id').notNull().references(() => languages.id),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 }, (table) => ({
   // Ensure either blockId or articleId is set, but not both
   blockOrArticleCheck: check('block_or_article_check', 
@@ -85,8 +85,8 @@ export const articleCalculationItem = pgTable('article_calculation_item', {
   value: numeric('value').notNull(),
   articleId: uuid('article_id').references(() => articles.id, { onDelete: 'cascade' }),
   order: integer('order'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
 // Roles table
@@ -94,8 +94,8 @@ export const roles = pgTable('roles', {
   id: uuid('id').primaryKey().defaultRandom(),
   name: text('name').notNull().unique(),
   description: text('description'),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
 // Permissions table
@@ -104,8 +104,8 @@ export const permissions = pgTable('permissions', {
   name: text('name').notNull().unique(),
   description: text('description'),
   resource: text('resource').notNull(),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
 
 // User Roles junction table
@@ -113,8 +113,8 @@ export const userRoles = pgTable('user_roles', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   roleId: uuid('role_id').notNull().references(() => roles.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 }, (table) => ({
   // Ensure a user can only have each role once
   userRoleUnique: unique('user_role_unique').on(table.userId, table.roleId),
@@ -125,8 +125,8 @@ export const rolePermissions = pgTable('role_permissions', {
   id: uuid('id').primaryKey().defaultRandom(),
   roleId: uuid('role_id').notNull().references(() => roles.id, { onDelete: 'cascade' }),
   permissionId: uuid('permission_id').notNull().references(() => permissions.id, { onDelete: 'cascade' }),
-  createdAt: timestamp('created_at').defaultNow().notNull(),
-  updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 }, (table) => ({
   // Ensure a role can only have each permission once
   rolePermissionUnique: unique('role_permission_unique').on(table.roleId, table.permissionId),

@@ -86,6 +86,7 @@ const MyDetailComponent = ({ resourceId }: { resourceId: string }) => {
       onEditToggle={setIsEditing}
       onSave={handleSave}
       disabled={isSaving}
+      initialUpdatedAt={resourceData?.updatedAt}
     />
   );
 };
@@ -123,6 +124,7 @@ interface EditLockButtonProps {
   onEditToggle: (editing: boolean) => void;
   onSave?: () => Promise<void> | void;
   disabled?: boolean;
+  initialUpdatedAt?: string; // Resource's last update timestamp for conflict detection
 }
 ```
 
@@ -190,7 +192,7 @@ export class EditLockError extends Error {
     message: string,
     public readonly articleId: string, // or blockId for blocks
     public readonly lockedBy: string | null = null,
-    public readonly lockedAt: Date | null = null
+    public readonly lockedAt: string | null = null  // ISO string timestamp
   ) {
     super(message);
     this.name = 'EditLockError';
@@ -305,16 +307,27 @@ toast.error(error.response.data.error);
 ### Article Locks
 ```sql
 -- articles table
-blocked BOOLEAN DEFAULT false,
-blockedBy TEXT REFERENCES auth.users(id)
+blocked TIMESTAMP,  -- UTC timestamp when locked (NULL when not locked)
+blockedBy TEXT REFERENCES auth.users(id)  -- User ID who has the lock
 ```
 
 ### Block Locks
 ```sql
--- blocks table
-blocked BOOLEAN DEFAULT false,
-blockedBy TEXT REFERENCES auth.users(id)
+-- blocks table  
+blocked TIMESTAMP,  -- UTC timestamp when locked (NULL when not locked)
+blockedBy TEXT REFERENCES auth.users(id)  -- User ID who has the lock
 ```
+
+### Timestamp Handling
+
+The system uses PostgreSQL's `NOW()` function for consistent UTC timestamps:
+
+- **Database Level**: All timestamps are generated using `sql`NOW()`` for consistency
+- **TypeScript Types**: Timestamps are handled as strings (ISO format) after JSON serialization
+- **Drizzle Schema**: Configured with `{ mode: 'string' }` to match runtime behavior
+- **Client Display**: Converted to local timezone for user-friendly display
+
+This approach eliminates timezone-related issues and ensures atomic timestamp operations.
 
 ## Optimistic Updates
 
@@ -334,7 +347,9 @@ The system uses optimistic updates for better user experience:
   resourceType="articles"
   resourceId={articleId}
   isEditing={isEditing}
-  onEditToggle={setIsEditing}
+  onToggleEdit={setIsEditing}
+  onSave={handleSave}
+  initialUpdatedAt={articleData?.updatedAt}  // Already a string from Drizzle
 />
 
 // ❌ Bad - Implement custom lock logic
@@ -361,20 +376,35 @@ try {
 }
 ```
 
+### 4. Use EditLockButton
+```typescript
+<EditLockButton
+  resourceType="new-resource"
+  resourceId={resourceId}
+  isEditing={isEditing}
+  onEditToggle={setIsEditing}
+  initialUpdatedAt={resourceData?.updatedAt}
+/>
+```
+
 ## Extending for New Resource Types
 
 ### 1. Extend Database Schema
 ```sql
 ALTER TABLE new_table 
-ADD COLUMN blocked BOOLEAN DEFAULT false,
-ADD COLUMN blockedBy TEXT REFERENCES auth.users(id);
+ADD COLUMN blocked TIMESTAMP,  -- UTC timestamp when locked (NULL when not locked)
+ADD COLUMN blockedBy TEXT REFERENCES auth.users(id);  -- User ID who has the lock
 ```
 
 ### 2. Create API Endpoints
 ```typescript
 // app/api/new-resource/[id]/lock/route.ts
-import { getCurrentUser, requireAuth } from "@/lib/auth/server";
-// ... implement GET, POST, DELETE handlers
+import { requireAuth } from "@/lib/auth/server";
+import { sql } from 'drizzle-orm';
+
+// GET - Check lock status
+// POST - Lock resource using sql`NOW()` for timestamp
+// DELETE - Unlock resource (set blocked to null)
 ```
 
 ### 3. Extend Hook Type
@@ -389,7 +419,10 @@ type ResourceType = 'articles' | 'blocks' | 'new-resource';
   resourceType="new-resource"
   resourceId={resourceId}
   isEditing={isEditing}
-  onEditToggle={setIsEditing}
+  isSaving={isSaving}
+  onToggleEdit={setIsEditing}
+  onSave={handleSave}
+  initialUpdatedAt={resourceData?.updatedAt}  // Already a string from Drizzle
 />
 ```
 
@@ -441,6 +474,34 @@ export default function RootLayout({ children }) {
 - `sonner` - Toast notifications
 - Supabase Auth - User authentication
 - Next.js 15 - API Routes
+
+### Authentication Implementation
+All lock API endpoints use the unified `requireAuth()` method from `@/lib/auth/server`:
+
+```typescript
+import { requireAuth } from '@/lib/auth/server';
+
+export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    // Get current user using DRY server-side utility
+    const { dbUser } = await requireAuth();
+    
+    // Lock the resource
+    await db.update(table).set({
+      blocked: sql`NOW()`,
+      blockedBy: dbUser.id,
+    }).where(eq(table.id, id));
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    // Handle authentication errors (thrown by requireAuth)
+    if (error instanceof Response) {
+      return error;
+    }
+    // Handle other errors...
+  }
+}
+```
 
 ### Performance
 - Optimistic updates reduce perceived latency

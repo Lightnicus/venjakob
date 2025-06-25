@@ -193,17 +193,22 @@ interface LockInfo {
 
 ## Database Schema
 
-The system uses existing `blocked` and `blockedBy` fields:
+The system uses `blocked` and `blockedBy` fields for lock management:
 
 ```sql
--- Articles table
-ALTER TABLE articles ADD COLUMN blocked timestamp;
-ALTER TABLE articles ADD COLUMN blocked_by uuid REFERENCES users(id);
+-- Articles table  
+blocked TIMESTAMP,      -- UTC timestamp when locked (NULL when not locked)
+blockedBy TEXT REFERENCES auth.users(id);  -- User ID who has the lock
 
--- Blocks table  
-ALTER TABLE blocks ADD COLUMN blocked timestamp;
-ALTER TABLE blocks ADD COLUMN blocked_by uuid REFERENCES users(id);
+-- Blocks table
+blocked TIMESTAMP,      -- UTC timestamp when locked (NULL when not locked)
+blockedBy TEXT REFERENCES auth.users(id);  -- User ID who has the lock
 ```
+
+### Timestamp Handling
+- All timestamps use PostgreSQL's `NOW()` function for consistency
+- Drizzle schema configured with `{ mode: 'string' }` for type safety
+- Client receives timestamps as ISO strings after JSON serialization
 
 ## Error Handling
 
@@ -246,10 +251,20 @@ export type LockableResource = 'articles' | 'blocks' | 'your-new-type';
 Create `/api/your-new-type/[id]/lock/route.ts` following the same pattern as articles/blocks.
 
 ### 3. Database Schema
-Add `blocked` and `blocked_by` columns to your table:
+Add `blocked` and `blockedBy` columns to your table:
 ```sql
-ALTER TABLE your_table ADD COLUMN blocked timestamp;
-ALTER TABLE your_table ADD COLUMN blocked_by uuid REFERENCES users(id);
+ALTER TABLE your_table 
+ADD COLUMN blocked TIMESTAMP,  -- UTC timestamp when locked (NULL when not locked)
+ADD COLUMN blockedBy TEXT REFERENCES auth.users(id);  -- User ID who has the lock
+```
+
+And update your Drizzle schema:
+```typescript
+export const yourTable = pgTable('your_table', {
+  // ... other fields
+  blocked: timestamp('blocked', { mode: 'string' }),
+  blockedBy: text('blockedBy').references(() => users.id),
+});
 ```
 
 ### 4. Usage

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { eq, and, isNull, isNotNull } from 'drizzle-orm';
+import { eq, and, isNull, isNotNull, sql } from 'drizzle-orm';
 import { db } from '@/lib/db/index';
 import { blocks, users } from '@/lib/db/schema';
-import { createClient } from '@/lib/supabase/server';
+import { requireAuth } from '@/lib/auth/server';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -50,16 +50,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const url = new URL(request.url);
     const force = url.searchParams.get('force') === 'true';
     
-    // Get current user
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
+    // Get current user using DRY server-side utility
+    const { dbUser } = await requireAuth();
     
     // Check if block exists and is not already locked by someone else
     const [block] = await db
@@ -75,7 +67,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
     
     // Check if already locked by someone else (only if not forcing)
-    if (!force && block.blocked && block.blockedBy !== user.id) {
+    if (!force && block.blocked && block.blockedBy !== dbUser.id) {
       const [blocker] = await db
         .select({ name: users.name })
         .from(users)
@@ -95,13 +87,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     await db
       .update(blocks)
       .set({
-        blocked: new Date(),
-        blockedBy: user.id,
+        blocked: sql`NOW()`,
+        blockedBy: dbUser.id,
       })
       .where(eq(blocks.id, id));
     
     return NextResponse.json({ success: true });
   } catch (error) {
+    // Handle authentication errors (thrown by requireAuth)
+    if (error instanceof Response) {
+      return error;
+    }
+
     console.error('Error locking block:', error);
     return NextResponse.json(
       { error: 'Failed to lock block' },
@@ -114,16 +111,8 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
   try {
     const { id } = await params;
     
-    // Get current user
-    const supabase = await createClient();
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Not authenticated' },
-        { status: 401 }
-      );
-    }
+    // Get current user using DRY server-side utility
+    const { dbUser } = await requireAuth();
     
     // Check if block exists and is locked by current user
     const [block] = await db
@@ -139,7 +128,7 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     }
     
     // Only allow unlocking if the user locked it or it's not locked
-    if (block.blockedBy && block.blockedBy !== user.id) {
+    if (block.blockedBy && block.blockedBy !== dbUser.id) {
       return NextResponse.json(
         { error: 'Can only unlock blocks you have locked' },
         { status: 403 }
@@ -157,6 +146,11 @@ export async function DELETE(request: NextRequest, { params }: { params: Promise
     
     return NextResponse.json({ success: true });
   } catch (error) {
+    // Handle authentication errors (thrown by requireAuth)
+    if (error instanceof Response) {
+      return error;
+    }
+
     console.error('Error unlocking block:', error);
     return NextResponse.json(
       { error: 'Failed to unlock block' },

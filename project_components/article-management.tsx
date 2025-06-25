@@ -131,7 +131,7 @@ const ArticleManagement = () => {
         title: '-', // New articles don't have blockContent yet, so use dash
         price: newArticle.price,
         hideTitle: newArticle.hideTitle,
-        updatedAt: newArticle.updatedAt instanceof Date ? newArticle.updatedAt.toISOString() : newArticle.updatedAt,
+        updatedAt: newArticle.updatedAt,
         calculationCount: newArticle.calculations.length,
         languages: 'Keine Sprachen' // New articles don't have languages yet
       };
@@ -157,7 +157,7 @@ const ArticleManagement = () => {
         title: '-', // Copied articles will get their title when data is reloaded
         price: copiedArticle.price,
         hideTitle: copiedArticle.hideTitle,
-        updatedAt: copiedArticle.updatedAt instanceof Date ? copiedArticle.updatedAt.toISOString() : copiedArticle.updatedAt,
+        updatedAt: copiedArticle.updatedAt,
         calculationCount: copiedArticle.calculations.length,
         languages: 'Keine Sprachen' // Copied articles will get their languages when data is reloaded
       };

@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Edit3, Save, Loader2, Lock, AlertTriangle } from 'lucide-react';
 import { useEditLock, type LockableResource } from '@/hooks/use-edit-lock';
+import { useUser } from '@/hooks/use-user';
 import { toast } from 'sonner';
 
 interface EditLockButtonProps {
@@ -13,32 +14,65 @@ interface EditLockButtonProps {
   isSaving?: boolean;
   onToggleEdit: () => void;
   onSave: () => Promise<void>;
+  initialUpdatedAt?: string;
 }
 
 // Helper function to format the lock timestamp in German
 const formatLockTime = (timestamp: string | null): string => {
   if (!timestamp) return '';
-  
-  const date = new Date(timestamp);
+
+  // Ensure timestamp is treated as UTC if it doesn't have timezone info
+  let normalizedTimestamp = timestamp + 'Z';
+  // if (
+  //   !timestamp.endsWith('Z') &&
+  //   !timestamp.includes('+') &&
+  //   !timestamp.includes('-')
+  // ) {
+  //   normalizedTimestamp = timestamp + 'Z';
+  // }
+
+  console.log('normalizedTimestamp', normalizedTimestamp);
+  const date = new Date(normalizedTimestamp);
   const now = new Date();
-  const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
-  
+  console.log('lock date', date);
+  console.log('date', now);
+
+  // Use UTC time for both dates to avoid timezone issues
+  const diffInMinutes = Math.floor(
+    (now.getTime() - date.getTime()) / (1000 * 60),
+  );
+
+  // Debug logging to help identify timezone issues
+  if (process.env.NODE_ENV === 'development') {
+    console.log('🕐 Lock timestamp debug:', {
+      originalTimestamp: timestamp,
+      normalizedTimestamp,
+      parsedDate: date.toISOString(),
+      parsedDateLocal: date.toString(),
+      now: now.toISOString(),
+      nowLocal: now.toString(),
+      diffInMinutes,
+    });
+  }
+
   if (diffInMinutes < 1) {
     return 'gerade eben';
   } else if (diffInMinutes < 60) {
     return `vor ${diffInMinutes} Min.`;
-  } else if (diffInMinutes < 1440) { // Less than 24 hours
+  } else if (diffInMinutes < 1440) {
+    // Less than 24 hours
     const hours = Math.floor(diffInMinutes / 60);
     return `vor ${hours} Std.`;
   } else {
-    // Format as German date for older locks
-    return date.toLocaleDateString('de-DE', {
+    // Format as German date for older locks - use UTC to avoid timezone confusion
+    return new Intl.DateTimeFormat('de-DE', {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric',
       hour: '2-digit',
-      minute: '2-digit'
-    });
+      minute: '2-digit',
+      timeZone: 'UTC',
+    }).format(date);
   }
 };
 
@@ -49,16 +83,75 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
   isSaving,
   onToggleEdit,
   onSave,
+  initialUpdatedAt,
 }) => {
-  const { lockInfo, canEdit, lockResourceOptimistic, unlockResourceOptimistic, unlockResource, forceOverrideLock } = useEditLock(
-    resourceType,
-    resourceId
-  );
+  const { dbUser } = useUser();
+  const {
+    lockInfo,
+    canEdit,
+    lockResourceOptimistic,
+    unlockResourceOptimistic,
+    unlockResource,
+    forceOverrideLock,
+    refreshLockStatus,
+  } = useEditLock(resourceType, resourceId);
+
+  // Store the updatedAt timestamp when editing starts
+  const [editStartUpdatedAt, setEditStartUpdatedAt] = React.useState<
+    string | null
+  >(null);
+
+  // Check if the resource has been modified by checking its current updatedAt
+  const checkForConflicts = async (): Promise<boolean> => {
+    if (!editStartUpdatedAt || !dbUser?.id) return true; // No baseline to compare or no user, allow save
+
+    try {
+      // Fetch current resource data to check updatedAt
+      const response = await fetch(`/api/${resourceType}/${resourceId}`);
+      if (!response.ok) {
+        toast.error('Fehler beim Prüfen des Datensatzstatus');
+        return false;
+      }
+
+      const currentData = await response.json();
+      const currentUpdatedAt = currentData.updatedAt;
+
+      // Refresh lock status to get the most current information
+      const lockResponse = await fetch(
+        `/api/${resourceType}/${resourceId}/lock`,
+      );
+      if (!lockResponse.ok) {
+        toast.error('Fehler beim Prüfen des Sperrstatus');
+        return false;
+      }
+
+      const lockData = await lockResponse.json();
+      const hasCurrentLock =
+        lockData.isLocked && lockData.lockedBy === dbUser.id;
+
+      if (!hasCurrentLock) {
+        // Lock is lost - check if data has changed
+        if (currentUpdatedAt !== editStartUpdatedAt) {
+          toast.error(
+            'Dieser Datensatz hat Änderungen, bitte schliessen Sie das Tab und öffnen Sie es wieder.',
+          );
+          return false;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error checking for conflicts:', error);
+      toast.error('Fehler beim Prüfen des Datensatzstatus');
+      return false;
+    }
+  };
 
   const handleToggleEdit = async () => {
     if (isEditing) {
       // If currently editing, unlock and exit edit mode (optimistic)
       onToggleEdit(); // Exit edit mode immediately
+      setEditStartUpdatedAt(null); // Clear the baseline timestamp
       const unlocked = await unlockResourceOptimistic();
       if (unlocked) {
         toast.success('Bearbeitung beendet - für andere freigegeben');
@@ -71,7 +164,7 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
       // If not editing, try to lock and enter edit mode
       if (!canEdit) {
         toast.error(
-          `Wird bereits von ${lockInfo.lockedByName || 'einem anderen Benutzer'} bearbeitet`
+          `Wird bereits von ${lockInfo.lockedByName || 'einem anderen Benutzer'} bearbeitet`,
         );
         return;
       }
@@ -81,6 +174,7 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         const locked = await lockResourceOptimistic();
         if (locked) {
           // Only enter edit mode if lock was successful
+          setEditStartUpdatedAt(initialUpdatedAt || null); // Store baseline timestamp
           onToggleEdit();
           toast.success('Bearbeitung gestartet - für andere gesperrt');
         } else {
@@ -98,8 +192,11 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
     try {
       const overridden = await forceOverrideLock();
       if (overridden) {
+        setEditStartUpdatedAt(initialUpdatedAt || null); // Store baseline timestamp
         onToggleEdit(); // Enter edit mode
-        toast.success(`Bearbeitung von ${lockInfo.lockedByName || 'anderem Benutzer'} überschrieben`);
+        toast.success(
+          `Bearbeitung von ${lockInfo.lockedByName || 'anderem Benutzer'} überschrieben`,
+        );
       } else {
         toast.error('Fehler beim Überschreiben der Sperre');
       }
@@ -109,6 +206,12 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
   };
 
   const handleSave = async () => {
+    // Check for conflicts before saving
+    const canSave = await checkForConflicts();
+    if (!canSave) {
+      return; // Don't proceed with save if there are conflicts
+    }
+
     await onSave();
     // Unlock the resource after saving
     const unlocked = await unlockResource();
@@ -142,7 +245,7 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
           </>
         )}
       </Button>
-      
+
       {/* Force Override Button - only show when locked by another user */}
       {lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && !isEditing && (
         <Button
@@ -156,7 +259,7 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
           Überschreiben
         </Button>
       )}
-      
+
       {isEditing && (
         <Button
           size="sm"
@@ -177,14 +280,15 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
           )}
         </Button>
       )}
-      
+
       {lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && (
         <span className="text-sm text-gray-600">
           wird bearbeitet von{' '}
           <strong>{lockInfo.lockedByName || 'Unbekannt'}</strong>
           {lockInfo.lockedAt && (
             <span className="text-gray-500">
-              {' '}({formatLockTime(lockInfo.lockedAt)})
+              {' '}
+              ({formatLockTime(lockInfo.lockedAt)})
             </span>
           )}
         </span>
@@ -193,4 +297,4 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
   );
 };
 
-export default EditLockButton; 
+export default EditLockButton;

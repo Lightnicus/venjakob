@@ -82,7 +82,40 @@ const newUser = await createUser({ email: 'new@example.com', name: 'John Doe' })
 
 ## Database Schema
 
-The current schema is found in /lib/db/schema.ts
+The current schema is found in `/lib/db/schema.ts`
+
+### Timestamp Handling
+
+All timestamp fields in the schema use Drizzle's string mode for consistency:
+
+```typescript
+// Schema definition
+export const articles = pgTable('articles', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow(),
+  blocked: timestamp('blocked', { mode: 'string' }),  // Lock timestamp
+  // ... other fields
+});
+```
+
+**Benefits:**
+- **Type Consistency**: TypeScript types match runtime behavior after JSON serialization
+- **Timezone Safety**: All timestamps are UTC strings, avoiding client/server timezone issues
+- **Database Operations**: Use PostgreSQL's `sql`NOW()`` for atomic timestamp generation
+
+**Usage:**
+```typescript
+// ✅ Correct - timestamps are strings
+const article = await db.select().from(articles).where(eq(articles.id, id));
+console.log(article.updatedAt); // "2024-01-15T10:30:00.000Z"
+
+// ✅ Correct - use SQL NOW() for updates
+await db.update(articles).set({
+  updatedAt: sql`NOW()`,
+  blocked: sql`NOW()`
+}).where(eq(articles.id, id));
+```
 
 
 ## Adding New Tables
