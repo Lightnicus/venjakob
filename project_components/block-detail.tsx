@@ -23,6 +23,13 @@ import EditLockButton from './edit-lock-button';
 
 type BlockWithContent = Block & {
   blockContents: BlockContent[];
+  lastChangedBy?: {
+    id: string;
+    name: string | null;
+    email: string;
+    timestamp: string;
+    changeType: 'block' | 'content';
+  } | null;
 };
 
 type BlockDetailProps = {
@@ -473,17 +480,9 @@ const BlockDetail: FC<BlockDetailProps> = ({
                           />
                         );
                       })()}
-                    </div>
-                  </div>
-                  {originalContent && (
-                    <div className="text-xs text-gray-500 mt-2">
-                      Zuletzt geändert am{' '}
-                      {new Date(originalContent.updatedAt).toLocaleDateString(
-                        'de-DE',
-                      )}
-                    </div>
-                  )}
-                </CardContent>
+                                      </div>
+                </div>
+              </CardContent>
               </Card>
             );
           })}
@@ -600,6 +599,33 @@ const BlockDetail: FC<BlockDetailProps> = ({
           )}
         </TabsContent>
       </Tabs>
+
+      <div className="text-xs text-gray-500 mt-6 pt-4 border-t text-right">
+        Zuletzt geändert am{' '}
+        {block.lastChangedBy ? (
+          <>
+            {new Date(block.lastChangedBy.timestamp).toLocaleString('de-DE', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+            {' von '}
+            {block.lastChangedBy.name || block.lastChangedBy.email}
+            {block.lastChangedBy.changeType === 'content' && ' (Inhalt)'}
+            {block.lastChangedBy.changeType === 'block' && ' (Eigenschaften)'}
+          </>
+        ) : (
+          new Date(block.updatedAt).toLocaleString('de-DE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        )}
+      </div>
     </div>
   );
 };

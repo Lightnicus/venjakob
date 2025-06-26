@@ -127,6 +127,13 @@
       "when": 1750421158107,
       "tag": "0017_zippy_the_anarchist",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1750933463121,
+      "tag": "0018_regular_makkari",
+      "breakpoints": true
     }
   ]
 }

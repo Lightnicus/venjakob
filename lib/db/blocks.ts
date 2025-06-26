@@ -1,4 +1,4 @@
-import { eq, desc, sql } from 'drizzle-orm';
+import { eq, desc, sql, and, inArray, or } from 'drizzle-orm';
 import { db } from './index';
 import {
   blocks,
@@ -9,6 +9,8 @@ import {
   type Language,
 } from './schema';
 import { getCurrentUser } from '@/lib/auth/server';
+import { auditedBlockOperations, auditedBlockContentOperations, auditQueries, ENTITY_TYPES } from './audit';
+import { changeHistory, users } from './schema';
 
 // Common error type for edit lock conflicts
 export class EditLockError extends Error {
@@ -25,6 +27,13 @@ export class EditLockError extends Error {
 
 export type BlockWithContent = Block & {
   blockContents: BlockContent[];
+  lastChangedBy?: {
+    id: string;
+    name: string | null;
+    email: string;
+    timestamp: string;
+    changeType: 'block' | 'content';
+  } | null;
 };
 
 // Check if a block is editable by the current user
@@ -112,9 +121,62 @@ export async function getBlockWithContent(
       .from(blockContent)
       .where(eq(blockContent.blockId, blockId));
 
+    // Find the most recent change (block itself or its content)
+    let lastChangedBy = null;
+    
+    // Get all content IDs for this block
+    const contentIds = content.map(c => c.id);
+    
+    // Build the where clause - if no content, only check block changes
+    let whereClause;
+    if (contentIds.length > 0) {
+      whereClause = or(
+        and(
+          eq(changeHistory.entityType, 'blocks'),
+          eq(changeHistory.entityId, blockId)
+        ),
+        and(
+          eq(changeHistory.entityType, 'block_content'),
+          inArray(changeHistory.entityId, contentIds)
+        )
+      );
+    } else {
+      whereClause = and(
+        eq(changeHistory.entityType, 'blocks'),
+        eq(changeHistory.entityId, blockId)
+      );
+    }
+    
+    // Query for the most recent change to either the block or its content
+    const recentChanges = await db
+      .select({
+        timestamp: changeHistory.timestamp,
+        entityType: changeHistory.entityType,
+        userId: changeHistory.userId,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(changeHistory)
+      .leftJoin(users, eq(changeHistory.userId, users.id))
+      .where(whereClause)
+      .orderBy(desc(changeHistory.timestamp))
+      .limit(1);
+
+    if (recentChanges.length > 0) {
+      const recentChange = recentChanges[0];
+      lastChangedBy = {
+        id: recentChange.userId,
+        name: recentChange.userName,
+        email: recentChange.userEmail || '',
+        timestamp: recentChange.timestamp,
+        changeType: recentChange.entityType === 'blocks' ? 'block' as const : 'content' as const
+      };
+    }
+
     return {
       ...block,
       blockContents: content,
+      lastChangedBy,
     };
   } catch (error) {
     console.error('Error fetching block:', error);
@@ -122,7 +184,7 @@ export async function getBlockWithContent(
   }
 }
 
-// Save block content (create or update)
+// Save block content (create or update) with audit
 export async function saveBlockContent(
   blockId: string,
   blockContents: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[],
@@ -131,13 +193,22 @@ export async function saveBlockContent(
     // Check if block is editable by current user
     await checkBlockEditable(blockId);
 
-    // Delete existing content for this block
-    await db.delete(blockContent).where(eq(blockContent.blockId, blockId));
-
-    // Insert new content
-    if (blockContents.length > 0) {
-      await db.insert(blockContent).values(blockContents);
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
     }
+
+    // Use audited bulk replacement operation
+    await auditedBlockContentOperations.replaceAll(
+      'blocks',
+      blockId,
+      blockContents,
+      user.dbUser.id,
+      {
+        source: 'block-content-management',
+        reason: 'Block-Inhalt aktualisiert'
+      }
+    );
   } catch (error) {
     if (error instanceof EditLockError) {
       throw error; // Re-throw edit lock errors as-is
@@ -147,7 +218,7 @@ export async function saveBlockContent(
   }
 }
 
-// Save block properties
+// Save block properties with audit
 export async function saveBlockProperties(
   blockId: string,
   blockData: Partial<Block>,
@@ -156,10 +227,20 @@ export async function saveBlockProperties(
     // Check if block is editable by current user
     await checkBlockEditable(blockId);
 
-    await db
-      .update(blocks)
-      .set({ ...blockData, updatedAt: sql`NOW()` })
-      .where(eq(blocks.id, blockId));
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await auditedBlockOperations.update(
+      blockId,
+      blockData,
+      user.dbUser.id,
+      {
+        source: 'block-management',
+        reason: 'Block-Eigenschaften aktualisiert'
+      }
+    );
   } catch (error) {
     if (error instanceof EditLockError) {
       throw error; // Re-throw edit lock errors as-is
@@ -169,21 +250,30 @@ export async function saveBlockProperties(
   }
 }
 
-// Create a new block
+// Create a new block with audit
 export async function createBlock(): Promise<BlockWithContent> {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
     // Create new block with position set to null since standard defaults to false
-    const [newBlock] = await db
-      .insert(blocks)
-      .values({
+    const newBlock = await auditedBlockOperations.create(
+      {
         name: 'Neuer Block',
         standard: false,
         mandatory: false,
         position: null, // Position is null when standard is false
         hideTitle: false,
         pageBreakAbove: false,
-      })
-      .returning();
+      },
+      user.dbUser.id,
+      {
+        source: 'block-management',
+        reason: 'Neuer Block erstellt'
+      }
+    );
 
     return {
       ...newBlock,
@@ -195,81 +285,118 @@ export async function createBlock(): Promise<BlockWithContent> {
   }
 }
 
-// Copy a block
+// Copy a block with audit
 export async function copyBlock(
   originalBlockId: string,
 ): Promise<BlockWithContent> {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
     // Get the original block with content
     const originalBlock = await getBlockWithContent(originalBlockId);
     if (!originalBlock) {
       throw new Error('Original block not found');
     }
 
-    // Get position for the copy - only if the original is standard
-    let copyPosition = null;
-    if (originalBlock.standard) {
-      const maxPositionResult = await db
-        .select({ maxPosition: blocks.position })
-        .from(blocks)
-        .orderBy(desc(blocks.position))
-        .limit(1);
+    // Use transaction to copy block and related data atomically
+    const result = await db.transaction(async (tx) => {
+      // Get position for the copy - only if the original is standard
+      let copyPosition = null;
+      if (originalBlock.standard) {
+        const maxPositionResult = await tx
+          .select({ maxPosition: blocks.position })
+          .from(blocks)
+          .orderBy(desc(blocks.position))
+          .limit(1);
 
-      copyPosition = (maxPositionResult[0]?.maxPosition || 0) + 1;
-    }
+        copyPosition = (maxPositionResult[0]?.maxPosition || 0) + 1;
+      }
 
-    // Create new block with "(Kopie)" appended to the name
-    const [newBlock] = await db
-      .insert(blocks)
-      .values({
-        name: `${originalBlock.name} (Kopie)`,
-        standard: originalBlock.standard,
-        mandatory: originalBlock.mandatory,
-        position: copyPosition,
-        hideTitle: originalBlock.hideTitle,
-        pageBreakAbove: originalBlock.pageBreakAbove,
-      })
-      .returning();
+      // Create new block with "(Kopie)" appended to the name and audit
+      const newBlock = await auditedBlockOperations.create(
+        {
+          name: `${originalBlock.name} (Kopie)`,
+          standard: originalBlock.standard,
+          mandatory: originalBlock.mandatory,
+          position: copyPosition,
+          hideTitle: originalBlock.hideTitle,
+          pageBreakAbove: originalBlock.pageBreakAbove,
+        },
+        user.dbUser.id,
+        {
+          source: 'block-management',
+          reason: `Block kopiert von ${originalBlock.name}`,
+          originalBlockId: originalBlockId
+        }
+      );
 
-    // Copy all block contents (without modifying titles)
-    const copiedContents = [];
-    if (originalBlock.blockContents.length > 0) {
-      const contentToInsert = originalBlock.blockContents.map(content => ({
-        blockId: newBlock.id,
-        articleId: content.articleId,
-        title: content.title,
-        content: content.content,
-        languageId: content.languageId,
-      }));
+      // Copy all block contents (without modifying titles) with audit
+      const copiedContents = [];
+      if (originalBlock.blockContents.length > 0) {
+        for (const content of originalBlock.blockContents) {
+          const newContent = await auditedBlockContentOperations.create(
+            {
+              blockId: newBlock.id,
+              articleId: content.articleId,
+              title: content.title,
+              content: content.content,
+              languageId: content.languageId,
+            },
+            user.dbUser.id,
+            {
+              source: 'block-copy-operation',
+              reason: `Inhalt kopiert von Block ${originalBlock.name}`,
+              originalContentId: content.id,
+              parentEntityType: 'blocks',
+              parentEntityId: newBlock.id,
+            }
+          );
+          copiedContents.push(newContent);
+        }
+      }
 
-      const insertedContents = await db
-        .insert(blockContent)
-        .values(contentToInsert)
-        .returning();
-      copiedContents.push(...insertedContents);
-    }
+      return {
+        ...newBlock,
+        blockContents: copiedContents,
+      };
+    });
 
-    return {
-      ...newBlock,
-      blockContents: copiedContents,
-    };
+    return result;
   } catch (error) {
     console.error('Error copying block:', error);
     throw new Error('Failed to copy block');
   }
 }
 
-// Delete a block and its content
+// Delete a block and its content with audit
 export async function deleteBlock(blockId: string): Promise<void> {
   try {
     // Check if block is editable by current user
     await checkBlockEditable(blockId);
 
-    // Delete block content first (foreign key constraint)
-    await db.delete(blockContent).where(eq(blockContent.blockId, blockId));
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
 
-    // Delete the block
-    await db.delete(blocks).where(eq(blocks.id, blockId));
+    // Use transaction to delete block and content atomically
+    await db.transaction(async (tx) => {
+      // Delete block content first (foreign key constraint)
+      await tx.delete(blockContent).where(eq(blockContent.blockId, blockId));
+
+      // Delete the block with audit
+      await auditedBlockOperations.delete(
+        blockId,
+        user.dbUser.id,
+        {
+          source: 'block-management',
+          reason: 'Block gelöscht'
+        }
+      );
+    });
   } catch (error) {
     if (error instanceof EditLockError) {
       throw error; // Re-throw edit lock errors as-is
@@ -379,5 +506,39 @@ export async function getBlockList(): Promise<
   } catch (error) {
     console.error('Error fetching block list:', error);
     throw new Error('Failed to fetch block list');
+  }
+}
+
+// Get change history for a specific block
+export async function getBlockChangeHistory(blockId: string, limit = 50) {
+  try {
+    return await auditQueries.getEntityHistory(ENTITY_TYPES.BLOCKS, blockId, limit);
+  } catch (error) {
+    console.error('Error fetching block change history:', error);
+    throw new Error('Failed to fetch block change history');
+  }
+}
+
+// Get change history for block content (blockContent where blockId is set)
+export async function getBlockContentChangeHistory(blockId: string, limit = 50) {
+  try {
+    // Get all content IDs for this block first
+    const blockContentRecords = await db
+      .select({ id: blockContent.id })
+      .from(blockContent)
+      .where(eq(blockContent.blockId, blockId));
+
+    // Get change history for all content pieces
+    const allHistory = [];
+    for (const content of blockContentRecords) {
+      const contentHistory = await auditQueries.getEntityHistory(ENTITY_TYPES.BLOCK_CONTENT, content.id, limit);
+      allHistory.push(...contentHistory);
+    }
+
+    // Sort by timestamp (most recent first)
+    return allHistory.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, limit);
+  } catch (error) {
+    console.error('Error fetching block content change history:', error);
+    throw new Error('Failed to fetch block content change history');
   }
 }

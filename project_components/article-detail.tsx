@@ -624,7 +624,30 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
       </Tabs>
 
       <div className="text-xs text-gray-500 mt-6 pt-4 border-t text-right">
-        Zuletzt geändert am {new Date(article.updatedAt).toLocaleDateString('de-DE')}
+        Zuletzt geändert am{' '}
+        {article.lastChangedBy ? (
+          <>
+            {new Date(article.lastChangedBy.timestamp).toLocaleString('de-DE', {
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit'
+            })}
+            {' von '}
+            {article.lastChangedBy.name || article.lastChangedBy.email}
+            {article.lastChangedBy.changeType === 'content' && ' (Inhalt)'}
+            {article.lastChangedBy.changeType === 'article' && ' (Eigenschaften)'}
+          </>
+        ) : (
+          new Date(article.updatedAt).toLocaleString('de-DE', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          })
+        )}
       </div>
     </div>
   );

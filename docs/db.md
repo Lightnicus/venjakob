@@ -370,6 +370,155 @@ pnpm run db:push --force
 3. **Proper Pagination**: Use limit/offset for large datasets
 4. **Connection Pooling**: Supabase handles this automatically
 
+## Change History / Audit System
+
+The project includes a comprehensive audit system that tracks all changes to database entities using Drizzle transactions.
+
+### Features
+
+- **Transaction-based**: Ensures both the main operation and audit log are saved atomically
+- **Entity-agnostic**: Works with any table (articles, blocks, users, etc.)
+- **Detailed tracking**: Records exactly what changed, who made the change, and when
+- **Performance optimized**: Uses proper indexing for fast queries
+- **Type-safe**: Full TypeScript support with proper error handling
+
+### Usage
+
+#### Audited Operations
+
+Replace standard database operations with audited versions:
+
+```typescript
+import { 
+  auditedArticleOperations, 
+  auditedBlockOperations, 
+  auditedBlockContentOperations 
+} from '@/lib/db/audit';
+
+// Create with audit
+const newArticle = await auditedArticleOperations.create(
+  { number: 'ART-001', price: '100.00', hideTitle: false },
+  userId,
+  { reason: 'New article creation', source: 'web-interface' }
+);
+
+// Update with audit
+const updatedArticle = await auditedArticleOperations.update(
+  articleId,
+  { price: '120.00' },
+  userId,
+  { reason: 'Price adjustment' }
+);
+
+// Delete with audit
+const deletedArticle = await auditedArticleOperations.delete(
+  articleId,
+  userId,
+  { reason: 'Article discontinued' }
+);
+
+// Block content operations with audit
+const newContent = await auditedBlockContentOperations.create(
+  { blockId, title: 'New Title', content: 'Content...', languageId },
+  userId,
+  { reason: 'Content created', source: 'content-editor' }
+);
+
+// Bulk content replacement (used by save operations)
+await auditedBlockContentOperations.replaceAll(
+  'blocks', // or 'articles'
+  blockId,
+  contentArray,
+  userId,
+  { reason: 'Content updated' }
+);
+```
+
+#### Query Change History
+
+```typescript
+import { auditQueries, ENTITY_TYPES } from '@/lib/db/audit';
+import { 
+  getArticleChangeHistory, 
+  getArticleContentChangeHistory,
+  getBlockChangeHistory,
+  getBlockContentChangeHistory 
+} from '@/lib/db/articles'; // or blocks
+
+// Get all changes for a specific article
+const history = await auditQueries.getEntityHistory(ENTITY_TYPES.ARTICLES, articleId);
+
+// Get article-specific change history (convenient wrapper)
+const articleHistory = await getArticleChangeHistory(articleId);
+const articleContentHistory = await getArticleContentChangeHistory(articleId);
+
+// Get block-specific change history
+const blockHistory = await getBlockChangeHistory(blockId);
+const blockContentHistory = await getBlockContentChangeHistory(blockId);
+
+// Get recent changes by a user
+const userActivity = await auditQueries.getUserActivity(userId);
+
+// Get recent changes across all entities
+const recentChanges = await auditQueries.getRecentChanges();
+```
+
+### Enhanced Entity Queries with lastChangedBy
+
+The main query functions now include information about who made the most recent change:
+
+```typescript
+// Enhanced article query with change information
+const article = await getArticleWithCalculations('article-id');
+if (article?.lastChangedBy) {
+  console.log('Last changed by:', article.lastChangedBy.name || article.lastChangedBy.email);
+  console.log('Change timestamp:', article.lastChangedBy.timestamp);
+  console.log('Change type:', article.lastChangedBy.changeType); // 'article' or 'content'
+}
+
+// Enhanced block query with change information
+const block = await getBlockWithContent('block-id');
+if (block?.lastChangedBy) {
+  console.log('Last changed by:', block.lastChangedBy.name || block.lastChangedBy.email);
+  console.log('Change timestamp:', block.lastChangedBy.timestamp);
+  console.log('Change type:', block.lastChangedBy.changeType); // 'block' or 'content'
+}
+```
+
+The `lastChangedBy` object contains:
+- `id`: User ID who made the change
+- `name`: User's display name (can be null)
+- `email`: User's email address  
+- `timestamp`: When the change was made
+- `changeType`: 'article'/'block' for entity changes, 'content' for content changes
+
+This provides a complete picture of who last touched any part of the entity, considering both the main entity and its associated content.
+
+### Transaction Guarantees
+
+All audited operations use Drizzle transactions to ensure:
+- Both the main operation AND audit log succeed together
+- OR both fail together (no partial writes)
+- Complete data consistency and reliability
+
+### Audit Data Structure
+
+Each audit entry contains:
+- **entityType**: The table name ('articles', 'blocks', 'block_content', etc.)
+- **entityId**: ID of the changed record
+- **action**: INSERT, UPDATE, or DELETE
+- **changedFields**: For UPDATE: `{field: {old: value, new: value}}`, for INSERT/DELETE: full record
+- **userId**: Who made the change
+- **timestamp**: When the change occurred (UTC)
+- **metadata**: Additional context (IP, user agent, reason, etc.)
+
+### Tracked Entities
+
+- **Articles** (`articles`): Article properties (number, price, hideTitle)
+- **Blocks** (`blocks`): Block properties (name, standard, mandatory, position, etc.)
+- **Block Content** (`block_content`): Content for both blocks and articles (title, content, language)
+- Ready to extend: Users, roles, permissions, and other entities
+
 ## File Structure
 
 ```
@@ -379,7 +528,9 @@ lib/
 │   ├── schema.ts         # Database schema definitions (with string timestamps)
 │   ├── queries.ts        # Database query functions
 │   ├── articles.ts       # Article-specific database operations
-│   ├── blocks.ts         # Block-specific database operations  
+│   ├── blocks.ts         # Block-specific database operations
+│   ├── audit.ts          # Transaction-based audit system
+│   ├── audit-examples.ts # Usage examples for audit system
 │   ├── migrations/       # Generated migration files
 │   └── seeds/            # SQL seed files for initial data
 ├── auth/

@@ -1,4 +1,4 @@
-import { eq, desc, asc, and, count, isNull, sql } from 'drizzle-orm';
+import { eq, desc, asc, and, count, isNull, sql, inArray, or } from 'drizzle-orm';
 import { db } from './index';
 import { 
   articles, 
@@ -11,6 +11,8 @@ import {
   type BlockContent
 } from './schema';
 import { getCurrentUser } from '@/lib/auth/server';
+import { auditedArticleOperations, auditedBlockContentOperations, auditQueries, ENTITY_TYPES } from './audit';
+import { changeHistory, users } from './schema';
 import articleCalculationConfig from '@/data/article-calculation-config.json';
 
 // Common error type for edit lock conflicts
@@ -61,6 +63,13 @@ async function checkArticleEditable(articleId: string): Promise<void> {
 export type ArticleWithCalculations = Article & {
   calculations: ArticleCalculationItem[];
   content?: BlockContent[];
+  lastChangedBy?: {
+    id: string;
+    name: string | null;
+    email: string;
+    timestamp: string;
+    changeType: 'article' | 'content';
+  } | null;
 };
 
 // Fetch all articles
@@ -92,11 +101,64 @@ export async function getArticleWithCalculations(articleId: string): Promise<Art
       .select()
       .from(blockContent)
       .where(eq(blockContent.articleId, articleId));
+
+    // Find the most recent change (article itself or its content)
+    let lastChangedBy = null;
+    
+    // Get all content IDs for this article
+    const contentIds = articleContent.map(content => content.id);
+    
+    // Build the where clause - if no content, only check article changes
+    let whereClause;
+    if (contentIds.length > 0) {
+      whereClause = or(
+        and(
+          eq(changeHistory.entityType, 'articles'),
+          eq(changeHistory.entityId, articleId)
+        ),
+        and(
+          eq(changeHistory.entityType, 'block_content'),
+          inArray(changeHistory.entityId, contentIds)
+        )
+      );
+    } else {
+      whereClause = and(
+        eq(changeHistory.entityType, 'articles'),
+        eq(changeHistory.entityId, articleId)
+      );
+    }
+    
+    // Query for the most recent change to either the article or its content
+    const recentChanges = await db
+      .select({
+        timestamp: changeHistory.timestamp,
+        entityType: changeHistory.entityType,
+        userId: changeHistory.userId,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(changeHistory)
+      .leftJoin(users, eq(changeHistory.userId, users.id))
+      .where(whereClause)
+      .orderBy(desc(changeHistory.timestamp))
+      .limit(1);
+
+    if (recentChanges.length > 0) {
+      const recentChange = recentChanges[0];
+      lastChangedBy = {
+        id: recentChange.userId,
+        name: recentChange.userName,
+        email: recentChange.userEmail || '',
+        timestamp: recentChange.timestamp,
+        changeType: recentChange.entityType === 'articles' ? 'article' as const : 'content' as const
+      };
+    }
     
     return {
       ...article,
       calculations: calculationItems,
-      content: articleContent
+      content: articleContent,
+      lastChangedBy
     };
   } catch (error) {
     console.error('Error fetching article with calculations:', error);
@@ -131,10 +193,22 @@ export async function getArticlesWithCalculationCounts(): Promise<(Article & { c
   }
 }
 
-// Create a new article
+// Create a new article with audit
 export async function createArticle(articleData: Omit<Article, 'id' | 'createdAt' | 'updatedAt'>): Promise<Article> {
   try {
-    const [newArticle] = await db.insert(articles).values(articleData).returning();
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    const newArticle = await auditedArticleOperations.create(
+      articleData,
+      user.dbUser.id,
+      {
+        source: 'article-management',
+        reason: 'Neuer Artikel erstellt'
+      }
+    );
     return newArticle;
   } catch (error) {
     console.error('Error creating article:', error);
@@ -142,7 +216,7 @@ export async function createArticle(articleData: Omit<Article, 'id' | 'createdAt
   }
 }
 
-// Update article properties
+// Update article properties with audit
 export async function saveArticle(
   articleId: string, 
   articleData: Partial<Omit<Article, 'id' | 'createdAt' | 'updatedAt'>>
@@ -151,9 +225,20 @@ export async function saveArticle(
     // Check if article is editable by current user
     await checkArticleEditable(articleId);
     
-    await db.update(articles)
-      .set({ ...articleData, updatedAt: sql`NOW()` })
-      .where(eq(articles.id, articleId));
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await auditedArticleOperations.update(
+      articleId,
+      articleData,
+      user.dbUser.id,
+      {
+        source: 'article-management',
+        reason: 'Artikel-Eigenschaften aktualisiert'
+      }
+    );
   } catch (error) {
     if (error instanceof EditLockError) {
       throw error; // Re-throw edit lock errors as-is
@@ -223,14 +308,26 @@ export async function removeCalculationFromArticle(
   }
 }
 
-// Delete an article (related content and calculations will be deleted automatically via CASCADE)
+// Delete an article with audit (related content and calculations will be deleted automatically via CASCADE)
 export async function deleteArticle(articleId: string): Promise<void> {
   try {
     // Check if article is editable by current user
     await checkArticleEditable(articleId);
     
-    // Delete the article - CASCADE will automatically delete related records
-    await db.delete(articles).where(eq(articles.id, articleId));
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    // Delete the article with audit - CASCADE will automatically delete related records
+    await auditedArticleOperations.delete(
+      articleId,
+      user.dbUser.id,
+      {
+        source: 'article-management',
+        reason: 'Artikel gelöscht'
+      }
+    );
   } catch (error) {
     if (error instanceof EditLockError) {
       throw error; // Re-throw edit lock errors as-is
@@ -302,7 +399,7 @@ export async function deleteCalculationItem(itemId: string): Promise<void> {
   }
 }
 
-// Create a new article with calculation items from config
+// Create a new article with calculation items from config and audit
 export async function createNewArticle(
   articleData: {
     number: string;
@@ -311,26 +408,43 @@ export async function createNewArticle(
   }
 ): Promise<ArticleWithCalculations> {
   try {
-    const [newArticle] = await db.insert(articles).values({
-      number: articleData.number,
-      price: articleData.price || '0.00',
-      hideTitle: articleData.hideTitle || false
-    }).returning();
-
-    // Create calculation items for this article based on the config
-    const calculationItems: ArticleCalculationItem[] = [];
-    
-    for (const configItem of articleCalculationConfig) {
-      const [calculationItem] = await db.insert(articleCalculationItem).values({
-        name: configItem.name,
-        type: configItem.type as 'time' | 'cost',
-        value: configItem.value,
-        articleId: newArticle.id,
-        order: configItem.order
-      }).returning();
-      
-      calculationItems.push(calculationItem);
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
     }
+
+    // Create the article with audit (this already uses its own transaction)
+    const newArticle = await auditedArticleOperations.create(
+      {
+        number: articleData.number,
+        price: articleData.price || '0.00',
+        hideTitle: articleData.hideTitle || false
+      },
+      user.dbUser.id,
+      {
+        source: 'article-management',
+        reason: 'Neuer Artikel mit Standard-Kalkulationen erstellt'
+      }
+    );
+
+    // Use separate transaction for calculations
+    const calculationItems = await db.transaction(async (tx) => {
+      const items: ArticleCalculationItem[] = [];
+      
+      for (const configItem of articleCalculationConfig) {
+        const [calculationItem] = await tx.insert(articleCalculationItem).values({
+          name: configItem.name,
+          type: configItem.type as 'time' | 'cost',
+          value: configItem.value,
+          articleId: newArticle.id,
+          order: configItem.order
+        }).returning();
+        
+        items.push(calculationItem);
+      }
+
+      return items;
+    });
 
     return {
       ...newArticle,
@@ -343,7 +457,7 @@ export async function createNewArticle(
   }
 }
 
-// Save article content
+// Save article content with audit
 export async function saveArticleContent(
   articleId: string,
   contentData: Omit<BlockContent, 'id' | 'createdAt' | 'updatedAt'>[]
@@ -352,13 +466,22 @@ export async function saveArticleContent(
     // Check if article is editable by current user
     await checkArticleEditable(articleId);
     
-    // Delete existing content for this article
-    await db.delete(blockContent).where(eq(blockContent.articleId, articleId));
-    
-    // Insert new content
-    if (contentData.length > 0) {
-      await db.insert(blockContent).values(contentData);
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
     }
+
+    // Use audited bulk replacement operation
+    await auditedBlockContentOperations.replaceAll(
+      'articles',
+      articleId,
+      contentData,
+      user.dbUser.id,
+      {
+        source: 'article-content-management',
+        reason: 'Artikel-Inhalt aktualisiert'
+      }
+    );
   } catch (error) {
     if (error instanceof EditLockError) {
       throw error; // Re-throw edit lock errors as-is
@@ -368,57 +491,85 @@ export async function saveArticleContent(
   }
 }
 
-// Copy an article
+// Copy an article with audit
 export async function copyArticle(originalArticleId: string): Promise<ArticleWithCalculations> {
   try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
     // Get the original article with content and calculations
     const originalArticle = await getArticleWithCalculations(originalArticleId);
     if (!originalArticle) {
       throw new Error('Original article not found');
     }
     
-    // Create new article with "(Kopie)" appended to the number
-    const [newArticle] = await db.insert(articles).values({
-      number: `${originalArticle.number} (Kopie)`,
-      price: originalArticle.price,
-      hideTitle: originalArticle.hideTitle,
-    }).returning();
+    // Use transaction to copy article and related data atomically
+    const result = await db.transaction(async (tx) => {
+      // Create new article with "(Kopie)" appended to the number and audit
+      const newArticle = await auditedArticleOperations.create(
+        {
+          number: `${originalArticle.number} (Kopie)`,
+          price: originalArticle.price,
+          hideTitle: originalArticle.hideTitle,
+        },
+        user.dbUser.id,
+        {
+          source: 'article-management',
+          reason: `Artikel kopiert von ${originalArticle.number}`,
+          originalArticleId: originalArticleId
+        }
+      );
     
-    // Copy all calculations
-    const copiedCalculations = [];
-    if (originalArticle.calculations.length > 0) {
-      const calculationsToInsert = originalArticle.calculations.map(calc => ({
-        name: calc.name,
-        type: calc.type,
-        value: calc.value,
-        articleId: newArticle.id,
-        order: calc.order,
-      }));
+      // Copy all calculations
+      const copiedCalculations = [];
+      if (originalArticle.calculations.length > 0) {
+        const calculationsToInsert = originalArticle.calculations.map(calc => ({
+          name: calc.name,
+          type: calc.type,
+          value: calc.value,
+          articleId: newArticle.id,
+          order: calc.order,
+        }));
+        
+        const insertedCalculations = await tx.insert(articleCalculationItem).values(calculationsToInsert).returning();
+        copiedCalculations.push(...insertedCalculations);
+      }
       
-      const insertedCalculations = await db.insert(articleCalculationItem).values(calculationsToInsert).returning();
-      copiedCalculations.push(...insertedCalculations);
-    }
-    
-    // Copy all article content (block_content where articleId is set)
-    const copiedContent = [];
-    if (originalArticle.content && originalArticle.content.length > 0) {
-      const contentToInsert = originalArticle.content.map(content => ({
-        blockId: content.blockId,
-        articleId: newArticle.id,
-        title: content.title,
-        content: content.content,
-        languageId: content.languageId,
-      }));
+      // Copy all article content (block_content where articleId is set) with audit
+      const copiedContent = [];
+      if (originalArticle.content && originalArticle.content.length > 0) {
+        for (const content of originalArticle.content) {
+          const newContent = await auditedBlockContentOperations.create(
+            {
+              blockId: content.blockId,
+              articleId: newArticle.id,
+              title: content.title,
+              content: content.content,
+              languageId: content.languageId,
+            },
+            user.dbUser.id,
+            {
+              source: 'article-copy-operation',
+              reason: `Inhalt kopiert von Artikel ${originalArticle.number}`,
+              originalContentId: content.id,
+              parentEntityType: 'articles',
+              parentEntityId: newArticle.id,
+            }
+          );
+          copiedContent.push(newContent);
+        }
+      }
       
-      const insertedContent = await db.insert(blockContent).values(contentToInsert).returning();
-      copiedContent.push(...insertedContent);
-    }
-    
-    return {
-      ...newArticle,
-      calculations: copiedCalculations,
-      content: copiedContent
-    };
+      return {
+        ...newArticle,
+        calculations: copiedCalculations,
+        content: copiedContent
+      };
+    });
+
+    return result;
   } catch (error) {
     console.error('Error copying article:', error);
     throw new Error('Failed to copy article');
@@ -522,5 +673,39 @@ export async function getArticleList(): Promise<{
   } catch (error) {
     console.error('Error fetching article list:', error);
     throw new Error('Failed to fetch article list');
+  }
+}
+
+// Get change history for a specific article
+export async function getArticleChangeHistory(articleId: string, limit = 50) {
+  try {
+    return await auditQueries.getEntityHistory(ENTITY_TYPES.ARTICLES, articleId, limit);
+  } catch (error) {
+    console.error('Error fetching article change history:', error);
+    throw new Error('Failed to fetch article change history');
+  }
+}
+
+// Get change history for article content (blockContent where articleId is set)
+export async function getArticleContentChangeHistory(articleId: string, limit = 50) {
+  try {
+    // Get all content IDs for this article first
+    const articleContent = await db
+      .select({ id: blockContent.id })
+      .from(blockContent)
+      .where(eq(blockContent.articleId, articleId));
+
+    // Get change history for all content pieces
+    const allHistory = [];
+    for (const content of articleContent) {
+      const contentHistory = await auditQueries.getEntityHistory(ENTITY_TYPES.BLOCK_CONTENT, content.id, limit);
+      allHistory.push(...contentHistory);
+    }
+
+    // Sort by timestamp (most recent first)
+    return allHistory.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, limit);
+  } catch (error) {
+    console.error('Error fetching article content change history:', error);
+    throw new Error('Failed to fetch article content change history');
   }
 } 

@@ -1,8 +1,9 @@
-import { pgTable, serial, text, timestamp, uuid, boolean, integer, pgEnum, numeric, check, unique } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, uuid, boolean, integer, pgEnum, numeric, check, unique, jsonb, index } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // Enums
 export const articleCalculationItemTypeEnum = pgEnum('article_calculation_item_type', ['time', 'cost']);
+export const auditActionEnum = pgEnum('audit_action', ['INSERT', 'UPDATE', 'DELETE']);
 
 // Example Users table
 export const users = pgTable('users', {
@@ -132,6 +133,24 @@ export const rolePermissions = pgTable('role_permissions', {
   rolePermissionUnique: unique('role_permission_unique').on(table.roleId, table.permissionId),
 }));
 
+// Change History / Audit Log table
+export const changeHistory = pgTable('change_history', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  entityType: text('entity_type').notNull(), // 'articles', 'blocks', 'users', etc.
+  entityId: uuid('entity_id').notNull(), // ID of the changed record
+  action: auditActionEnum('action').notNull(), // INSERT, UPDATE, DELETE
+  changedFields: jsonb('changed_fields'), // For UPDATE: {field: {old: value, new: value}}, for INSERT/DELETE: full record
+  userId: uuid('user_id').notNull().references(() => users.id),
+  timestamp: timestamp('timestamp', { mode: 'string' }).defaultNow().notNull(),
+  metadata: jsonb('metadata'), // Optional: IP, user agent, reason, etc.
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+}, (table) => ({
+  // Indexes for performance
+  entityIdx: index('change_history_entity_idx').on(table.entityType, table.entityId),
+  userIdx: index('change_history_user_idx').on(table.userId),
+  timestampIdx: index('change_history_timestamp_idx').on(table.timestamp),
+}));
+
 // Export types for TypeScript
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert; 
@@ -164,4 +183,7 @@ export type UserRole = typeof userRoles.$inferSelect;
 export type InsertUserRole = typeof userRoles.$inferInsert;
 
 export type RolePermission = typeof rolePermissions.$inferSelect;
-export type InsertRolePermission = typeof rolePermissions.$inferInsert; 
+export type InsertRolePermission = typeof rolePermissions.$inferInsert;
+
+export type ChangeHistory = typeof changeHistory.$inferSelect;
+export type InsertChangeHistory = typeof changeHistory.$inferInsert; 
