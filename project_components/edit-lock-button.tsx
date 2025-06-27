@@ -101,6 +101,11 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
     string | null
   >(null);
 
+  // Loading states for async operations
+  const [isToggling, setIsToggling] = React.useState(false);
+  const [isOverriding, setIsOverriding] = React.useState(false);
+  const [isSavingInternal, setIsSavingInternal] = React.useState(false);
+
   // Check if the resource has been modified by checking its current updatedAt
   const checkForConflicts = async (): Promise<boolean> => {
     if (!editStartUpdatedAt || !dbUser?.id) return true; // No baseline to compare or no user, allow save
@@ -148,47 +153,55 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
   };
 
   const handleToggleEdit = async () => {
-    if (isEditing) {
-      // If currently editing, unlock and exit edit mode (optimistic)
-      onToggleEdit(); // Exit edit mode immediately
-      setEditStartUpdatedAt(null); // Clear the baseline timestamp
-      const unlocked = await unlockResourceOptimistic();
-      if (unlocked) {
-        toast.success('Bearbeitung beendet - für andere freigegeben');
-      } else {
-        toast.error('Fehler beim Entsperren');
-        // Don't revert onToggleEdit here as the unlock might have failed for network reasons
-        // but the UI state change should stay to avoid confusing the user
-      }
-    } else {
-      // If not editing, try to lock and enter edit mode
-      if (!canEdit) {
-        toast.error(
-          `Wird bereits von ${lockInfo.lockedByName || 'einem anderen Benutzer'} bearbeitet`,
-        );
-        return;
-      }
-
-      try {
-        // First try to get the lock
-        const locked = await lockResourceOptimistic();
-        if (locked) {
-          // Only enter edit mode if lock was successful
-          setEditStartUpdatedAt(initialUpdatedAt || null); // Store baseline timestamp
-          onToggleEdit();
-          toast.success('Bearbeitung gestartet - für andere gesperrt');
+    setIsToggling(true);
+    
+    try {
+      if (isEditing) {
+        // If currently editing, unlock and exit edit mode (optimistic)
+        onToggleEdit(); // Exit edit mode immediately
+        setEditStartUpdatedAt(null); // Clear the baseline timestamp
+        const unlocked = await unlockResourceOptimistic();
+        if (unlocked) {
+          toast.success('Bearbeitung beendet - für andere freigegeben');
         } else {
-          // Lock failed - don't change edit mode
+          toast.error('Fehler beim Entsperren');
+          // Don't revert onToggleEdit here as the unlock might have failed for network reasons
+          // but the UI state change should stay to avoid confusing the user
+        }
+      } else {
+        // If not editing, try to lock and enter edit mode
+        if (!canEdit) {
+          toast.error(
+            `Wird bereits von ${lockInfo.lockedByName || 'einem anderen Benutzer'} bearbeitet`,
+          );
+          return;
+        }
+
+        try {
+          // First try to get the lock
+          const locked = await lockResourceOptimistic();
+          if (locked) {
+            // Only enter edit mode if lock was successful
+            setEditStartUpdatedAt(initialUpdatedAt || null); // Store baseline timestamp
+            onToggleEdit();
+            toast.success('Bearbeitung gestartet - für andere gesperrt');
+          } else {
+            // Lock failed - don't change edit mode
+            toast.error('Fehler beim Sperren für Bearbeitung');
+          }
+        } catch (error) {
+          // Any error during locking - don't change edit mode
           toast.error('Fehler beim Sperren für Bearbeitung');
         }
-      } catch (error) {
-        // Any error during locking - don't change edit mode
-        toast.error('Fehler beim Sperren für Bearbeitung');
       }
+    } finally {
+      setIsToggling(false);
     }
   };
 
   const handleForceOverride = async () => {
+    setIsOverriding(true);
+    
     try {
       const overridden = await forceOverrideLock();
       if (overridden) {
@@ -202,23 +215,31 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
       }
     } catch (error) {
       toast.error('Fehler beim Überschreiben der Sperre');
+    } finally {
+      setIsOverriding(false);
     }
   };
 
   const handleSave = async () => {
-    // Check for conflicts before saving
-    const canSave = await checkForConflicts();
-    if (!canSave) {
-      return; // Don't proceed with save if there are conflicts
-    }
+    setIsSavingInternal(true);
+    
+    try {
+      // Check for conflicts before saving
+      const canSave = await checkForConflicts();
+      if (!canSave) {
+        return; // Don't proceed with save if there are conflicts
+      }
 
-    await onSave();
-    // Unlock the resource after saving
-    const unlocked = await unlockResource();
-    if (unlocked) {
-      toast.success('Gespeichert und für andere freigegeben');
-    } else {
-      toast.error('Fehler beim Entsperren nach dem Speichern');
+      await onSave();
+      // Unlock the resource after saving
+      const unlocked = await unlockResource();
+      if (unlocked) {
+        toast.success('Gespeichert und für andere freigegeben');
+      } else {
+        toast.error('Fehler beim Entsperren nach dem Speichern');
+      }
+    } finally {
+      setIsSavingInternal(false);
     }
   };
 
@@ -228,10 +249,15 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         variant="outline"
         size="sm"
         onClick={handleToggleEdit}
-        disabled={!canEdit && !isEditing}
+        disabled={(!canEdit && !isEditing) || isToggling}
         aria-label={isEditing ? 'Abbrechen' : 'Bearbeiten'}
       >
-        {isEditing ? (
+        {isToggling ? (
+          <>
+            <Loader2 size={14} className="inline-block animate-spin mr-1" />
+            {isEditing ? 'Wird beendet...' : 'Wird gesperrt...'}
+          </>
+        ) : isEditing ? (
           'Abbrechen'
         ) : !canEdit ? (
           <>
@@ -252,11 +278,21 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
           variant="destructive"
           size="sm"
           onClick={handleForceOverride}
+          disabled={isOverriding}
           aria-label="Sperre überschreiben und bearbeiten"
           className="bg-orange-600 hover:bg-orange-700"
         >
-          <AlertTriangle size={14} className="inline-block mr-1" />
-          Überschreiben
+          {isOverriding ? (
+            <>
+              <Loader2 size={14} className="inline-block animate-spin mr-1" />
+              Überschreibt...
+            </>
+          ) : (
+            <>
+              <AlertTriangle size={14} className="inline-block mr-1" />
+              Überschreiben
+            </>
+          )}
         </Button>
       )}
 
@@ -264,10 +300,10 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         <Button
           size="sm"
           onClick={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || isSavingInternal}
           aria-label="Änderungen speichern"
         >
-          {isSaving ? (
+          {isSaving || isSavingInternal ? (
             <>
               <Loader2 size={14} className="inline-block animate-spin mr-1" />
               Speichern...
