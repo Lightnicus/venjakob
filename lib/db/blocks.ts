@@ -382,21 +382,35 @@ export async function deleteBlock(blockId: string): Promise<void> {
       throw new Error('Benutzer nicht authentifiziert');
     }
 
-    // Use transaction to delete block and content atomically
-    await db.transaction(async (tx) => {
-      // Delete block content first (foreign key constraint)
-      await tx.delete(blockContent).where(eq(blockContent.blockId, blockId));
+    // Get all content pieces for this block first for audit purposes
+    const contentPieces = await db
+      .select()
+      .from(blockContent)
+      .where(eq(blockContent.blockId, blockId));
 
-      // Delete the block with audit
-      await auditedBlockOperations.delete(
-        blockId,
+    // Delete each content piece with audit (done sequentially to avoid lock issues)
+    for (const content of contentPieces) {
+      await auditedBlockContentOperations.delete(
+        content.id,
         user.dbUser.id,
         {
-          source: 'block-management',
-          reason: 'Block gelöscht'
+          source: 'block-deletion',
+          reason: 'Block-Inhalt gelöscht (Block wird gelöscht)',
+          parentEntityType: 'blocks',
+          parentEntityId: blockId,
         }
       );
-    });
+    }
+
+    // Then delete the block with audit
+    await auditedBlockOperations.delete(
+      blockId,
+      user.dbUser.id,
+      {
+        source: 'block-management',
+        reason: 'Block gelöscht'
+      }
+    );
   } catch (error) {
     if (error instanceof EditLockError) {
       throw error; // Re-throw edit lock errors as-is
