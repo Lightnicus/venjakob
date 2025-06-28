@@ -144,47 +144,51 @@ export async function getCurrentUser() {
   }
 }
 
-async function syncUserToDatabase() {
-  const supabase = await createClient();
-  
+async function syncUsersToDatabase() {
   try {
-    // Get current user
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    
-    if (userError) {
-      // Handle auth session missing error gracefully
-      if (userError.message?.includes('Auth session missing') || userError.name === 'AuthSessionMissingError') {
-        return; // This is expected when user is not logged in
-      } else {
-        console.error('Auth error in syncUserToDatabase:', userError);
-        return;
-      }
+    // Check if service role key is available
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.warn('SUPABASE_SERVICE_ROLE_KEY not configured - skipping user sync');
+      return;
     }
     
-    if (!user) {
+    const adminClient = createAdminClient();
+
+    // Get all users from Supabase Auth (admin operation)
+    const { data: { users: allAuthUsers }, error: listError } = await adminClient.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error('Error fetching users from Supabase Auth:', listError);
+      return;
+    }
+    
+    if (!allAuthUsers) {
+      console.log('No users found in Supabase Auth');
       return;
     }
 
-    // Upsert current user to local database
-    await upsertUser(user.id, user.email!, user.user_metadata?.name);
-
-    // Get all users from Supabase Auth (admin operation)
-    const { data: { users: allAuthUsers }, error: listError } = await supabase.auth.admin.listUsers();
+    // Upsert all users to local database in parallel
+    const upsertPromises = allAuthUsers.map(authUser => 
+      upsertUser(authUser.id, authUser.email!, authUser.user_metadata?.name)
+    );
     
-    if (!listError && allAuthUsers) {
-      // Extract user IDs that exist in Supabase Auth
-      const validUserIds = allAuthUsers.map(authUser => authUser.id);
-      
-      // Clean up orphaned users in local database
-      await cleanupOrphanedUsers(validUserIds);
+    const upsertResults = await Promise.allSettled(upsertPromises);
+    
+    // Log any failed upserts
+    const failedUpserts = upsertResults.filter(result => result.status === 'rejected');
+    if (failedUpserts.length > 0) {
+      console.error(`Failed to upsert ${failedUpserts.length} users:`, failedUpserts.map(result => result.reason));
     }
+
+    // Extract user IDs that exist in Supabase Auth
+    const validUserIds = allAuthUsers.map(authUser => authUser.id);
+    
+    // Clean up orphaned users in local database
+    await cleanupOrphanedUsers(validUserIds);
+    
+    console.log(`Successfully synced ${allAuthUsers.length} users to local database`);
   } catch (error: any) {
-    // Handle AuthSessionMissingError and other auth errors gracefully
-    if (error.message?.includes('Auth session missing') || error.name === 'AuthSessionMissingError') {
-      return; // This is expected when user is not logged in
-    } else {
-      console.error('Error syncing user to database:', error);
-    }
+    console.error('Error syncing users to database:', error);
   }
 }
 
@@ -202,8 +206,8 @@ export async function signIn(formData: FormData) {
     redirect(`/?error=${encodeURIComponent('Ungültige E-Mail oder Passwort. Bitte versuchen Sie es erneut.')}`);
   }
 
-  // Sync user to local database after successful login
-  await syncUserToDatabase();
+  // Sync all users to local database after successful login
+  await syncUsersToDatabase();
 
   revalidatePath('/', 'layout');
   redirect('/portal');
@@ -223,8 +227,8 @@ export async function signUp(formData: FormData) {
     redirect(`/?error=${encodeURIComponent(error.message)}`);
   }
 
-  // Sync user to local database after successful signup
-  await syncUserToDatabase();
+  // Sync all users to local database after successful signup
+  await syncUsersToDatabase();
 
   revalidatePath('/', 'layout');
   redirect('/portal');
