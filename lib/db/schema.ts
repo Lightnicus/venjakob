@@ -4,6 +4,7 @@ import { sql } from 'drizzle-orm';
 // Enums
 export const articleCalculationItemTypeEnum = pgEnum('article_calculation_item_type', ['time', 'cost']);
 export const auditActionEnum = pgEnum('audit_action', ['INSERT', 'UPDATE', 'DELETE']);
+export const salesOpportunityStatusEnum = pgEnum('sales_opportunity_status', ['open', 'in_progress', 'won', 'lost', 'cancelled']);
 
 // Example Users table
 export const users = pgTable('users', {
@@ -151,6 +152,113 @@ export const changeHistory = pgTable('change_history', {
   timestampIdx: index('change_history_timestamp_idx').on(table.timestamp),
 }));
 
+// Contact Persons table (Ansprechpartner)
+export const contactPersons = pgTable('contact_persons', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  clientId: uuid('client_id').notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  firstName: text('first_name'),
+  email: text('email'),
+  phone: text('phone'),
+  position: text('position'),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+});
+
+// Sales Opportunities table (Verkaufschance)
+export const salesOpportunities = pgTable('sales_opportunities', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  crmId: text('crm_id'),
+  clientId: uuid('client_id').notNull().references(() => clients.id),
+  contactPersonId: uuid('contact_person_id').references(() => contactPersons.id),
+  orderInventorySpecification: text('order_inventory_specification'),
+  status: salesOpportunityStatusEnum('status').notNull().default('open'),
+  businessArea: text('business_area'),
+  salesRepresentative: uuid('sales_representative').references(() => users.id),
+  keyword: text('keyword'),
+  quoteVolume: numeric('quote_volume'),
+  blocked: timestamp('blocked', { mode: 'string' }),
+  blockedBy: uuid('blocked_by').references(() => users.id),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  createdBy: uuid('created_by').notNull().references(() => users.id),
+  modifiedBy: uuid('modified_by').references(() => users.id),
+});
+
+// Quotes table (Angebot)
+export const quotes = pgTable('quotes', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  salesOpportunityId: uuid('sales_opportunity_id').notNull().references(() => salesOpportunities.id, { onDelete: 'cascade' }),
+  quoteNumber: text('quote_number').notNull().unique(),
+  title: text('title'),
+  validUntil: timestamp('valid_until', { mode: 'string' }),
+  blocked: timestamp('blocked', { mode: 'string' }),
+  blockedBy: uuid('blocked_by').references(() => users.id),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  createdBy: uuid('created_by').notNull().references(() => users.id),
+  modifiedBy: uuid('modified_by').references(() => users.id),
+});
+
+// Quote Variants table (Variante)
+export const quoteVariants = pgTable('quote_variants', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  quoteId: uuid('quote_id').notNull().references(() => quotes.id, { onDelete: 'cascade' }),
+  variantDescriptor: text('variant_descriptor').notNull(),
+  languageId: uuid('language_id').notNull().references(() => languages.id),
+  isDefault: boolean('is_default').notNull().default(false),
+  blocked: timestamp('blocked', { mode: 'string' }),
+  blockedBy: uuid('blocked_by').references(() => users.id),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  createdBy: uuid('created_by').notNull().references(() => users.id),
+  modifiedBy: uuid('modified_by').references(() => users.id),
+});
+
+// Quote Versions table (Version)
+export const quoteVersions = pgTable('quote_versions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  variantId: uuid('variant_id').notNull().references(() => quoteVariants.id, { onDelete: 'cascade' }),
+  versionNumber: text('version_number').notNull(),
+  accepted: boolean('accepted').notNull().default(false),
+  calculationDataLive: boolean('calculation_data_live').notNull().default(false),
+  totalPrice: numeric('total_price'),
+  isLatest: boolean('is_latest').notNull().default(false),
+  blocked: timestamp('blocked', { mode: 'string' }),
+  blockedBy: uuid('blocked_by').references(() => users.id),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+  createdBy: uuid('created_by').notNull().references(() => users.id),
+  modifiedBy: uuid('modified_by').references(() => users.id),
+}, (table) => ({
+  // Ensure version number is unique within a variant
+  variantVersionUnique: unique('variant_version_unique').on(table.variantId, table.versionNumber),
+}));
+
+// Quote Positions table (Position)
+export const quotePositions = pgTable('quote_positions', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  versionId: uuid('version_id').notNull().references(() => quoteVersions.id, { onDelete: 'cascade' }),
+  articleId: uuid('article_id').references(() => articles.id),
+  blockId: uuid('block_id').references(() => blocks.id),
+  originalDocumentId: uuid('original_document_id'), // Reference to source document
+  positionNumber: integer('position_number').notNull(),
+  quantity: numeric('quantity').notNull().default('1'),
+  unitPrice: numeric('unit_price'),
+  totalPrice: numeric('total_price'),
+  articleCost: numeric('article_cost'),
+  description: text('description'),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+}, (table) => ({
+  // Ensure either articleId or blockId is set, but not both
+  articleOrBlockCheck: check('article_or_block_check', 
+    sql`(${table.articleId} IS NOT NULL AND ${table.blockId} IS NULL) OR (${table.articleId} IS NULL AND ${table.blockId} IS NOT NULL)`
+  ),
+  // Ensure position number is unique within a version
+  versionPositionUnique: unique('version_position_unique').on(table.versionId, table.positionNumber),
+}));
+
 // Export types for TypeScript
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert; 
@@ -160,6 +268,24 @@ export type InsertLanguage = typeof languages.$inferInsert;
 
 export type Client = typeof clients.$inferSelect;
 export type InsertClient = typeof clients.$inferInsert;
+
+export type ContactPerson = typeof contactPersons.$inferSelect;
+export type InsertContactPerson = typeof contactPersons.$inferInsert;
+
+export type SalesOpportunity = typeof salesOpportunities.$inferSelect;
+export type InsertSalesOpportunity = typeof salesOpportunities.$inferInsert;
+
+export type Quote = typeof quotes.$inferSelect;
+export type InsertQuote = typeof quotes.$inferInsert;
+
+export type QuoteVariant = typeof quoteVariants.$inferSelect;
+export type InsertQuoteVariant = typeof quoteVariants.$inferInsert;
+
+export type QuoteVersion = typeof quoteVersions.$inferSelect;
+export type InsertQuoteVersion = typeof quoteVersions.$inferInsert;
+
+export type QuotePosition = typeof quotePositions.$inferSelect;
+export type InsertQuotePosition = typeof quotePositions.$inferInsert;
 
 export type Block = typeof blocks.$inferSelect;
 export type InsertBlock = typeof blocks.$inferInsert;
