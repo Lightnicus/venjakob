@@ -519,23 +519,252 @@ Each audit entry contains:
 - **Block Content** (`block_content`): Content for both blocks and articles (title, content, language)
 - Ready to extend: Users, roles, permissions, and other entities
 
+## Database Helper Functions
+
+The project provides comprehensive helper functions for database operations, organized by entity type. All functions follow consistent patterns with proper error handling, authentication, and type safety.
+
+### Articles (`lib/db/articles.ts`)
+
+#### Core Operations
+- `getArticles()` - Fetch all articles ordered by number
+- `getArticleWithCalculations(articleId)` - Get single article with calculations and content
+- `getArticlesWithCalculationCounts()` - Get all articles with calculation counts
+- `getArticleList()` - Optimized query for table displays with titles and languages
+- `createArticle(articleData)` - Create new article with audit
+- `saveArticle(articleId, articleData)` - Update article properties with audit and edit lock check
+- `deleteArticle(articleId)` - Delete article with audit and edit lock check
+
+#### Calculation Management
+- `saveArticleCalculations(articleId, calculations)` - Replace all calculations for an article
+- `addCalculationToArticle(articleId, name, type, value, order)` - Add single calculation
+- `removeCalculationFromArticle(calculationItemId)` - Remove specific calculation
+- `getCalculationItems()` - Get global calculation items (not tied to articles)
+- `createCalculationItem(itemData)` - Create global calculation item
+- `saveCalculationItem(itemId, itemData)` - Update calculation item
+- `deleteCalculationItem(itemId)` - Delete calculation item
+
+#### Advanced Operations
+- `createNewArticle(articleData)` - Create article with default calculations from config
+- `createArticleWithDefaults(articleData)` - Alias for createNewArticle
+- `copyArticle(originalArticleId)` - Copy article with all calculations and content
+- `saveArticleContent(articleId, contentData)` - Save article content with audit
+
+#### History & Auditing
+- `getArticleChangeHistory(articleId, limit)` - Get change history for article
+- `getArticleContentChangeHistory(articleId, limit)` - Get change history for article content
+
+#### Types
+- `ArticleWithCalculations` - Article with calculations, content, and lastChangedBy info
+- `EditLockError` - Custom error for edit lock conflicts
+
+### Blocks (`lib/db/blocks.ts`)
+
+#### Core Operations
+- `getBlocksWithContent()` - Fetch all blocks with their content
+- `getBlockWithContent(blockId)` - Get single block with content and change info
+- `getBlockList()` - Optimized query for table displays with language info
+- `createBlock()` - Create new block with audit
+- `saveBlockProperties(blockId, blockData)` - Update block properties with audit and edit lock check
+- `deleteBlock(blockId)` - Delete block and content with audit and edit lock check
+
+#### Content Management
+- `saveBlockContent(blockId, blockContents)` - Save/replace all content for a block with audit
+- `getLanguages()` - Fetch all available languages
+
+#### Advanced Operations
+- `copyBlock(originalBlockId)` - Copy block with all content and proper positioning
+
+#### History & Auditing
+- `getBlockChangeHistory(blockId, limit)` - Get change history for block
+- `getBlockContentChangeHistory(blockId, limit)` - Get change history for block content
+
+#### Types
+- `BlockWithContent` - Block with content and lastChangedBy info
+- `EditLockError` - Custom error for edit lock conflicts
+
+### Sales Opportunities (`lib/db/sales-opportunities.ts`)
+
+#### Core Operations
+- `getSalesOpportunities()` - Fetch all sales opportunities ordered by creation date
+- `getSalesOpportunityWithDetails(salesOpportunityId)` - Get single opportunity with client, contact, and sales rep details
+- `getSalesOpportunitiesList()` - Optimized query for table displays with relationship counts
+- `createSalesOpportunity(salesOpportunityData)` - Create new sales opportunity
+- `saveSalesOpportunity(salesOpportunityId, salesOpportunityData)` - Update opportunity with edit lock check
+- `deleteSalesOpportunity(salesOpportunityId)` - Delete opportunity (validates no related quotes exist)
+
+#### Advanced Operations
+- `copySalesOpportunity(originalSalesOpportunityId)` - Copy opportunity with reset status
+
+#### History & Auditing
+- `getSalesOpportunityChangeHistory(salesOpportunityId, limit)` - Get change history
+
+#### Types
+- `SalesOpportunityWithDetails` - Opportunity with client, contact person, sales rep, and quote count
+- `EditLockError` - Custom error for edit lock conflicts
+
+### Contact Persons (`lib/db/contact-persons.ts`)
+
+#### Core Operations
+- `getContactPersons()` - Fetch all contact persons ordered by name
+- `getContactPersonsByClient(clientId)` - Get contact persons for specific client
+- `getContactPersonWithDetails(contactPersonId)` - Get single contact person with client details
+- `getContactPersonsList()` - Optimized query for table displays with sales opportunity counts
+- `createContactPerson(contactPersonData)` - Create new contact person
+- `saveContactPerson(contactPersonId, contactPersonData)` - Update contact person
+- `deleteContactPerson(contactPersonId)` - Delete contact person (validates no related opportunities exist)
+
+#### History & Auditing
+- `getContactPersonChangeHistory(contactPersonId, limit)` - Get change history
+
+#### Types
+- `ContactPersonWithDetails` - Contact person with client info and sales opportunity count
+
+### Quotes (`lib/db/quotes.ts`)
+
+#### Core Operations
+- `getQuotes()` - Fetch all quotes ordered by creation date
+- `getQuotesBySalesOpportunity(salesOpportunityId)` - Get quotes for specific sales opportunity
+- `getQuoteWithDetails(quoteId)` - Get complete quote with variants, versions, and positions
+- `getQuotesList()` - Optimized query for table displays with variant counts
+- `createQuote(quoteData)` - Create new quote
+- `saveQuote(quoteId, quoteData)` - Update quote with edit lock check
+- `deleteQuote(quoteId)` - Delete quote and all related data (cascade)
+
+#### Variant Management
+- `getQuoteVariantsByQuote(quoteId)` - Get variants for a quote with versions
+- `createQuoteVariant(variantData)` - Create new quote variant
+
+#### Version Management
+- `getQuoteVersionsByVariant(variantId)` - Get versions for a variant with positions
+- `createQuoteVersion(versionData)` - Create new version (handles latest version flag)
+
+#### Position Management
+- `getQuotePositionsByVersion(versionId)` - Get positions for a version with article/block details
+- `addQuotePosition(positionData)` - Add position to quote version
+
+#### Advanced Operations
+- `copyQuote(originalQuoteId)` - Copy quote (basic copy, full copy with variants/versions TODO)
+
+#### History & Auditing
+- `getQuoteChangeHistory(quoteId, limit)` - Get change history
+
+#### Types
+- `QuoteWithDetails` - Complete quote with sales opportunity, variants, and counts
+- `QuoteVariantWithVersions` - Variant with language and versions
+- `QuoteVersionWithPositions` - Version with positions and counts
+- `QuotePositionWithDetails` - Position with article or block details
+- `EditLockError` - Custom error for edit lock conflicts
+
+### Common Patterns
+
+#### Error Handling
+All helper functions follow consistent error handling:
+```typescript
+try {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Benutzer nicht authentifiziert');
+  }
+  // ... operation
+} catch (error) {
+  if (error instanceof EditLockError) {
+    throw error; // Re-throw edit lock errors as-is
+  }
+  console.error('Error description:', error);
+  throw new Error('User-friendly error message');
+}
+```
+
+#### Edit Lock Protection
+Functions that modify data check edit locks:
+```typescript
+async function checkEntityEditable(entityId: string): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new EditLockError('Benutzer nicht authentifiziert', entityId);
+  }
+  
+  // Check if entity is locked by another user
+  if (entity.blocked && entity.blockedBy && entity.blockedBy !== user.dbUser.id) {
+    throw new EditLockError('Entity locked by another user', entityId, entity.blockedBy, entity.blocked);
+  }
+}
+```
+
+#### List Functions
+Optimized queries for table displays return minimal data:
+```typescript
+export async function getEntityList(): Promise<{
+  id: string;
+  name: string;
+  // ... essential display fields
+  relationshipCount: number;
+  createdAt: string;
+  updatedAt: string;
+}[]> {
+  // Efficient query with relationship counts
+}
+```
+
+#### Enriched Detail Functions
+Detail functions return complete entity information:
+```typescript
+export type EntityWithDetails = Entity & {
+  relatedEntity: RelatedEntity;
+  relationshipCount: number;
+  lastChangedBy?: {
+    id: string;
+    name: string | null;
+    email: string;
+    timestamp: string;
+  } | null;
+};
+```
+
+#### Authentication Integration
+All functions use `getCurrentUser()` for authentication:
+```typescript
+const user = await getCurrentUser();
+if (!user) {
+  throw new Error('Benutzer nicht authentifiziert');
+}
+// Use user.dbUser.id for operations
+```
+
+#### Relationship Validation
+Delete functions validate relationships:
+```typescript
+// Check if there are related records
+const [relatedCount] = await db
+  .select({ count: count(relatedTable.id) })
+  .from(relatedTable)
+  .where(eq(relatedTable.parentId, entityId));
+
+if (Number(relatedCount?.count || 0) > 0) {
+  throw new Error('Cannot delete: related records exist');
+}
+```
+
 ## File Structure
 
 ```
 lib/
 ├── db/
-│   ├── index.ts          # Database connection
-│   ├── schema.ts         # Database schema definitions (with string timestamps)
-│   ├── queries.ts        # Database query functions
-│   ├── articles.ts       # Article-specific database operations
-│   ├── blocks.ts         # Block-specific database operations
-│   ├── audit.ts          # Transaction-based audit system
-│   ├── audit-examples.ts # Usage examples for audit system
-│   ├── migrations/       # Generated migration files
-│   └── seeds/            # SQL seed files for initial data
+│   ├── index.ts              # Database connection
+│   ├── schema.ts             # Database schema definitions (with string timestamps)
+│   ├── queries.ts            # Database query functions
+│   ├── articles.ts           # Article-specific database operations
+│   ├── blocks.ts             # Block-specific database operations
+│   ├── sales-opportunities.ts # Sales opportunity database operations
+│   ├── contact-persons.ts    # Contact person database operations
+│   ├── quotes.ts             # Quote, variant, version, position operations
+│   ├── audit.ts              # Transaction-based audit system
+│   ├── audit-examples.ts     # Usage examples for audit system
+│   ├── migrations/           # Generated migration files
+│   └── seeds/                # SQL seed files for initial data
 ├── auth/
-│   └── server.ts         # Server-side authentication utilities (requireAuth)
+│   └── server.ts             # Server-side authentication utilities (requireAuth)
 └── supabase/
-    ├── client.ts         # Client-side Supabase instance
-    └── server.ts         # Server-side Supabase instance
+    ├── client.ts             # Client-side Supabase instance
+    └── server.ts             # Server-side Supabase instance
 ``` 
