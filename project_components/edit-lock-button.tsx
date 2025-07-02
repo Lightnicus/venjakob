@@ -89,6 +89,7 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
   const {
     lockInfo,
     canEdit,
+    isLoading,
     lockResourceOptimistic,
     unlockResourceOptimistic,
     unlockResource,
@@ -202,19 +203,27 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
   const handleForceOverride = async () => {
     setIsOverriding(true);
     
+    // Optimistically enter edit mode immediately to avoid UI flickering
+    setEditStartUpdatedAt(initialUpdatedAt || null); // Store baseline timestamp
+    onToggleEdit(); // Enter edit mode immediately
+    
     try {
       const overridden = await forceOverrideLock();
       if (overridden) {
-        setEditStartUpdatedAt(initialUpdatedAt || null); // Store baseline timestamp
-        onToggleEdit(); // Enter edit mode
         toast.success(
           `Bearbeitung von ${lockInfo.lockedByName || 'anderem Benutzer'} überschrieben`,
         );
       } else {
         toast.error('Fehler beim Überschreiben der Sperre');
+        // Revert the optimistic UI change if override failed
+        setEditStartUpdatedAt(null);
+        onToggleEdit(); // Exit edit mode
       }
     } catch (error) {
       toast.error('Fehler beim Überschreiben der Sperre');
+      // Revert the optimistic UI change if override failed
+      setEditStartUpdatedAt(null);
+      onToggleEdit(); // Exit edit mode
     } finally {
       setIsOverriding(false);
     }
@@ -249,13 +258,18 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         variant="outline"
         size="sm"
         onClick={handleToggleEdit}
-        disabled={(!canEdit && !isEditing) || isToggling}
+        disabled={(!canEdit && !isEditing) || isToggling || isLoading}
         aria-label={isEditing ? 'Abbrechen' : 'Bearbeiten'}
       >
-        {isToggling ? (
+        {isLoading ? (
           <>
             <Loader2 size={14} className="inline-block animate-spin mr-1" />
-            {isEditing ? 'Wird beendet...' : 'Wird gesperrt...'}
+            Laden...
+          </>
+        ) : isToggling ? (
+          <>
+            <Loader2 size={14} className="inline-block animate-spin mr-1" />
+            Bitte warten...
           </>
         ) : isEditing ? (
           'Abbrechen'
@@ -272,8 +286,8 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         )}
       </Button>
 
-      {/* Force Override Button - only show when locked by another user */}
-      {lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && !isEditing && (
+      {/* Force Override Button - only show when locked by another user and initial load is complete */}
+      {!isLoading && lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && !isEditing && (
         <Button
           variant="destructive"
           size="sm"
@@ -317,7 +331,7 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         </Button>
       )}
 
-      {lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && (
+      {!isLoading && lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && (
         <span className="text-sm text-gray-600">
           wird bearbeitet von{' '}
           <strong>{lockInfo.lockedByName || 'Unbekannt'}</strong>
