@@ -22,6 +22,8 @@ import {
 } from './schema';
 import { getCurrentUser } from '@/lib/auth/server';
 import { auditQueries } from './audit';
+import { copyArticle } from './articles';
+import { copyBlock } from './blocks';
 
 // Common error type for edit lock conflicts
 export class EditLockError extends Error {
@@ -595,6 +597,87 @@ export async function getQuoteChangeHistory(quoteId: string, limit = 50) {
   } catch (error) {
     console.error('Error fetching quote change history:', error);
     throw new Error('Failed to fetch quote change history');
+  }
+}
+
+// Add position helper function
+export async function addAsPosition(
+  versionId: string,
+  articleId?: string,
+  blockId?: string
+): Promise<QuotePosition> {
+  try {
+    // Validate parameters
+    if (!articleId && !blockId) {
+      throw new Error('Either articleId or blockId must be provided');
+    }
+    if (articleId && blockId) {
+      throw new Error('Cannot provide both articleId and blockId');
+    }
+
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    // Get the next position number for this version
+    const [maxPositionResult] = await db
+      .select({ maxPosition: quotePositions.positionNumber })
+      .from(quotePositions)
+      .where(eq(quotePositions.versionId, versionId))
+      .orderBy(desc(quotePositions.positionNumber))
+      .limit(1);
+
+    const nextPositionNumber = (maxPositionResult?.maxPosition || 0) + 1;
+
+    // Copy the article or block and create position data
+    let positionData;
+    
+    if (articleId) {
+      const copiedArticle = await copyArticle(articleId);
+      positionData = {
+        versionId,
+        articleId: copiedArticle.id,
+        blockId: null,
+        originalArticleId: articleId,
+        originalBlockId: null,
+        positionNumber: nextPositionNumber,
+        quantity: '1',
+        unitPrice: copiedArticle.price,
+        totalPrice: copiedArticle.price,
+        articleCost: null,
+        description: null,
+      };
+    } else if (blockId) {
+      const copiedBlock = await copyBlock(blockId);
+      positionData = {
+        versionId,
+        articleId: null,
+        blockId: copiedBlock.id,
+        originalArticleId: null,
+        originalBlockId: blockId,
+        positionNumber: nextPositionNumber,
+        quantity: '1',
+        unitPrice: null,
+        totalPrice: null,
+        articleCost: null,
+        description: null,
+      };
+    } else {
+      throw new Error('Either articleId or blockId must be provided');
+    }
+
+    const [newPosition] = await db
+      .insert(quotePositions)
+      .values(positionData)
+      .returning();
+
+    // TODO: Add audit trail when audit operations are implemented for quote positions
+
+    return newPosition;
+  } catch (error) {
+    console.error('Error adding position:', error);
+    throw new Error('Failed to add position');
   }
 }
 
