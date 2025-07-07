@@ -322,6 +322,7 @@ export async function getSalesOpportunitiesList(): Promise<{
   crmId: string | null;
   clientName: string;
   contactPersonName: string | null;
+  salesRepresentativeName: string | null;
   status: string;
   businessArea: string | null;
   keyword: string | null;
@@ -337,6 +338,7 @@ export async function getSalesOpportunitiesList(): Promise<{
         crmId: salesOpportunities.crmId,
         clientId: salesOpportunities.clientId,
         contactPersonId: salesOpportunities.contactPersonId,
+        salesRepresentative: salesOpportunities.salesRepresentative,
         status: salesOpportunities.status,
         businessArea: salesOpportunities.businessArea,
         keyword: salesOpportunities.keyword,
@@ -349,7 +351,7 @@ export async function getSalesOpportunitiesList(): Promise<{
       .leftJoin(clients, eq(salesOpportunities.clientId, clients.id))
       .orderBy(desc(salesOpportunities.createdAt));
 
-    // Get contact person names and quotes counts for each opportunity
+    // Get contact person names, sales representative names, and quotes counts for each opportunity
     const opportunitiesWithDetails = await Promise.all(
       opportunities.map(async (opportunity) => {
         // Get contact person name if exists
@@ -360,6 +362,16 @@ export async function getSalesOpportunitiesList(): Promise<{
             .from(contactPersons)
             .where(eq(contactPersons.id, opportunity.contactPersonId));
           contactPersonName = cp?.name || null;
+        }
+
+        // Get sales representative name if exists
+        let salesRepresentativeName = null;
+        if (opportunity.salesRepresentative) {
+          const [sr] = await db
+            .select({ name: users.name })
+            .from(users)
+            .where(eq(users.id, opportunity.salesRepresentative));
+          salesRepresentativeName = sr?.name || null;
         }
 
         // Get quotes count
@@ -373,6 +385,7 @@ export async function getSalesOpportunitiesList(): Promise<{
            crmId: opportunity.crmId,
            clientName: opportunity.clientName || 'Unbekannter Kunde',
            contactPersonName,
+           salesRepresentativeName,
            status: opportunity.status,
            businessArea: opportunity.businessArea,
            keyword: opportunity.keyword,

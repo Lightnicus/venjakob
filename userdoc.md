@@ -33,15 +33,9 @@ Auf der Startseite (`/`). Zeigt das Login-Formular. Deutet die Möglichkeit and,
 
 ---
 
-**Angebote**  
-`project_components/offers.tsx`  
-Im Portal unter „Angebote“ im Hauptmenü. Zeigt die Angebotsübersicht.
-
----
-
 **Angebotstabelle**  
 `project_components/offers-table.tsx`  
-Zeigt die Tabelle aller Angebote in der obigen Komponente.
+Zeigt die Tabelle aller Angebote.
 
 ---
 
@@ -51,7 +45,7 @@ Dialog zur Anzeige von Angebotsvarianten. In der Angebots-Tabelle sichtbar, wenn
 
 ---
 
-**Angebotsversionen-Tabelle**  
+**Angebotspositionen-Tabelle**  
 `project_components/offer-versions-table.tsx`  
 Tabelle mit Versionen im obigen Dialog.
 

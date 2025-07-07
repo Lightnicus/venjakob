@@ -2,7 +2,6 @@
 
 import { ReactNode } from 'react';
 import { Tab } from '@/project_components/tabbed-interface-provider';
-import Offers from '@/project_components/offers';
 
 import OrderConfirmations, {
   OrderConfirmation,

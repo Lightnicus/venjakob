@@ -1,4 +1,4 @@
-import { FC } from 'react';
+import { FC, useState, useEffect } from 'react';
 import {
   DialogManagerProvider,
   DialogRenderer,
@@ -13,7 +13,8 @@ import { ChooseOfferVariantDialog } from '@/project_components/choose-offer-vari
 import { ConfirmOverwriteVariantDialog } from '@/project_components/confirm-overwrite-variant-dialog';
 import { VersionsForOfferVariantDialog } from '@/project_components/versions-for-offer-variant-dialog';
 import { SaleChance } from '@/project_components/sale-opportunities-table';
-import saleChancesData from '@/data/sale-chances.json';
+import { fetchSalesOpportunitiesList, type SalesOpportunityListItem } from '@/lib/api/sales-opportunities';
+import { toast } from 'sonner';
 
 // Dialog IDs
 export const QUOTE_DIALOGS = {
@@ -60,16 +61,73 @@ const ChooseQuoteDialogComponent: FC = () => {
   return <ChooseOfferDialog onWeiter={handleWeiter} />;
 };
 
+// Transform database data to SaleChance format
+const transformSalesOpportunityToSaleChance = (item: SalesOpportunityListItem): SaleChance => {
+  // Format date from ISO string to German format (DD.MM.YYYY)
+  const formatDate = (isoDate: string): string => {
+    try {
+      const date = new Date(isoDate);
+      return date.toLocaleDateString('de-DE');
+    } catch {
+      return '';
+    }
+  };
+
+  return {
+    titel: item.keyword || item.clientName || 'Unbekannt',
+    kunde: item.clientName,
+    verantwortlicher: item.salesRepresentativeName || '',
+    status: item.status,
+    gb: item.businessArea || '',
+    volumen: item.quoteVolume || '',
+    liefertermin: '', // Not available in current API, could be enhanced
+    geaendertAm: formatDate(item.updatedAt),
+    angebote: item.quotesCount,
+  };
+};
+
 const ChooseSalesOpportunityDialogComponent: FC = () => {
   const { openDialog } = useDialogManager();
+  const [salesOpportunities, setSalesOpportunities] = useState<SaleChance[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Load sales opportunities data
+  const loadSalesOpportunities = async () => {
+    try {
+      setIsLoading(true);
+      const data = await fetchSalesOpportunitiesList();
+      const transformedData = data.map(transformSalesOpportunityToSaleChance);
+      setSalesOpportunities(transformedData);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Fehler beim Laden der Verkaufschancen';
+      toast.error(errorMessage);
+      setSalesOpportunities([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    loadSalesOpportunities();
+  }, []);
 
   const handleWeiter = (selectedChance: SaleChance) => {
     openDialog(QUOTE_DIALOGS.QUOTE_AS_NEW_VARIANT);
   };
 
+  if (isLoading) {
+    return (
+      <ChooseSalesOpportunityDialog
+        data={[]}
+        onWeiter={handleWeiter}
+      />
+    );
+  }
+
   return (
     <ChooseSalesOpportunityDialog
-      data={saleChancesData}
+      data={salesOpportunities}
       onWeiter={handleWeiter}
     />
   );

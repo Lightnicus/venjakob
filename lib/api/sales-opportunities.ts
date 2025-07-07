@@ -5,6 +5,7 @@ export type SalesOpportunityListItem = {
   crmId: string | null;
   clientName: string;
   contactPersonName: string | null;
+  salesRepresentativeName: string | null;
   status: string;
   businessArea: string | null;
   keyword: string | null;
