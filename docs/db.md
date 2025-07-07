@@ -642,6 +642,8 @@ The project provides comprehensive helper functions for database operations, org
 - `getQuotePositionsByVersion(versionId)` - Get positions for a version with article/block details
 - `addQuotePosition(positionData)` - Add position to quote version
 
+**Note**: Quote positions now support original source tracking with `originalArticleId` and `originalBlockId` fields that reference the source articles or blocks. A check constraint ensures exactly one of these original source fields is set.
+
 #### Advanced Operations
 - `copyQuote(originalQuoteId)` - Copy quote (basic copy, full copy with variants/versions TODO)
 
