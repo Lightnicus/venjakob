@@ -17,6 +17,7 @@ import ArticleManagement from '@/project_components/article-management';
 import RoleManagement from '@/project_components/role-management';
 import PermissionManagement from '@/project_components/permission-management';
 import UserManagement from '@/project_components/user-management';
+import QuotesManagement from '@/project_components/quotes-management';
 
 export interface TabDefinition extends Omit<Tab, 'content'> {
   content: () => ReactNode; // Use a function to render content to avoid immediate rendering
@@ -29,8 +30,7 @@ export const tabMappings: Record<string, TabDefinition> = {
     title: 'Angebote',
     content: () => (
       <>
-        <h2 className="text-2xl font-bold">Angebote</h2>
-        <Offers />
+        <QuotesManagement />
       </>
     ),
     closable: true,

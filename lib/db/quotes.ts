@@ -111,6 +111,41 @@ export async function getQuotes(): Promise<Quote[]> {
   }
 }
 
+// Create a new quote with default values
+export async function createNewQuote(quoteData: {
+  title: string;
+  salesOpportunityId: string;
+  validUntil?: string;
+}): Promise<Quote> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    // Generate a unique quote number
+    const quoteCount = await db.select({ count: count(quotes.id) }).from(quotes);
+    const nextNumber = (Number(quoteCount[0]?.count || 0) + 1);
+    const quoteNumber = `ANG-${new Date().getFullYear()}-${String(nextNumber).padStart(4, '0')}`;
+
+    const newQuoteData = {
+      ...quoteData,
+      quoteNumber,
+      createdBy: user.dbUser.id,
+      modifiedBy: user.dbUser.id,
+    };
+
+    const [newQuote] = await db.insert(quotes).values(newQuoteData).returning();
+    
+    // TODO: Add audit log when audit operations are available for quotes
+    
+    return newQuote;
+  } catch (error) {
+    console.error('Error creating new quote:', error);
+    throw new Error('Failed to create new quote');
+  }
+}
+
 // Get quotes for a specific sales opportunity
 export async function getQuotesBySalesOpportunity(salesOpportunityId: string): Promise<Quote[]> {
   try {
