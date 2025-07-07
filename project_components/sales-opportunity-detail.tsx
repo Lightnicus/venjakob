@@ -1,8 +1,14 @@
 'use client';
 
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useEffect } from 'react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import { Edit, Save, X } from 'lucide-react';
+import { toast } from 'sonner';
+import { fetchSalesOpportunity, saveSalesOpportunityPropertiesAPI } from '@/lib/api/sales-opportunities';
+import type { SalesOpportunityWithDetails } from '@/lib/db/sales-opportunities';
+import type { SalesOpportunity } from '@/lib/db/schema';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Building, FileText, MapPin, Phone, Globe } from 'lucide-react';
 import SalesOpportunityOffers, { SalesOpportunityOffer } from './sales-opportunity-offers';
 import salesOpportunityOffersData from '../data/sales-opportunity-offers.json';
@@ -34,179 +40,250 @@ export type SalesOpportunityDetailData = {
   };
 };
 
-type Props = {
-  data: SalesOpportunityDetailData;
-};
+interface SalesOpportunityDetailProps {
+  salesOpportunityId: string;
+}
 
-export function SalesOpportunityDetail({ data }: Props) {
+const SalesOpportunityDetail: React.FC<SalesOpportunityDetailProps> = ({ salesOpportunityId }) => {
+  const [salesOpportunity, setSalesOpportunity] = useState<SalesOpportunityWithDetails | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedData, setEditedData] = useState<Partial<SalesOpportunity>>({});
+
+  // Load sales opportunity data
+  useEffect(() => {
+    const loadSalesOpportunity = async () => {
+      try {
+        setIsLoading(true);
+        const data = await fetchSalesOpportunity(salesOpportunityId);
+        setSalesOpportunity(data);
+      } catch (error) {
+        console.error('Error loading sales opportunity:', error);
+        toast.error('Fehler beim Laden der Verkaufschance');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadSalesOpportunity();
+  }, [salesOpportunityId]);
+
+  const handleEdit = () => {
+    if (salesOpportunity) {
+      setEditedData({
+        keyword: salesOpportunity.keyword,
+        orderInventorySpecification: salesOpportunity.orderInventorySpecification,
+        status: salesOpportunity.status,
+        businessArea: salesOpportunity.businessArea,
+        quoteVolume: salesOpportunity.quoteVolume,
+      });
+      setIsEditing(true);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!salesOpportunity) return;
+
+    try {
+      await saveSalesOpportunityPropertiesAPI(salesOpportunity.id, editedData);
+      
+      // Update local state
+      setSalesOpportunity(prev => prev ? { ...prev, ...editedData } : null);
+      setIsEditing(false);
+      setEditedData({});
+      toast.success('Verkaufschance erfolgreich gespeichert');
+    } catch (error: any) {
+      if (error.type === 'EDIT_LOCK_ERROR') {
+        toast.error(`Verkaufschance wird bereits bearbeitet: ${error.message}`);
+      } else {
+        toast.error('Fehler beim Speichern der Verkaufschance');
+      }
+    }
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditedData({});
+  };
+
+  const handleInputChange = (field: keyof SalesOpportunity, value: string) => {
+    setEditedData(prev => ({ ...prev, [field]: value }));
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-gray-500">Lade Verkaufschance...</div>
+      </div>
+    );
+  }
+
+  if (!salesOpportunity) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="text-red-500">Verkaufschance nicht gefunden</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="w-full">
-      {/* Header */}
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900">{data.title}</h1>
-        <div className="mt-2">
-          <Button variant="outline" className="flex items-center gap-2 text-sm">
-            <FileText className="h-4 w-4" />
-            Neues Angebot erstellen
-          </Button>
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h1 className="text-2xl font-bold">
+            {salesOpportunity.keyword || 'Verkaufschance'}
+          </h1>
+          <p className="text-gray-600">{salesOpportunity.client.name}</p>
+        </div>
+        <div className="flex gap-2">
+          {!isEditing ? (
+            <Button onClick={handleEdit} variant="outline">
+              <Edit className="h-4 w-4 mr-2" />
+              Bearbeiten
+            </Button>
+          ) : (
+            <>
+              <Button onClick={handleSave} variant="default">
+                <Save className="h-4 w-4 mr-2" />
+                Speichern
+              </Button>
+              <Button onClick={handleCancel} variant="outline">
+                <X className="h-4 w-4 mr-2" />
+                Abbrechen
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="allgemein">
-        <TabsList className="shrink-0 bg-white p-0 border-b flex flex-wrap gap-2 justify-start rounded-none w-full">
-          <TabsTrigger
-            value="allgemein"
-            className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100"
-          >
-            Allgemein
-          </TabsTrigger>
-          <TabsTrigger
-            value="angebote"
-            className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100"
-          >
-            Angebote
-          </TabsTrigger>
+      <Tabs defaultValue="eigenschaften" className="w-full">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="eigenschaften">Eigenschaften</TabsTrigger>
+          <TabsTrigger value="angebote">Angebote ({salesOpportunity.quotesCount})</TabsTrigger>
+          <TabsTrigger value="historie">Historie</TabsTrigger>
+          <TabsTrigger value="notizen">Notizen</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="allgemein" className="mt-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {/* Customer Panel */}
-            <Card className="border border-gray-300 shadow-none">
-              <CardHeader className="border-b ">
-                <CardTitle className="text-base">Kunde</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-3">
-                  <div className="flex items-start gap-2">
-                    <Building className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-500" />
-                    <div>
-                      <p className="font-medium">
-                        {data.customer.id} - {data.customer.name}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <MapPin className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-500" />
-                    <div>
-                      {data.customer.address.map((line, i) => (
-                        <p key={i}>{line}</p>
-                      ))}
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Phone className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-500" />
-                    <div>
-                      <p>Tel.: {data.customer.phone}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <Globe className="mt-0.5 h-5 w-5 flex-shrink-0 text-gray-500" />
-                    <div>
-                      <a
-                        href={data.customer.casLink}
-                        className="text-blue-600 hover:underline"
-                      >
-                        CAS-Link
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+        <TabsContent value="eigenschaften" className="space-y-4 mt-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Stichwort
+              </label>
+              <input
+                type="text"
+                value={isEditing ? (editedData.keyword || '') : (salesOpportunity.keyword || '')}
+                onChange={(e) => handleInputChange('keyword', e.target.value)}
+                readOnly={!isEditing}
+                className="w-full border rounded px-3 py-2 text-sm bg-white read-only:bg-gray-100 read-only:cursor-not-allowed"
+              />
+            </div>
 
-            {/* Order Confirmation Panel */}
-            <Card className="border border-gray-300 shadow-none">
-              <CardHeader className="border-b ">
-                <CardTitle className="text-base">Auftragsbestätigung</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <p>{data.orderConfirmation || 'Keine AB vorhanden'}</p>
-              </CardContent>
-            </Card>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Status
+              </label>
+              <select
+                value={isEditing ? (editedData.status || salesOpportunity.status) : salesOpportunity.status}
+                onChange={(e) => handleInputChange('status', e.target.value)}
+                disabled={!isEditing}
+                className="w-full border rounded px-3 py-2 text-sm bg-white disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
+                <option value="open">Offen</option>
+                <option value="in_progress">In Bearbeitung</option>
+                <option value="won">Gewonnen</option>
+                <option value="lost">Verloren</option>
+                <option value="cancelled">Storniert</option>
+              </select>
+            </div>
 
-            {/* Information Panel */}
-            <Card className="border border-gray-300 shadow-none">
-              <CardHeader className="border-b ">
-                <CardTitle className="text-base">Informationen</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <table className="w-full">
-                  <tbody>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">
-                        Vertriebsverantwortung
-                      </td>
-                      <td className="p-3">
-                        {data.info.vertriebsverantwortung}
-                      </td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">Geschäftsbereich</td>
-                      <td className="p-3">{data.info.geschaeftsbereich}</td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">CAS ID</td>
-                      <td className="p-3">{data.info.casId}</td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">CAS Stichwort</td>
-                      <td className="p-3">{data.info.casStichwort}</td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">CAS Kurzbeschreibung</td>
-                      <td className="p-3">{data.info.casKurzbeschreibung}</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3 font-medium">Liefertermin</td>
-                      <td className="p-3">{data.info.liefertermin}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Geschäftsbereich
+              </label>
+              <input
+                type="text"
+                value={isEditing ? (editedData.businessArea || '') : (salesOpportunity.businessArea || '')}
+                onChange={(e) => handleInputChange('businessArea', e.target.value)}
+                readOnly={!isEditing}
+                className="w-full border rounded px-3 py-2 text-sm bg-white read-only:bg-gray-100 read-only:cursor-not-allowed"
+              />
+            </div>
 
-            {/* Offer Recipient Panel */}
-            <Card className="border border-gray-300 shadow-none">
-              <CardHeader className="border-b ">
-                <CardTitle className="text-base">Angebotsempfänger</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <table className="w-full">
-                  <tbody>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">Anrede</td>
-                      <td className="p-3">{data.recipient.anrede}</td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">Name</td>
-                      <td className="p-3">{data.recipient.name}</td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">Nachname</td>
-                      <td className="p-3">{data.recipient.nachname}</td>
-                    </tr>
-                    <tr className="border-b">
-                      <td className="p-3 font-medium">Telefon</td>
-                      <td className="p-3">{data.recipient.telefon}</td>
-                    </tr>
-                    <tr>
-                      <td className="p-3 font-medium">E-Mail</td>
-                      <td className="p-3">{data.recipient.email}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </CardContent>
-            </Card>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Angebotswert
+              </label>
+              <input
+                type="text"
+                value={isEditing ? (editedData.quoteVolume || '') : (salesOpportunity.quoteVolume || '')}
+                onChange={(e) => handleInputChange('quoteVolume', e.target.value)}
+                readOnly={!isEditing}
+                className="w-full border rounded px-3 py-2 text-sm bg-white read-only:bg-gray-100 read-only:cursor-not-allowed"
+              />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Bestellspezifikation
+              </label>
+              <textarea
+                value={isEditing ? (editedData.orderInventorySpecification || '') : (salesOpportunity.orderInventorySpecification || '')}
+                onChange={(e) => handleInputChange('orderInventorySpecification', e.target.value)}
+                readOnly={!isEditing}
+                rows={3}
+                className="w-full border rounded px-3 py-2 text-sm bg-white read-only:bg-gray-100 read-only:cursor-not-allowed"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mt-6 pt-4 border-t">
+            <div>
+              <h3 className="font-medium text-gray-700 mb-2">Kundendaten</h3>
+              <div className="space-y-2 text-sm">
+                <div><strong>Name:</strong> {salesOpportunity.client.name}</div>
+                <div><strong>Fremd-ID:</strong> {salesOpportunity.client.foreignId || 'Keine'}</div>
+                <div><strong>Sprache:</strong> {salesOpportunity.client.languageId || 'Keine'}</div>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="font-medium text-gray-700 mb-2">Kontaktdaten</h3>
+              <div className="space-y-2 text-sm">
+                {salesOpportunity.contactPerson ? (
+                  <>
+                    <div><strong>Ansprechpartner:</strong> {salesOpportunity.contactPerson.name}</div>
+                    <div><strong>E-Mail:</strong> {salesOpportunity.contactPerson.email || 'Keine'}</div>
+                    <div><strong>Telefon:</strong> {salesOpportunity.contactPerson.phone || 'Keine'}</div>
+                  </>
+                ) : (
+                  <div className="text-gray-500">Kein Ansprechpartner zugeordnet</div>
+                )}
+              </div>
+            </div>
           </div>
         </TabsContent>
 
-        <TabsContent value="angebote">
-          <div className="mt-4">
-            <SalesOpportunityOffers data={salesOpportunityOffersData as SalesOpportunityOffer[]} />
+        <TabsContent value="angebote" className="mt-4">
+          <div className="text-gray-500">
+            Angebote-Liste wird hier angezeigt ({salesOpportunity.quotesCount} Angebote)
+          </div>
+        </TabsContent>
+
+        <TabsContent value="historie" className="mt-4">
+          <div className="text-gray-500">
+            Änderungshistorie wird hier angezeigt
+          </div>
+        </TabsContent>
+
+        <TabsContent value="notizen" className="mt-4">
+          <div className="text-gray-500">
+            Notizen-Bereich wird hier angezeigt
           </div>
         </TabsContent>
       </Tabs>
     </div>
   );
-}
+};
+
+export default SalesOpportunityDetail;

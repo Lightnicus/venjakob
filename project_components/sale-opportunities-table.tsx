@@ -3,8 +3,10 @@ import type { ColumnDef, Row } from '@tanstack/react-table';
 import Link from 'next/link';
 import { Eye, Copy } from 'lucide-react';
 import { useTabbedInterface } from './tabbed-interface-provider';
-import { SalesOpportunityDetail, SalesOpportunityDetailData } from './sales-opportunity-detail';
+import SalesOpportunityDetail from './sales-opportunity-detail';
 import salesOpportunityDetailData from '@/data/sales-opportunity-detail.json';
+
+export type SalesOpportunityDetailData = any; // Legacy type for backward compatibility
 import { FilterableTable, DateFilterConfig } from './filterable-table';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -43,7 +45,7 @@ const SalesOpportunitiesTable = ({
     openNewTab({
       id: `verkaufschance-details-${titel.replace(/\s+/g, '-')}`,
       title: 'Verkaufschance Details',
-      content: <SalesOpportunityDetail data={salesOpportunityDetailData as SalesOpportunityDetailData} />,
+      content: <div>Legacy Sales Opportunity Detail (deprecated)</div>,
       closable: true,
     });
   }, [openNewTab]);

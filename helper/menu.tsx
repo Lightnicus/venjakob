@@ -3,21 +3,20 @@
 import { ReactNode } from 'react';
 import { Tab } from '@/project_components/tabbed-interface-provider';
 import Offers from '@/project_components/offers';
-import SalesOpportunitiesTable from '@/project_components/sale-opportunities-table';
-import saleChancesData from '@/data/sale-chances.json';
+
 import OrderConfirmations, {
   OrderConfirmation,
 } from '@/project_components/order-confirmations';
 import orderConfirmationsData from '@/data/order-confirmations.json';
 import StammdatenPlaceholder from '@/project_components/stammdaten-placeholder';
 import EinstellungenPlaceholder from '@/project_components/einstellungen-placeholder';
-import { SalesOpportunityDetail } from '@/project_components/sales-opportunity-detail';
 import BlockManagement from '@/project_components/block-management';
 import ArticleManagement from '@/project_components/article-management';
 import RoleManagement from '@/project_components/role-management';
 import PermissionManagement from '@/project_components/permission-management';
 import UserManagement from '@/project_components/user-management';
 import QuotesManagement from '@/project_components/quotes-management';
+import SalesOpportunitiesManagement from '@/project_components/sales-opportunities-management';
 
 export interface TabDefinition extends Omit<Tab, 'content'> {
   content: () => ReactNode; // Use a function to render content to avoid immediate rendering
@@ -41,15 +40,11 @@ export const tabMappings: Record<string, TabDefinition> = {
     title: 'Verkaufschancen',
     content: () => (
       <>
-        <h2 className="text-2xl font-bold">Verkaufschancen</h2>
-        <SalesOpportunitiesTable
-          data={saleChancesData}
-          showSelectionRadio={false}
-        />
+        <SalesOpportunitiesManagement />
       </>
     ),
     closable: true,
-    requiredPermissions: 'angebote',
+    requiredPermissions: 'verkaufschancen',
   },
   '/auftragsbestaetigungen': {
     id: 'auftragsbestaetigungen',
