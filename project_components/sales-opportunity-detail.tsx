@@ -6,39 +6,9 @@ import { Button } from '@/components/ui/button';
 import { Edit, Save, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchSalesOpportunity, saveSalesOpportunityPropertiesAPI } from '@/lib/api/sales-opportunities';
+import { fetchLanguages } from '@/lib/api/blocks';
 import type { SalesOpportunityWithDetails } from '@/lib/db/sales-opportunities';
-import type { SalesOpportunity } from '@/lib/db/schema';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Building, FileText, MapPin, Phone, Globe } from 'lucide-react';
-import SalesOpportunityOffers, { SalesOpportunityOffer } from './sales-opportunity-offers';
-import salesOpportunityOffersData from '../data/sales-opportunity-offers.json';
-
-export type SalesOpportunityDetailData = {
-  title: string;
-  customer: {
-    id: string;
-    name: string;
-    address: string[];
-    phone: string;
-    casLink: string;
-  };
-  orderConfirmation: string | null;
-  info: {
-    vertriebsverantwortung: string;
-    geschaeftsbereich: string;
-    casId: string;
-    casStichwort: string;
-    casKurzbeschreibung: string;
-    liefertermin: string;
-  };
-  recipient: {
-    anrede: string;
-    name: string;
-    nachname: string;
-    telefon: string;
-    email: string;
-  };
-};
+import type { SalesOpportunity, Language } from '@/lib/db/schema';
 
 interface SalesOpportunityDetailProps {
   salesOpportunityId: string;
@@ -46,26 +16,31 @@ interface SalesOpportunityDetailProps {
 
 const SalesOpportunityDetail: React.FC<SalesOpportunityDetailProps> = ({ salesOpportunityId }) => {
   const [salesOpportunity, setSalesOpportunity] = useState<SalesOpportunityWithDetails | null>(null);
+  const [languages, setLanguages] = useState<Language[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editedData, setEditedData] = useState<Partial<SalesOpportunity>>({});
 
-  // Load sales opportunity data
+  // Load sales opportunity data and languages
   useEffect(() => {
-    const loadSalesOpportunity = async () => {
+    const loadData = async () => {
       try {
         setIsLoading(true);
-        const data = await fetchSalesOpportunity(salesOpportunityId);
-        setSalesOpportunity(data);
+        const [salesOpportunityData, languagesData] = await Promise.all([
+          fetchSalesOpportunity(salesOpportunityId),
+          fetchLanguages()
+        ]);
+        setSalesOpportunity(salesOpportunityData);
+        setLanguages(languagesData);
       } catch (error) {
-        console.error('Error loading sales opportunity:', error);
-        toast.error('Fehler beim Laden der Verkaufschance');
+        console.error('Error loading data:', error);
+        toast.error('Fehler beim Laden der Daten');
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadSalesOpportunity();
+    loadData();
   }, [salesOpportunityId]);
 
   const handleEdit = () => {
@@ -108,6 +83,13 @@ const SalesOpportunityDetail: React.FC<SalesOpportunityDetailProps> = ({ salesOp
 
   const handleInputChange = (field: keyof SalesOpportunity, value: string) => {
     setEditedData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Helper function to get language label by ID
+  const getLanguageLabel = (languageId: string | null): string => {
+    if (!languageId) return 'Keine';
+    const language = languages.find(lang => lang.id === languageId);
+    return language ? language.label : 'Unbekannt';
   };
 
   if (isLoading) {
@@ -243,7 +225,7 @@ const SalesOpportunityDetail: React.FC<SalesOpportunityDetailProps> = ({ salesOp
               <div className="space-y-2 text-sm">
                 <div><strong>Name:</strong> {salesOpportunity.client.name}</div>
                 <div><strong>Fremd-ID:</strong> {salesOpportunity.client.foreignId || 'Keine'}</div>
-                <div><strong>Sprache:</strong> {salesOpportunity.client.languageId || 'Keine'}</div>
+                <div><strong>Sprache:</strong> {getLanguageLabel(salesOpportunity.client.languageId)}</div>
               </div>
             </div>
 
