@@ -10,7 +10,7 @@ import {
   copyQuoteAPI,
 } from '@/lib/api/quotes';
 import { fetchLanguages } from '@/lib/api/blocks';
-import { useTabReload } from './tabbed-interface-provider';
+import { useTabReload } from '@/project_components/tabbed-interface-provider';
 import { usePermissionGuard } from '@/hooks/use-permission-guard';
 
 type QuoteListItem = {

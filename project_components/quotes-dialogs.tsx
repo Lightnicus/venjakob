@@ -3,16 +3,16 @@ import {
   DialogManagerProvider,
   DialogRenderer,
   useDialogManager,
-} from './dialog-manager';
-import NewOfferFromExistingDialog from './new-offer-from-existing-dialog';
-import ChooseOfferDialog from './choose-offer-dialog';
-import ChooseSalesOpportunityDialog from './choose-sales-opportunity-dialog';
-import OfferAsNewVariantDialog from './offer-as-new-variant-dialog';
-import ChooseOfferLanguageDialog from './choose-offer-language-dialog';
-import { ChooseOfferVariantDialog } from './choose-offer-variant-dialog';
-import { ConfirmOverwriteVariantDialog } from './confirm-overwrite-variant-dialog';
-import { VersionsForOfferVariantDialog } from './versions-for-offer-variant-dialog';
-import { SaleChance } from './sale-opportunities-table';
+} from '@/project_components/dialog-manager';
+import NewOfferFromExistingDialog from '@/project_components/new-offer-from-existing-dialog';
+import ChooseOfferDialog from '@/project_components/choose-offer-dialog';
+import ChooseSalesOpportunityDialog from '@/project_components/choose-sales-opportunity-dialog';
+import OfferAsNewVariantDialog from '@/project_components/offer-as-new-variant-dialog';
+import ChooseOfferLanguageDialog from '@/project_components/choose-offer-language-dialog';
+import { ChooseOfferVariantDialog } from '@/project_components/choose-offer-variant-dialog';
+import { ConfirmOverwriteVariantDialog } from '@/project_components/confirm-overwrite-variant-dialog';
+import { VersionsForOfferVariantDialog } from '@/project_components/versions-for-offer-variant-dialog';
+import { SaleChance } from '@/project_components/sale-opportunities-table';
 import saleChancesData from '@/data/sale-chances.json';
 
 // Dialog IDs

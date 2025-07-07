@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import InteractiveSplitPanel from './interactive-split-panel';
-import OfferProperties from './offer-properties';
-import offerPropertiesData from '../data/offer-properties.json';
-import PdfPreview from './pdf-preview';
-import OfferVersionsTable from './offer-versions-table';
+import InteractiveSplitPanel from '@/project_components/interactive-split-panel';
+import OfferProperties from '@/project_components/offer-properties';
+import offerPropertiesData from '@/data/offer-properties.json';
+import PdfPreview from '@/project_components/pdf-preview';
+import OfferVersionsTable from '@/project_components/offer-versions-table';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTabbedInterface } from './tabbed-interface-provider';
+import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
 import { toast } from "sonner";
 import { Edit3, Save } from "lucide-react";
 

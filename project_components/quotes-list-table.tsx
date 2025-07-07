@@ -7,10 +7,10 @@ import {
   SelectItem,
   SelectValue,
 } from '@/components/ui/select';
-import { FilterableTable } from './filterable-table';
+import { FilterableTable } from '@/project_components/filterable-table';
 import type { ColumnDef, Row } from '@tanstack/react-table';
-import { useTabbedInterface } from './tabbed-interface-provider';
-import QuoteDetail from './quote-detail';
+import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
+import QuoteDetail from '@/project_components/quote-detail';
 import type { Language } from '@/lib/db/schema';
 import { MoreVertical, Edit, Copy, Trash2 } from 'lucide-react';
 import {
@@ -19,8 +19,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
-import QuoteDialogs, { QUOTE_DIALOGS, useDialogManager } from './quotes-dialogs';
+import { DeleteConfirmationDialog } from '@/project_components/delete-confirmation-dialog';
+import QuoteDialogs, { QUOTE_DIALOGS, useDialogManager } from '@/project_components/quotes-dialogs';
 
 type QuoteListItem = {
   id: string;
