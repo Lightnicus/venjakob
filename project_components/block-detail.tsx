@@ -380,6 +380,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
           isSaving={isSaving}
           onToggleEdit={handleToggleEdit}
           onSave={handleSaveChanges}
+          onRefreshData={loadBlockData}
           initialUpdatedAt={block?.updatedAt}
         />
       </div>

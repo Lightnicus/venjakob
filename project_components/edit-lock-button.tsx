@@ -14,6 +14,7 @@ interface EditLockButtonProps {
   isSaving?: boolean;
   onToggleEdit: () => void;
   onSave: () => Promise<void>;
+  onRefreshData?: () => Promise<void>; // Optional callback to refresh data from parent
   initialUpdatedAt?: string;
 }
 
@@ -83,6 +84,7 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
   isSaving,
   onToggleEdit,
   onSave,
+  onRefreshData,
   initialUpdatedAt,
 }) => {
   const { dbUser } = useUser();
@@ -106,29 +108,23 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
   const [isToggling, setIsToggling] = React.useState(false);
   const [isOverriding, setIsOverriding] = React.useState(false);
   const [isSavingInternal, setIsSavingInternal] = React.useState(false);
+  const [isValidatingLock, setIsValidatingLock] = React.useState(false);
+  const [isRefreshingData, setIsRefreshingData] = React.useState(false);
 
-  // Check if the resource has been modified by checking its current updatedAt
-  const checkForConflicts = async (): Promise<boolean> => {
-    if (!editStartUpdatedAt || !dbUser?.id) return true; // No baseline to compare or no user, allow save
+  // Check if the resource has been modified and if the lock is still valid
+  const checkForConflictsAndLockValidity = async (): Promise<{ canSave: boolean; shouldRevertEdit: boolean }> => {
+    if (!dbUser?.id) {
+      return { canSave: false, shouldRevertEdit: true };
+    }
 
     try {
-      // Fetch current resource data to check updatedAt
-      const response = await fetch(`/api/${resourceType}/${resourceId}`);
-      if (!response.ok) {
-        toast.error('Fehler beim Prüfen des Datensatzstatus');
-        return false;
-      }
-
-      const currentData = await response.json();
-      const currentUpdatedAt = currentData.updatedAt;
-
-      // Refresh lock status to get the most current information
+      // First check if we still have the lock
       const lockResponse = await fetch(
         `/api/${resourceType}/${resourceId}/lock`,
       );
       if (!lockResponse.ok) {
         toast.error('Fehler beim Prüfen des Sperrstatus');
-        return false;
+        return { canSave: false, shouldRevertEdit: true };
       }
 
       const lockData = await lockResponse.json();
@@ -136,20 +132,41 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         lockData.isLocked && lockData.lockedBy === dbUser.id;
 
       if (!hasCurrentLock) {
-        // Lock is lost - check if data has changed
+        // We've lost the lock - check who has it now
+        if (lockData.isLocked) {
+          toast.error(
+            `Die Sperre wurde von ${lockData.lockedByName || 'einem anderen Benutzer'} überschrieben. Bearbeitung wird beendet.`,
+          );
+        } else {
+          toast.error('Die Sperre ist abgelaufen. Bearbeitung wird beendet.');
+        }
+        return { canSave: false, shouldRevertEdit: true };
+      }
+
+      // We still have the lock, now check for data conflicts if we have a baseline
+      if (editStartUpdatedAt) {
+        const response = await fetch(`/api/${resourceType}/${resourceId}`);
+        if (!response.ok) {
+          toast.error('Fehler beim Prüfen des Datensatzstatus');
+          return { canSave: false, shouldRevertEdit: false };
+        }
+
+        const currentData = await response.json();
+        const currentUpdatedAt = currentData.updatedAt;
+
         if (currentUpdatedAt !== editStartUpdatedAt) {
           toast.error(
             'Dieser Datensatz hat Änderungen, bitte schliessen Sie das Tab und öffnen Sie es wieder.',
           );
-          return false;
+          return { canSave: false, shouldRevertEdit: false };
         }
       }
 
-      return true;
+      return { canSave: true, shouldRevertEdit: false };
     } catch (error) {
-      console.error('Error checking for conflicts:', error);
+      console.error('Error checking for conflicts and lock validity:', error);
       toast.error('Fehler beim Prüfen des Datensatzstatus');
-      return false;
+      return { canSave: false, shouldRevertEdit: false };
     }
   };
 
@@ -179,7 +196,21 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         }
 
         try {
-          // First try to get the lock
+          // First refresh data if callback is provided to ensure we have latest data
+          if (onRefreshData) {
+            setIsRefreshingData(true);
+            try {
+              await onRefreshData();
+            } catch (error) {
+              console.error('Error refreshing data:', error);
+              toast.error('Fehler beim Aktualisieren der Daten');
+              setIsRefreshingData(false);
+              return; // Don't proceed if data refresh failed
+            }
+            setIsRefreshingData(false);
+          }
+
+          // Then try to get the lock
           const locked = await lockResourceOptimistic();
           if (locked) {
             // Only enter edit mode if lock was successful
@@ -192,6 +223,7 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
           }
         } catch (error) {
           // Any error during locking - don't change edit mode
+          setIsRefreshingData(false);
           toast.error('Fehler beim Sperren für Bearbeitung');
         }
       }
@@ -231,15 +263,27 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
 
   const handleSave = async () => {
     setIsSavingInternal(true);
+    setIsValidatingLock(true);
     
     try {
-      // Check for conflicts before saving
-      const canSave = await checkForConflicts();
+      // Check for conflicts and lock validity before saving
+      const { canSave, shouldRevertEdit } = await checkForConflictsAndLockValidity();
+      
+      setIsValidatingLock(false);
+      
+      if (shouldRevertEdit) {
+        // Lock was lost or overwritten - revert edit mode
+        setEditStartUpdatedAt(null);
+        onToggleEdit(); // Exit edit mode
+        return;
+      }
+      
       if (!canSave) {
-        return; // Don't proceed with save if there are conflicts
+        return; // Don't proceed with save if there are conflicts but don't revert edit mode
       }
 
       await onSave();
+      
       // Unlock the resource after saving
       const unlocked = await unlockResource();
       if (unlocked) {
@@ -247,6 +291,10 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
       } else {
         toast.error('Fehler beim Entsperren nach dem Speichern');
       }
+    } catch (error) {
+      setIsValidatingLock(false);
+      console.error('Error during save:', error);
+      toast.error('Fehler beim Speichern');
     } finally {
       setIsSavingInternal(false);
     }
@@ -265,6 +313,11 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
           <>
             <Loader2 size={14} className="inline-block animate-spin mr-1" />
             Laden...
+          </>
+        ) : isRefreshingData ? (
+          <>
+            <Loader2 size={14} className="inline-block animate-spin mr-1" />
+            Aktualisiere...
           </>
         ) : isToggling ? (
           <>
@@ -286,8 +339,8 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         )}
       </Button>
 
-      {/* Force Override Button - only show when locked by another user and initial load is complete */}
-      {!isLoading && lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && !isEditing && (
+      {/* Force Override Button - only show when locked by another user */}
+      {!isLoading && lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && (
         <Button
           variant="destructive"
           size="sm"
@@ -310,14 +363,20 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         </Button>
       )}
 
-      {isEditing && (
+      {/* Save Button - only show when in edit mode AND we actually have the lock */}
+      {isEditing && lockInfo.isLockedByCurrentUser && (
         <Button
           size="sm"
           onClick={handleSave}
           disabled={isSaving || isSavingInternal}
           aria-label="Änderungen speichern"
         >
-          {isSaving || isSavingInternal ? (
+          {isValidatingLock ? (
+            <>
+              <Loader2 size={14} className="inline-block animate-spin mr-1" />
+              Prüfe Sperre...
+            </>
+          ) : isSaving || isSavingInternal ? (
             <>
               <Loader2 size={14} className="inline-block animate-spin mr-1" />
               Speichern...

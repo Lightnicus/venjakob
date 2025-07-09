@@ -408,6 +408,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
           isSaving={isSaving}
           onToggleEdit={handleToggleEdit}
           onSave={handleSaveChanges}
+          onRefreshData={loadArticleData}
           initialUpdatedAt={article?.updatedAt}
         />
       </div>
