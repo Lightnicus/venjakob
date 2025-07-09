@@ -15,6 +15,7 @@ import { VersionsForOfferVariantDialog } from '@/project_components/versions-for
 import { SaleChance } from '@/project_components/sale-opportunities-table';
 import { fetchSalesOpportunitiesList, type SalesOpportunityListItem } from '@/lib/api/sales-opportunities';
 import { fetchQuotesList } from '@/lib/api/quotes';
+import { useLoading } from '@/project_components/loading-provider';
 import { toast } from 'sonner';
 
 // Dialog IDs
@@ -45,72 +46,55 @@ interface QuoteDialogsProps {
 
 // Smart Entry Point Component
 const SmartEntryDialogComponent: FC = () => {
-  const { openDialog } = useDialogManager();
-  const [dataAvailability, setDataAvailability] = useState<DataAvailability>({
-    hasExistingQuotes: false,
-    hasSalesOpportunities: false,
-    hasQuoteVariants: false,
-    isLoading: true,
-  });
+  const { replaceDialog } = useDialogManager();
+  const { setLoading } = useLoading();
 
   useEffect(() => {
     const checkDataAvailability = async () => {
       try {
+        setLoading('quote-creation-routing', true);
+        
         const [quotesData, salesOppsData] = await Promise.all([
           fetchQuotesList().catch(() => []),
           fetchSalesOpportunitiesList().catch(() => []),
         ]);
 
-        setDataAvailability({
-          hasExistingQuotes: quotesData.length > 0,
-          hasSalesOpportunities: salesOppsData.length > 0,
-          hasQuoteVariants: quotesData.some((quote: any) => quote.variants?.length > 0),
-          isLoading: false,
-        });
+        const hasExistingQuotes = quotesData.length > 0;
+        const hasSalesOpportunities = salesOppsData.length > 0;
+
+        // No sales opportunities = can't create quotes
+        if (!hasSalesOpportunities) {
+          toast.error('Keine Verkaufschancen verfügbar. Bitte erstellen Sie zuerst eine Verkaufschance.');
+          return;
+        }
+
+        // No existing quotes = skip "copy from existing" question
+        if (!hasExistingQuotes) {
+          replaceDialog(QUOTE_DIALOGS.CHOOSE_SALES_OPPORTUNITY);
+          return;
+        }
+
+        // Has both = show choice dialog
+        replaceDialog(QUOTE_DIALOGS.NEW_QUOTE);
       } catch (error) {
         console.error('Error checking data availability:', error);
-        setDataAvailability(prev => ({ ...prev, isLoading: false }));
+        toast.error('Fehler beim Überprüfen der verfügbaren Daten');
+      } finally {
+        setLoading('quote-creation-routing', false);
       }
     };
 
     checkDataAvailability();
-  }, []);
+  }, []); // Empty dependency array to run only once
 
-  useEffect(() => {
-    if (!dataAvailability.isLoading) {
-      routeBasedOnData();
-    }
-  }, [dataAvailability]);
-
-  const routeBasedOnData = () => {
-    const { hasExistingQuotes, hasSalesOpportunities } = dataAvailability;
-
-    // No sales opportunities = can't create quotes
-    if (!hasSalesOpportunities) {
-      toast.error('Keine Verkaufschancen verfügbar. Bitte erstellen Sie zuerst eine Verkaufschance.');
-      return;
-    }
-
-    // No existing quotes = skip "copy from existing" question
-    if (!hasExistingQuotes) {
-      openDialog(QUOTE_DIALOGS.CHOOSE_SALES_OPPORTUNITY);
-      return;
-    }
-
-    // Has both = show choice dialog
-    openDialog(QUOTE_DIALOGS.NEW_QUOTE);
-  };
-
-  // Show loading state while checking data
-  if (dataAvailability.isLoading) {
-    return <div>Checking available data...</div>;
-  }
-
-  return null; // This component just routes, doesn't render
+  // This component just routes using global loading state, doesn't render anything
+  return null;
 };
 
 // Dialog Components
-const NewQuoteDialogComponent: FC = () => {
+const NewQuoteDialogComponent: FC<{
+  dialogData?: any;
+}> = ({ dialogData }) => {
   const { openDialog } = useDialogManager();
 
   const handleNo = () => {
@@ -381,7 +365,10 @@ const VersionsForQuoteVariantDialogComponent: FC<{
 // Dialog configuration for DialogRenderer
 const createQuoteDialogComponents = (onCreateQuote: () => Promise<any>) => [
   { id: QUOTE_DIALOGS.SMART_ENTRY, component: SmartEntryDialogComponent },
-  { id: QUOTE_DIALOGS.NEW_QUOTE, component: NewQuoteDialogComponent },
+  { 
+    id: QUOTE_DIALOGS.NEW_QUOTE, 
+    component: (dialogProps: any) => <NewQuoteDialogComponent dialogData={dialogProps} />
+  },
   { 
     id: QUOTE_DIALOGS.CHOOSE_QUOTE, 
     component: (dialogProps: any) => <ChooseQuoteDialogComponent dialogData={dialogProps} />

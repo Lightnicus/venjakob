@@ -24,9 +24,13 @@ export const ManagedDialog: FC<ManagedDialogProps> = ({
   onCloseButtonClick,
   className,
 }) => {
-  const { currentDialog, closeDialog, goBack } = useDialogManager();
+  const { currentDialog, closeDialog, goBack, dialogHistory } = useDialogManager();
   
   const isOpen = !!currentDialog;
+  
+  // Auto-detect if this is an entry point (first dialog in history)
+  const isEntryPoint = dialogHistory.length <= 1;
+  const shouldShowBackButton = showBackButton && !isEntryPoint;
 
   const handleOpenChange = (open: boolean) => {
     if (!open) closeDialog();
@@ -55,9 +59,9 @@ export const ManagedDialog: FC<ManagedDialogProps> = ({
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
         <div className="py-4">{children}</div>
-        {(footer || showBackButton || showCloseButton) && (
+        {(footer || shouldShowBackButton || showCloseButton) && (
           <DialogFooter className="flex items-center justify-end gap-2">
-            {showBackButton && (
+            {shouldShowBackButton && (
               <Button variant="outline" onClick={handleBack}>
                 Zurück
               </Button>

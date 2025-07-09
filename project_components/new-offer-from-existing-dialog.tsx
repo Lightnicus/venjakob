@@ -10,7 +10,7 @@ type NewOfferFromExistingDialogProps = {
 
 const NewOfferFromExistingDialog: FC<NewOfferFromExistingDialogProps> = ({ 
   onNo, 
-  onYes 
+  onYes
 }) => {
   const { closeDialog } = useDialogManager();
 
@@ -30,7 +30,7 @@ const NewOfferFromExistingDialog: FC<NewOfferFromExistingDialogProps> = ({
       title="Angebot erstellen"
       footer={footer}
       showCloseButton={true}
-      showBackButton={false}
+      showBackButton={true}
     >
       <div className="text-base">
         Wollen Sie ein bereits existierendes Angebot kopieren?
