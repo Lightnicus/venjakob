@@ -197,12 +197,12 @@ export function OfferVariantsTable({
           <div className="flex items-center gap-1">
             Erstellt von
             <div className="inline-block w-24">
-              <Select defaultValue="">
+              <Select defaultValue="all">
                 <SelectTrigger className="h-6 w-full text-sm">
                   <SelectValue placeholder="Alle" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Alle</SelectItem>
+                  <SelectItem value="all">Alle</SelectItem>
                 </SelectContent>
               </Select>
             </div>

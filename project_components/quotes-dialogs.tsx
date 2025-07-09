@@ -14,10 +14,12 @@ import { ConfirmOverwriteVariantDialog } from '@/project_components/confirm-over
 import { VersionsForOfferVariantDialog } from '@/project_components/versions-for-offer-variant-dialog';
 import { SaleChance } from '@/project_components/sale-opportunities-table';
 import { fetchSalesOpportunitiesList, type SalesOpportunityListItem } from '@/lib/api/sales-opportunities';
+import { fetchQuotesList } from '@/lib/api/quotes';
 import { toast } from 'sonner';
 
 // Dialog IDs
 export const QUOTE_DIALOGS = {
+  SMART_ENTRY: 'smart-entry',
   NEW_QUOTE: 'new-quote',
   CHOOSE_QUOTE: 'choose-quote',
   CHOOSE_SALES_OPPORTUNITY: 'choose-sales-opportunity',
@@ -28,10 +30,84 @@ export const QUOTE_DIALOGS = {
   VERSIONS_FOR_QUOTE_VARIANT: 'versions-for-quote-variant',
 };
 
+// Data availability interface
+interface DataAvailability {
+  hasExistingQuotes: boolean;
+  hasSalesOpportunities: boolean;
+  hasQuoteVariants: boolean;
+  isLoading: boolean;
+}
+
 interface QuoteDialogsProps {
   onCreateQuote: () => Promise<any>;
   children: React.ReactNode;
 }
+
+// Smart Entry Point Component
+const SmartEntryDialogComponent: FC = () => {
+  const { openDialog } = useDialogManager();
+  const [dataAvailability, setDataAvailability] = useState<DataAvailability>({
+    hasExistingQuotes: false,
+    hasSalesOpportunities: false,
+    hasQuoteVariants: false,
+    isLoading: true,
+  });
+
+  useEffect(() => {
+    const checkDataAvailability = async () => {
+      try {
+        const [quotesData, salesOppsData] = await Promise.all([
+          fetchQuotesList().catch(() => []),
+          fetchSalesOpportunitiesList().catch(() => []),
+        ]);
+
+        setDataAvailability({
+          hasExistingQuotes: quotesData.length > 0,
+          hasSalesOpportunities: salesOppsData.length > 0,
+          hasQuoteVariants: quotesData.some((quote: any) => quote.variants?.length > 0),
+          isLoading: false,
+        });
+      } catch (error) {
+        console.error('Error checking data availability:', error);
+        setDataAvailability(prev => ({ ...prev, isLoading: false }));
+      }
+    };
+
+    checkDataAvailability();
+  }, []);
+
+  useEffect(() => {
+    if (!dataAvailability.isLoading) {
+      routeBasedOnData();
+    }
+  }, [dataAvailability]);
+
+  const routeBasedOnData = () => {
+    const { hasExistingQuotes, hasSalesOpportunities } = dataAvailability;
+
+    // No sales opportunities = can't create quotes
+    if (!hasSalesOpportunities) {
+      toast.error('Keine Verkaufschancen verfügbar. Bitte erstellen Sie zuerst eine Verkaufschance.');
+      return;
+    }
+
+    // No existing quotes = skip "copy from existing" question
+    if (!hasExistingQuotes) {
+      openDialog(QUOTE_DIALOGS.CHOOSE_SALES_OPPORTUNITY);
+      return;
+    }
+
+    // Has both = show choice dialog
+    openDialog(QUOTE_DIALOGS.NEW_QUOTE);
+  };
+
+  // Show loading state while checking data
+  if (dataAvailability.isLoading) {
+    return <div>Checking available data...</div>;
+  }
+
+  return null; // This component just routes, doesn't render
+};
 
 // Dialog Components
 const NewQuoteDialogComponent: FC = () => {
@@ -51,11 +127,18 @@ const NewQuoteDialogComponent: FC = () => {
   />;
 };
 
-const ChooseQuoteDialogComponent: FC = () => {
+const ChooseQuoteDialogComponent: FC<{
+  dialogData?: any;
+}> = ({ dialogData }) => {
   const { openDialog } = useDialogManager();
 
-  const handleWeiter = () => {
-    openDialog(QUOTE_DIALOGS.CHOOSE_SALES_OPPORTUNITY);
+  const handleWeiter = (selectedQuote?: any) => {
+    // When copying from existing quote, we still need to select sales opportunity
+    // but we can pass the selected quote context
+    openDialog(QUOTE_DIALOGS.CHOOSE_SALES_OPPORTUNITY, { 
+      selectedQuote: selectedQuote,
+      isCopyingFromExisting: true 
+    });
   };
 
   return <ChooseOfferDialog onWeiter={handleWeiter} />;
@@ -86,7 +169,12 @@ const transformSalesOpportunityToSaleChance = (item: SalesOpportunityListItem): 
   };
 };
 
-const ChooseSalesOpportunityDialogComponent: FC = () => {
+const ChooseSalesOpportunityDialogComponent: FC<{
+  dialogData?: { 
+    selectedQuote?: any; 
+    isCopyingFromExisting?: boolean;
+  };
+}> = ({ dialogData }) => {
   const { openDialog } = useDialogManager();
   const [salesOpportunities, setSalesOpportunities] = useState<SaleChance[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,8 +200,31 @@ const ChooseSalesOpportunityDialogComponent: FC = () => {
     loadSalesOpportunities();
   }, []);
 
+  // Context-aware routing based on selected sales opportunity and flow context
   const handleWeiter = (selectedChance: SaleChance) => {
-    openDialog(QUOTE_DIALOGS.QUOTE_AS_NEW_VARIANT);
+    const hasExistingQuotes = selectedChance.angebote > 0;
+    const isCopyingFromExisting = dialogData?.isCopyingFromExisting ?? false;
+    
+    if (isCopyingFromExisting) {
+      // User is copying from existing quote -> go to language selection
+      openDialog(QUOTE_DIALOGS.CHOOSE_QUOTE_LANGUAGE, { 
+        selectedSalesOpportunity: selectedChance,
+        selectedQuote: dialogData?.selectedQuote,
+        isCopyingFromExisting: true 
+      });
+    } else if (!hasExistingQuotes) {
+      // No existing quotes for this sales opportunity -> skip to language selection
+      openDialog(QUOTE_DIALOGS.CHOOSE_QUOTE_LANGUAGE, { 
+        selectedSalesOpportunity: selectedChance,
+        skipVariantQuestion: true 
+      });
+    } else {
+      // Has existing quotes -> ask if user wants to create variant or new version
+      openDialog(QUOTE_DIALOGS.QUOTE_AS_NEW_VARIANT, { 
+        selectedSalesOpportunity: selectedChance,
+        hasExistingQuotes: true 
+      });
+    }
   };
 
   if (isLoading) {
@@ -135,31 +246,60 @@ const ChooseSalesOpportunityDialogComponent: FC = () => {
 
 const QuoteAsNewVariantDialogComponent: FC<{
   fromVariantSelection?: boolean;
-}> = ({ fromVariantSelection }) => {
+  dialogData?: { 
+    selectedSalesOpportunity?: SaleChance; 
+    hasExistingQuotes?: boolean;
+  };
+}> = ({ fromVariantSelection, dialogData }) => {
   const { openDialog } = useDialogManager();
 
   const handleJa = () => {
-    openDialog(QUOTE_DIALOGS.CHOOSE_QUOTE_LANGUAGE);
+    // Creating new variant -> go to language selection
+    openDialog(QUOTE_DIALOGS.CHOOSE_QUOTE_LANGUAGE, { 
+      selectedSalesOpportunity: dialogData?.selectedSalesOpportunity,
+      isNewVariant: true 
+    });
   };
 
   const handleNein = () => {
-    openDialog(QUOTE_DIALOGS.CHOOSE_QUOTE_VARIANT, { isCreatingNewVersion: true });
+    // Creating new version of existing variant -> check if variants exist for this sales opportunity
+    const hasExistingQuotes = dialogData?.hasExistingQuotes ?? false;
+    
+    if (!hasExistingQuotes) {
+      // No existing quotes -> show message and redirect to create variant
+      toast.info('Keine vorhandenen Angebote für neue Version. Erstelle stattdessen eine neue Variante.');
+      handleJa();
+    } else {
+      // Has existing quotes -> show variant selection
+      openDialog(QUOTE_DIALOGS.CHOOSE_QUOTE_VARIANT, { 
+        isCreatingNewVersion: true,
+        selectedSalesOpportunity: dialogData?.selectedSalesOpportunity 
+      });
+    }
   };
 
   return <OfferAsNewVariantDialog onJa={handleJa} onNein={handleNein} />;
 };
 
-const ChooseQuoteLanguageDialogComponent: FC<{ onCreateQuote: () => Promise<any> }> = ({
-  onCreateQuote
-}) => {
+const ChooseQuoteLanguageDialogComponent: FC<{ 
+  onCreateQuote: () => Promise<any>;
+  dialogData?: { 
+    selectedSalesOpportunity?: SaleChance; 
+    skipVariantQuestion?: boolean;
+    isNewVariant?: boolean;
+  };
+}> = ({ onCreateQuote, dialogData }) => {
   const { closeDialog } = useDialogManager();
 
   const handleErstellen = async () => {
     try {
+      // Pass the sales opportunity context to the create function if needed
+      // This could be enhanced to pass selectedSalesOpportunity.id to the API
       await onCreateQuote();
       closeDialog();
     } catch (error) {
       console.error('Error creating quote:', error);
+      toast.error('Fehler beim Erstellen des Angebots');
     }
   };
 
@@ -172,23 +312,32 @@ const ChooseQuoteLanguageDialogComponent: FC<{ onCreateQuote: () => Promise<any>
 
 const ChooseQuoteVariantDialogComponent: FC<{
   isCreatingNewVersion?: boolean;
-}> = ({ isCreatingNewVersion = false }) => {
+  dialogData?: { 
+    selectedSalesOpportunity?: SaleChance;
+  };
+}> = ({ isCreatingNewVersion = false, dialogData }) => {
   const { openDialog } = useDialogManager();
 
   const handleCreate = (identifier: any) => {
     openDialog(QUOTE_DIALOGS.CONFIRM_OVERWRITE_VARIANT, {
       variantIdentifier: identifier,
+      selectedSalesOpportunity: dialogData?.selectedSalesOpportunity,
     });
+  };
+
+  // Context-aware header based on sales opportunity
+  const getContextualHeader = () => {
+    if (isCreatingNewVersion) {
+      const salesOppName = dialogData?.selectedSalesOpportunity?.titel || 'dieser Verkaufschance';
+      return `Zu welcher Angebotsvariante von "${salesOppName}" soll eine neue Version erstellt werden?`;
+    }
+    return undefined;
   };
 
   return (
     <ChooseOfferVariantDialog
       onCreate={handleCreate}
-      header={
-        isCreatingNewVersion
-          ? 'Zu welcher Angebotsvariante soll eine neue Version erstellt werden?'
-          : undefined
-      }
+      header={getContextualHeader()}
     />
   );
 };
@@ -231,15 +380,28 @@ const VersionsForQuoteVariantDialogComponent: FC<{
 
 // Dialog configuration for DialogRenderer
 const createQuoteDialogComponents = (onCreateQuote: () => Promise<any>) => [
+  { id: QUOTE_DIALOGS.SMART_ENTRY, component: SmartEntryDialogComponent },
   { id: QUOTE_DIALOGS.NEW_QUOTE, component: NewQuoteDialogComponent },
-  { id: QUOTE_DIALOGS.CHOOSE_QUOTE, component: ChooseQuoteDialogComponent },
-  { id: QUOTE_DIALOGS.CHOOSE_SALES_OPPORTUNITY, component: ChooseSalesOpportunityDialogComponent },
-  { id: QUOTE_DIALOGS.QUOTE_AS_NEW_VARIANT, component: QuoteAsNewVariantDialogComponent },
+  { 
+    id: QUOTE_DIALOGS.CHOOSE_QUOTE, 
+    component: (dialogProps: any) => <ChooseQuoteDialogComponent dialogData={dialogProps} />
+  },
+  { 
+    id: QUOTE_DIALOGS.CHOOSE_SALES_OPPORTUNITY, 
+    component: (dialogProps: any) => <ChooseSalesOpportunityDialogComponent dialogData={dialogProps} />
+  },
+  { 
+    id: QUOTE_DIALOGS.QUOTE_AS_NEW_VARIANT, 
+    component: (dialogProps: any) => <QuoteAsNewVariantDialogComponent dialogData={dialogProps} />
+  },
   { 
     id: QUOTE_DIALOGS.CHOOSE_QUOTE_LANGUAGE, 
-    component: (dialogProps: any) => <ChooseQuoteLanguageDialogComponent onCreateQuote={onCreateQuote} />
+    component: (dialogProps: any) => <ChooseQuoteLanguageDialogComponent onCreateQuote={onCreateQuote} dialogData={dialogProps} />
   },
-  { id: QUOTE_DIALOGS.CHOOSE_QUOTE_VARIANT, component: ChooseQuoteVariantDialogComponent },
+  { 
+    id: QUOTE_DIALOGS.CHOOSE_QUOTE_VARIANT, 
+    component: (dialogProps: any) => <ChooseQuoteVariantDialogComponent dialogData={dialogProps} isCreatingNewVersion={dialogProps?.isCreatingNewVersion} />
+  },
   { 
     id: QUOTE_DIALOGS.CONFIRM_OVERWRITE_VARIANT, 
     component: (dialogProps: any) => <ConfirmOverwriteVariantDialogComponent onCreateQuote={onCreateQuote} />

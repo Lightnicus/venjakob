@@ -62,7 +62,7 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
   const [selectedVariantIdentifier, setSelectedVariantIdentifier] = useState('A');
 
   const handleCreateQuote = () => {
-    openDialog(QUOTE_DIALOGS.NEW_QUOTE);
+    openDialog(QUOTE_DIALOGS.SMART_ENTRY);
   };
 
   const handleOpenVersionsDialog = (
