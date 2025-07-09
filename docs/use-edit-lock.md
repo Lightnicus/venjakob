@@ -26,6 +26,18 @@ import EditLockButton from '@/project_components/edit-lock-button';
 const MyComponent = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [resourceData, setResourceData] = useState(null);
+
+  // Function to refresh data from server
+  const loadResourceData = async () => {
+    try {
+      const freshData = await fetchResourceData(resourceId);
+      setResourceData(freshData);
+    } catch (error) {
+      console.error('Error loading data:', error);
+      throw error; // Let EditLockButton handle the error
+    }
+  };
 
   const handleToggleEdit = () => {
     setIsEditing(!isEditing);
@@ -35,7 +47,7 @@ const MyComponent = () => {
     setIsSaving(true);
     try {
       // Your save logic here
-      await saveData();
+      await saveData(resourceData);
     } finally {
       setIsSaving(false);
       setIsEditing(false);
@@ -50,6 +62,8 @@ const MyComponent = () => {
       isSaving={isSaving}
       onToggleEdit={handleToggleEdit}
       onSave={handleSave}
+      onRefreshData={loadResourceData} // Ensures fresh data before edit
+      initialUpdatedAt={resourceData?.updatedAt}
     />
   );
 };
@@ -151,7 +165,9 @@ interface LockInfo {
   isEditing={boolean}
   isSaving={boolean}
   onToggleEdit={() => void}
-  onSave={() => void}
+  onSave={() => Promise<void>}
+  onRefreshData={() => Promise<void>} // Optional
+  initialUpdatedAt={string} // Optional
 />
 ```
 
@@ -159,19 +175,89 @@ interface LockInfo {
 - `resourceType: 'articles' | 'blocks'` - Type of resource
 - `resourceId: string` - Resource ID
 - `isEditing: boolean` - Current edit state
-- `isSaving: boolean` - Whether save operation is in progress
+- `isSaving?: boolean` - Whether save operation is in progress
 - `onToggleEdit: () => void` - Callback when edit mode toggles
-- `onSave: () => void` - Callback when save button is clicked
+- `onSave: () => Promise<void>` - Callback when save button is clicked
+- `onRefreshData?: () => Promise<void>` - Optional callback to refresh data before edit
+- `initialUpdatedAt?: string` - Resource's last update timestamp for conflict detection
+
+## Enhanced Features
+
+### Automatic Data Refresh
+
+The EditLockButton now supports automatic data refresh before entering edit mode:
+
+```tsx
+const ArticleDetail = ({ articleId }) => {
+  const [articleData, setArticleData] = useState(null);
+  
+  const loadArticleData = async () => {
+    // Fetch fresh data from server
+    const data = await fetchArticle(articleId);
+    setArticleData(data);
+  };
+
+  return (
+    <EditLockButton
+      resourceType="articles"
+      resourceId={articleId}
+      // ... other props
+      onRefreshData={loadArticleData} // Refreshes before edit
+    />
+  );
+};
+```
+
+**Benefits:**
+- Prevents save conflicts from stale data
+- Ensures users always work with current information
+- Automatically triggered for both edit and override actions
+
+### Enhanced Save Process
+
+The save process includes comprehensive validation:
+
+1. **Lock Validation** - Checks if user still has the lock
+2. **Conflict Detection** - Compares current data with baseline
+3. **Automatic Recovery** - Exits edit mode if lock is lost
+
+```tsx
+// Save process flow:
+"Prüfe Sperre..." → "Speichern..." → "Gespeichert und für andere freigegeben"
+
+// If lock is lost:
+"Prüfe Sperre..." → Exit edit mode → Show current lock holder
+```
+
+### Force Override Capability
+
+Users can override locks held by other users:
+
+- **Visual Indicator**: Orange "Überschreiben" button with warning icon
+- **Data Refresh**: Automatically refreshes data before override
+- **Clear Feedback**: Shows who was overridden in success message
+
+### Comprehensive Loading States
+
+The component provides specific loading indicators for each operation:
+
+- **"Laden..."** - Initial lock status loading
+- **"Aktualisiere..."** - Data refresh in progress  
+- **"Bitte warten..."** - Lock acquisition in progress
+- **"Prüfe Sperre..."** - Save-time lock validation
+- **"Speichern..."** - Save operation in progress
+- **"Überschreibt..."** - Force override in progress
 
 ## Behavior & Flow
 
-### Optimistic Locking Flow
+### Enhanced Edit Flow with Data Refresh
 
 1. **User clicks "Bearbeiten"**:
-   - UI immediately enters edit mode
-   - Lock request sent to server
+   - Data refresh (if `onRefreshData` provided) → "Aktualisiere..."
+   - Lock request sent to server → "Bitte warten..."
+   - UI enters edit mode
    - Success: ✅ "Bearbeitung gestartet - für andere gesperrt"
-   - Failure: ❌ Edit mode reverted, error shown
+   - Failure: ❌ Error shown, edit mode not entered
 
 2. **User clicks "Abbrechen"**:
    - UI immediately exits edit mode
@@ -180,16 +266,35 @@ interface LockInfo {
    - Failure: ❌ Error shown (but stays in non-edit mode)
 
 3. **User clicks "Speichern"**:
-   - Save operation completes first
-   - Then unlocks resource
-   - Success: ✅ "Gespeichert und für andere freigegeben"
-   - Failure: ❌ Error shown
+   - Lock validation → "Prüfe Sperre..."
+   - Save operation if lock valid → "Speichern..."
+   - Unlock resource → Success: ✅ "Gespeichert und für andere freigegeben"
+   - Lock lost: ❌ Exit edit mode, show current lock holder
+
+### Force Override Flow
+
+1. **User clicks "Überschreiben"**:
+   - Data refresh (if `onRefreshData` provided) → "Aktualisiere..."
+   - Force override request → "Überschreibt..."
+   - UI enters edit mode
+   - Success: ✅ "Bearbeitung von [Username] überschrieben"
+   - Failure: ❌ Error shown, edit mode not entered
 
 ### Lock Conflict Handling
 
 - If resource is locked by another user, "Bearbeiten" button shows "Gesperrt"
-- Displays: "wird bearbeitet von **[User Name]**"
-- User cannot enter edit mode until lock is released
+- Displays: "wird bearbeitet von **[User Name]** (vor X Min.)"
+- Shows orange "Überschreiben" button for force override
+- User cannot enter edit mode until lock is released or overridden
+
+### Save Validation Process
+
+The enhanced save process includes multiple validation steps:
+
+1. **Lock Ownership Check**: Verifies user still has the lock
+2. **Data Conflict Detection**: Checks for changes since edit started
+3. **Automatic Recovery**: If lock lost, exits edit mode and refreshes lock status
+4. **Error Handling**: Provides specific error messages for different scenarios
 
 ## Database Schema
 
@@ -227,15 +332,22 @@ blockedBy TEXT REFERENCES auth.users(id);  -- User ID who has the lock
 The system provides comprehensive feedback through toast notifications:
 
 ### Success Messages
-- 🟢 **"Bearbeitung gestartet - für andere gesperrt"**
-- 🟢 **"Bearbeitung beendet - für andere freigegeben"**  
-- 🟢 **"Gespeichert und für andere freigegeben"**
+- 🟢 **"Bearbeitung gestartet - für andere gesperrt"** - Edit mode started
+- 🟢 **"Bearbeitung beendet - für andere freigegeben"** - Edit mode cancelled  
+- 🟢 **"Gespeichert und für andere freigegeben"** - Save completed successfully
+- 🟢 **"Bearbeitung von [Username] überschrieben"** - Force override successful
 
 ### Error Messages
-- 🔴 **"Fehler beim Sperren für Bearbeitung"**
-- 🔴 **"Fehler beim Entsperren"**
-- 🔴 **"Fehler beim Entsperren nach dem Speichern"**
-- 🔴 **"Wird bereits von [Name] bearbeitet"**
+- 🔴 **"Wird bereits von [Name] bearbeitet"** - Lock conflict when trying to edit
+- 🔴 **"Die Sperre wurde von [Username] überschrieben. Bearbeitung wird beendet."** - Lock lost during edit
+- 🔴 **"Die Sperre ist abgelaufen. Bearbeitung wird beendet."** - Lock expired during edit
+- 🔴 **"Dieser Datensatz hat Änderungen, bitte schliessen Sie das Tab und öffnen Sie es wieder."** - Data conflicts detected
+- 🔴 **"Fehler beim Aktualisieren der Daten"** - Data refresh failed
+- 🔴 **"Fehler beim Sperren für Bearbeitung"** - Lock acquisition failed
+- 🔴 **"Fehler beim Entsperren"** - Unlock operation failed
+- 🔴 **"Fehler beim Entsperren nach dem Speichern"** - Unlock after save failed
+- 🔴 **"Fehler beim Speichern"** - Save operation failed
+- 🔴 **"Fehler beim Überschreiben der Sperre"** - Force override failed
 
 ## Adding New Resource Types
 

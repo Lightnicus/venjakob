@@ -235,27 +235,36 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
   const handleForceOverride = async () => {
     setIsOverriding(true);
     
-    // Optimistically enter edit mode immediately to avoid UI flickering
-    setEditStartUpdatedAt(initialUpdatedAt || null); // Store baseline timestamp
-    onToggleEdit(); // Enter edit mode immediately
-    
     try {
+      // First refresh data if callback is provided to ensure we have latest data
+      if (onRefreshData) {
+        setIsRefreshingData(true);
+        try {
+          await onRefreshData();
+        } catch (error) {
+          console.error('Error refreshing data:', error);
+          toast.error('Fehler beim Aktualisieren der Daten');
+          setIsRefreshingData(false);
+          return; // Don't proceed if data refresh failed
+        }
+        setIsRefreshingData(false);
+      }
+
+      // Then attempt to override the lock
       const overridden = await forceOverrideLock();
       if (overridden) {
+        // Only enter edit mode if override was successful
+        setEditStartUpdatedAt(initialUpdatedAt || null); // Store baseline timestamp
+        onToggleEdit(); // Enter edit mode
         toast.success(
           `Bearbeitung von ${lockInfo.lockedByName || 'anderem Benutzer'} überschrieben`,
         );
       } else {
         toast.error('Fehler beim Überschreiben der Sperre');
-        // Revert the optimistic UI change if override failed
-        setEditStartUpdatedAt(null);
-        onToggleEdit(); // Exit edit mode
       }
     } catch (error) {
+      setIsRefreshingData(false);
       toast.error('Fehler beim Überschreiben der Sperre');
-      // Revert the optimistic UI change if override failed
-      setEditStartUpdatedAt(null);
-      onToggleEdit(); // Exit edit mode
     } finally {
       setIsOverriding(false);
     }
@@ -272,9 +281,16 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
       setIsValidatingLock(false);
       
       if (shouldRevertEdit) {
-        // Lock was lost or overwritten - revert edit mode
+        // Lock was lost or overwritten - revert edit mode and refresh lock status
         setEditStartUpdatedAt(null);
         onToggleEdit(); // Exit edit mode
+        
+        // Refresh lock status to show current state (who has the lock now)
+        try {
+          await refreshLockStatus();
+        } catch (error) {
+          console.error('Error refreshing lock status:', error);
+        }
         return;
       }
       
@@ -345,11 +361,16 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
           variant="destructive"
           size="sm"
           onClick={handleForceOverride}
-          disabled={isOverriding}
+          disabled={isOverriding || isRefreshingData}
           aria-label="Sperre überschreiben und bearbeiten"
           className="bg-orange-600 hover:bg-orange-700"
         >
-          {isOverriding ? (
+          {isRefreshingData ? (
+            <>
+              <Loader2 size={14} className="inline-block animate-spin mr-1" />
+              Aktualisiere...
+            </>
+          ) : isOverriding ? (
             <>
               <Loader2 size={14} className="inline-block animate-spin mr-1" />
               Überschreibt...

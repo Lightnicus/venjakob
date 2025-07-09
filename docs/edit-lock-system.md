@@ -77,15 +77,37 @@ import { EditLockButton } from "@/project_components/edit-lock-button";
 
 const MyDetailComponent = ({ resourceId }: { resourceId: string }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [resourceData, setResourceData] = useState(null);
+
+  // Function to load fresh data from server
+  const loadResourceData = async () => {
+    const freshData = await fetchResourceData(resourceId);
+    setResourceData(freshData);
+  };
+
+  const handleToggleEdit = () => {
+    setIsEditing(!isEditing);
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await saveResourceData(resourceData);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <EditLockButton
       resourceType="articles"
       resourceId={resourceId}
       isEditing={isEditing}
-      onEditToggle={setIsEditing}
+      isSaving={isSaving}
+      onToggleEdit={handleToggleEdit}
       onSave={handleSave}
-      disabled={isSaving}
+      onRefreshData={loadResourceData} // Ensures fresh data before edit
       initialUpdatedAt={resourceData?.updatedAt}
     />
   );
@@ -121,12 +143,89 @@ interface EditLockButtonProps {
   resourceType: 'articles' | 'blocks';
   resourceId: string;
   isEditing: boolean;
-  onEditToggle: (editing: boolean) => void;
-  onSave?: () => Promise<void> | void;
-  disabled?: boolean;
+  isSaving?: boolean;
+  onToggleEdit: () => void;
+  onSave: () => Promise<void>;
+  onRefreshData?: () => Promise<void>; // Optional callback to refresh data from parent
   initialUpdatedAt?: string; // Resource's last update timestamp for conflict detection
 }
 ```
+
+**New Features:**
+- **Data Refresh**: `onRefreshData` callback refreshes data before entering edit mode
+- **Lock Validation**: Enhanced save process validates lock before saving
+- **Force Override**: Override locks held by other users with data refresh
+- **Loading States**: Specific loading indicators for data refresh operations
+
+## Enhanced Edit Lock Features
+
+### Data Refresh Before Edit Mode
+
+The system now automatically refreshes data before entering edit mode to prevent conflicts from outdated information:
+
+```typescript
+// When user clicks "Bearbeiten" or "Überschreiben"
+1. Data refresh (if onRefreshData provided) → "Aktualisiere..."
+2. Lock acquisition → "Bitte warten..."
+3. Enter edit mode → Success toast
+```
+
+**Benefits:**
+- Prevents save conflicts from stale data
+- Ensures users work with latest information
+- Consistent behavior for both edit and override flows
+
+### Enhanced Save Validation
+
+The save process now includes comprehensive lock validation:
+
+```typescript
+// When user clicks "Speichern"
+1. Lock validation → "Prüfe Sperre..."
+2. Conflict detection → Check for data changes
+3. Save operation → "Speichern..."
+4. Unlock resource → Success toast
+```
+
+**Lock Validation Scenarios:**
+- **Lock Lost**: Automatically exits edit mode, shows current lock holder
+- **Data Conflicts**: Prevents save, shows conflict message
+- **Lock Valid**: Proceeds with save operation
+
+### Force Override Functionality
+
+Users can override locks held by other users when necessary:
+
+**Override Button Appearance:**
+- Orange "Überschreiben" button with warning icon
+- Shows when resource is locked by another user
+- Includes lock holder name and timestamp
+
+**Override Flow:**
+1. Data refresh → "Aktualisiere..."
+2. Force override → "Überschreibt..."
+3. Enter edit mode → Success message with override confirmation
+
+### Loading States
+
+The system provides detailed loading feedback:
+
+- **"Laden..."** - Initial lock status loading
+- **"Aktualisiere..."** - Data refresh in progress
+- **"Bitte warten..."** - Lock acquisition in progress
+- **"Prüfe Sperre..."** - Save-time lock validation
+- **"Speichern..."** - Save operation in progress
+- **"Überschreibt..."** - Force override in progress
+
+### Automatic UI State Management
+
+The component automatically manages UI state based on actual lock status:
+
+**State Synchronization:**
+- Shows override button when lock is held by others
+- Hides save button when user doesn't have lock
+- Refreshes lock status after save failures
+- Displays current lock holder information
 
 ## API Endpoints
 
@@ -296,11 +395,17 @@ toast.error(error.response.data.error);
 - **Lock**: "Bearbeitung gestartet - für andere gesperrt"
 - **Unlock**: "Bearbeitung beendet - für andere freigegeben"
 - **Save**: "Gespeichert und für andere freigegeben"
+- **Override**: "Bearbeitung von [Username] überschrieben"
 
 ### Errors
-- **Lock Conflict**: "Ressource wird bereits von [Username] bearbeitet"
-- **Network Error**: "Fehler beim Sperren der Ressource"
-- **Permission Error**: "Keine Berechtigung zum Sperren dieser Ressource"
+- **Lock Conflict**: "Wird bereits von [Username] bearbeitet"
+- **Lock Lost**: "Die Sperre wurde von [Username] überschrieben. Bearbeitung wird beendet."
+- **Lock Expired**: "Die Sperre ist abgelaufen. Bearbeitung wird beendet."
+- **Data Conflicts**: "Dieser Datensatz hat Änderungen, bitte schliessen Sie das Tab und öffnen Sie es wieder."
+- **Data Refresh Error**: "Fehler beim Aktualisieren der Daten"
+- **Network Errors**: "Fehler beim Sperren für Bearbeitung" / "Fehler beim Entsperren"
+- **Save Errors**: "Fehler beim Speichern" / "Fehler beim Entsperren nach dem Speichern"
+- **Override Errors**: "Fehler beim Überschreiben der Sperre"
 
 ## Database Schema
 
@@ -340,23 +445,55 @@ The system uses optimistic updates for better user experience:
 
 ## Best Practices
 
-### 1. Use EditLockButton
+### 1. Use EditLockButton with Data Refresh
 ```typescript
-// ✅ Good - Use the pre-built component
+// ✅ Good - Use the pre-built component with data refresh
 <EditLockButton
   resourceType="articles"
   resourceId={articleId}
   isEditing={isEditing}
-  onToggleEdit={setIsEditing}
+  isSaving={isSaving}
+  onToggleEdit={handleToggleEdit}
   onSave={handleSave}
-  initialUpdatedAt={articleData?.updatedAt}  // Already a string from Drizzle
+  onRefreshData={loadLatestData}  // Prevents conflicts from stale data
+  initialUpdatedAt={articleData?.updatedAt}
 />
 
-// ❌ Bad - Implement custom lock logic
-<Button onClick={handleCustomLock}>Edit</Button>
+// ❌ Bad - Missing data refresh
+<EditLockButton
+  resourceType="articles"
+  resourceId={articleId}
+  isEditing={isEditing}
+  onToggleEdit={handleToggleEdit}
+  onSave={handleSave}
+  // Missing onRefreshData - may cause save conflicts
+/>
 ```
 
-### 2. Use Optimistic Updates
+### 2. Implement Proper Data Loading
+```typescript
+// ✅ Good - Async data loading function
+const loadArticleData = async () => {
+  setIsLoading(true);
+  try {
+    const freshData = await fetchArticleData(articleId);
+    setArticleData(freshData);
+    // Update all relevant state with fresh data
+  } catch (error) {
+    console.error('Error loading data:', error);
+    toast.error('Fehler beim Laden der Daten');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// ❌ Bad - Synchronous or incomplete data loading
+const loadData = () => {
+  // Sync operation or missing error handling
+};
+```
+
+### 3. Use Optimistic Updates
 ```typescript
 // ✅ Good - Optimistic updates for better UX
 await lockResourceOptimistic();
@@ -365,26 +502,38 @@ await lockResourceOptimistic();
 await lockResource();
 ```
 
-### 3. Error Handling
+### 4. Handle Lock Validation Properly
 ```typescript
-// ✅ Good - Catch and handle errors
+// ✅ Good - Let EditLockButton handle validation
+const handleSave = async () => {
+  setIsSaving(true);
+  try {
+    await saveResourceData();
+    // EditLockButton handles lock validation automatically
+  } finally {
+    setIsSaving(false);
+  }
+};
+
+// ❌ Bad - Manual lock checking (redundant)
+const handleSave = async () => {
+  // Manual lock checks are unnecessary and error-prone
+  const lockStatus = await checkLock();
+  if (!lockStatus.valid) return;
+  await saveResourceData();
+};
+```
+
+### 5. Error Handling
+```typescript
+// ✅ Good - Catch and handle errors gracefully
 try {
   await lockResourceOptimistic();
 } catch (error) {
   // Error is automatically shown via toast
   // Additional error handling if needed
+  console.error('Lock error:', error);
 }
-```
-
-### 4. Use EditLockButton
-```typescript
-<EditLockButton
-  resourceType="new-resource"
-  resourceId={resourceId}
-  isEditing={isEditing}
-  onEditToggle={setIsEditing}
-  initialUpdatedAt={resourceData?.updatedAt}
-/>
 ```
 
 ## Extending for New Resource Types
@@ -420,9 +569,10 @@ type ResourceType = 'articles' | 'blocks' | 'new-resource';
   resourceId={resourceId}
   isEditing={isEditing}
   isSaving={isSaving}
-  onToggleEdit={setIsEditing}
+  onToggleEdit={handleToggleEdit}
   onSave={handleSave}
-  initialUpdatedAt={resourceData?.updatedAt}  // Already a string from Drizzle
+  onRefreshData={loadResourceData}  // Include data refresh
+  initialUpdatedAt={resourceData?.updatedAt}
 />
 ```
 
