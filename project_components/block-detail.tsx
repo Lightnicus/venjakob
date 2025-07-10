@@ -94,7 +94,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
     try {
       // Fetch block data using the existing API function
       const blockData = await fetchBlockWithContent(blockId);
-      console.log('Block in block detail', blockData);
+      // console.log('Block in block detail', blockData);
 
       if (!blockData) {
         throw new Error('Block not found');
@@ -481,9 +481,9 @@ const BlockDetail: FC<BlockDetailProps> = ({
                           />
                         );
                       })()}
-                                      </div>
-                </div>
-              </CardContent>
+                    </div>
+                  </div>
+                </CardContent>
               </Card>
             );
           })}
@@ -610,7 +610,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
               month: '2-digit',
               day: '2-digit',
               hour: '2-digit',
-              minute: '2-digit'
+              minute: '2-digit',
             })}
             {' von '}
             {block.lastChangedBy.name || block.lastChangedBy.email}
@@ -623,7 +623,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
             month: '2-digit',
             day: '2-digit',
             hour: '2-digit',
-            minute: '2-digit'
+            minute: '2-digit',
           })
         )}
       </div>

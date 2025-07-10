@@ -32,11 +32,8 @@ const formatLockTime = (timestamp: string | null): string => {
   //   normalizedTimestamp = timestamp + 'Z';
   // }
 
-  console.log('normalizedTimestamp', normalizedTimestamp);
   const date = new Date(normalizedTimestamp);
   const now = new Date();
-  console.log('lock date', date);
-  console.log('date', now);
 
   // Use UTC time for both dates to avoid timezone issues
   const diffInMinutes = Math.floor(
@@ -77,6 +74,60 @@ const formatLockTime = (timestamp: string | null): string => {
   }
 };
 
+// Unified loading state management
+type LoadingState = 'idle' | 'processing' | 'saving' | 'loading';
+
+const useStableLoadingState = (
+  currentState: LoadingState,
+  minDisplayTime = 300,
+) => {
+  const [displayState, setDisplayState] = React.useState<LoadingState>('idle');
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastChangeRef = React.useRef<number>(0);
+
+  React.useEffect(() => {
+    const now = Date.now();
+
+    // If we're going from idle to loading, show immediately
+    if (displayState === 'idle' && currentState !== 'idle') {
+      setDisplayState(currentState);
+      lastChangeRef.current = now;
+      return;
+    }
+
+    // If we're going from loading to idle, respect minimum display time
+    if (displayState !== 'idle' && currentState === 'idle') {
+      const timeSinceLastChange = now - lastChangeRef.current;
+      const remainingTime = Math.max(0, minDisplayTime - timeSinceLastChange);
+
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      timeoutRef.current = setTimeout(() => {
+        setDisplayState('idle');
+      }, remainingTime);
+      return;
+    }
+
+    // For other state changes, update immediately but track timing
+    if (currentState !== displayState) {
+      setDisplayState(currentState);
+      lastChangeRef.current = now;
+    }
+  }, [currentState, displayState, minDisplayTime]);
+
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  return displayState;
+};
+
 const EditLockButton: React.FC<EditLockButtonProps> = ({
   resourceType,
   resourceId,
@@ -104,15 +155,27 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
     string | null
   >(null);
 
-  // Loading states for async operations
-  const [isToggling, setIsToggling] = React.useState(false);
+  // Unified loading states
+  const [isProcessing, setIsProcessing] = React.useState(false);
   const [isOverriding, setIsOverriding] = React.useState(false);
   const [isSavingInternal, setIsSavingInternal] = React.useState(false);
-  const [isValidatingLock, setIsValidatingLock] = React.useState(false);
-  const [isRefreshingData, setIsRefreshingData] = React.useState(false);
+
+  // Determine current loading state
+  const currentLoadingState: LoadingState = React.useMemo(() => {
+    if (isLoading) return 'loading';
+    if (isSaving || isSavingInternal) return 'saving';
+    if (isProcessing || isOverriding) return 'processing';
+    return 'idle';
+  }, [isLoading, isSaving, isSavingInternal, isProcessing, isOverriding]);
+
+  // Use stable loading state to prevent flickering
+  const stableLoadingState = useStableLoadingState(currentLoadingState);
 
   // Check if the resource has been modified and if the lock is still valid
-  const checkForConflictsAndLockValidity = async (): Promise<{ canSave: boolean; shouldRevertEdit: boolean }> => {
+  const checkForConflictsAndLockValidity = async (): Promise<{
+    canSave: boolean;
+    shouldRevertEdit: boolean;
+  }> => {
     if (!dbUser?.id) {
       return { canSave: false, shouldRevertEdit: true };
     }
@@ -171,8 +234,8 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
   };
 
   const handleToggleEdit = async () => {
-    setIsToggling(true);
-    
+    setIsProcessing(true);
+
     try {
       if (isEditing) {
         // If currently editing, unlock and exit edit mode (optimistic)
@@ -198,16 +261,13 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         try {
           // First refresh data if callback is provided to ensure we have latest data
           if (onRefreshData) {
-            setIsRefreshingData(true);
             try {
               await onRefreshData();
             } catch (error) {
               console.error('Error refreshing data:', error);
               toast.error('Fehler beim Aktualisieren der Daten');
-              setIsRefreshingData(false);
               return; // Don't proceed if data refresh failed
             }
-            setIsRefreshingData(false);
           }
 
           // Then try to get the lock
@@ -223,31 +283,27 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
           }
         } catch (error) {
           // Any error during locking - don't change edit mode
-          setIsRefreshingData(false);
           toast.error('Fehler beim Sperren für Bearbeitung');
         }
       }
     } finally {
-      setIsToggling(false);
+      setIsProcessing(false);
     }
   };
 
   const handleForceOverride = async () => {
     setIsOverriding(true);
-    
+
     try {
       // First refresh data if callback is provided to ensure we have latest data
       if (onRefreshData) {
-        setIsRefreshingData(true);
         try {
           await onRefreshData();
         } catch (error) {
           console.error('Error refreshing data:', error);
           toast.error('Fehler beim Aktualisieren der Daten');
-          setIsRefreshingData(false);
           return; // Don't proceed if data refresh failed
         }
-        setIsRefreshingData(false);
       }
 
       // Then attempt to override the lock
@@ -263,7 +319,6 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         toast.error('Fehler beim Überschreiben der Sperre');
       }
     } catch (error) {
-      setIsRefreshingData(false);
       toast.error('Fehler beim Überschreiben der Sperre');
     } finally {
       setIsOverriding(false);
@@ -272,19 +327,17 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
 
   const handleSave = async () => {
     setIsSavingInternal(true);
-    setIsValidatingLock(true);
-    
+
     try {
       // Check for conflicts and lock validity before saving
-      const { canSave, shouldRevertEdit } = await checkForConflictsAndLockValidity();
-      
-      setIsValidatingLock(false);
-      
+      const { canSave, shouldRevertEdit } =
+        await checkForConflictsAndLockValidity();
+
       if (shouldRevertEdit) {
         // Lock was lost or overwritten - revert edit mode and refresh lock status
         setEditStartUpdatedAt(null);
         onToggleEdit(); // Exit edit mode
-        
+
         // Refresh lock status to show current state (who has the lock now)
         try {
           await refreshLockStatus();
@@ -293,13 +346,13 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         }
         return;
       }
-      
+
       if (!canSave) {
         return; // Don't proceed with save if there are conflicts but don't revert edit mode
       }
 
       await onSave();
-      
+
       // Unlock the resource after saving
       const unlocked = await unlockResource();
       if (unlocked) {
@@ -308,7 +361,6 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         toast.error('Fehler beim Entsperren nach dem Speichern');
       }
     } catch (error) {
-      setIsValidatingLock(false);
       console.error('Error during save:', error);
       toast.error('Fehler beim Speichern');
     } finally {
@@ -316,71 +368,81 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
     }
   };
 
+  // Determine button text and icon for idle state
+  const getEditButtonContent = () => {
+    if (isEditing) {
+      return 'Abbrechen';
+    }
+
+    if (!canEdit) {
+      return (
+        <>
+          <Lock size={14} className="inline-block mr-1" />
+          Gesperrt
+        </>
+      );
+    }
+
+    return (
+      <>
+        <Edit3 size={14} className="inline-block mr-1" />
+        Bearbeiten
+      </>
+    );
+  };
+
+  const getOverrideButtonContent = () => {
+    return (
+      <>
+        <AlertTriangle size={14} className="inline-block mr-1" />
+        Überschreiben
+      </>
+    );
+  };
+
+  const getSaveButtonContent = () => {
+    return (
+      <>
+        <Save size={14} className="inline-block mr-1" />
+        Speichern
+      </>
+    );
+  };
+
+  // Show loading indicator when any operation is in progress
+  if (stableLoadingState !== 'idle') {
+    return (
+      <div className="flex gap-2 items-center">
+        <div className="flex items-center text-sm text-gray-600">
+          <Loader2 size={16} className="inline-block animate-spin mr-2" />
+          Laden...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex gap-2 items-center">
       <Button
         variant="outline"
         size="sm"
         onClick={handleToggleEdit}
-        disabled={(!canEdit && !isEditing) || isToggling || isLoading}
+        disabled={!canEdit && !isEditing}
         aria-label={isEditing ? 'Abbrechen' : 'Bearbeiten'}
       >
-        {isLoading ? (
-          <>
-            <Loader2 size={14} className="inline-block animate-spin mr-1" />
-            Laden...
-          </>
-        ) : isRefreshingData ? (
-          <>
-            <Loader2 size={14} className="inline-block animate-spin mr-1" />
-            Aktualisiere...
-          </>
-        ) : isToggling ? (
-          <>
-            <Loader2 size={14} className="inline-block animate-spin mr-1" />
-            Bitte warten...
-          </>
-        ) : isEditing ? (
-          'Abbrechen'
-        ) : !canEdit ? (
-          <>
-            <Lock size={14} className="inline-block mr-1" />
-            Gesperrt
-          </>
-        ) : (
-          <>
-            <Edit3 size={14} className="inline-block mr-1" />
-            Bearbeiten
-          </>
-        )}
+        {getEditButtonContent()}
       </Button>
 
       {/* Force Override Button - only show when locked by another user */}
-      {!isLoading && lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && (
+      {lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && (
         <Button
           variant="destructive"
           size="sm"
           onClick={handleForceOverride}
-          disabled={isOverriding || isRefreshingData}
           aria-label="Sperre überschreiben und bearbeiten"
           className="bg-orange-600 hover:bg-orange-700"
         >
-          {isRefreshingData ? (
-            <>
-              <Loader2 size={14} className="inline-block animate-spin mr-1" />
-              Aktualisiere...
-            </>
-          ) : isOverriding ? (
-            <>
-              <Loader2 size={14} className="inline-block animate-spin mr-1" />
-              Überschreibt...
-            </>
-          ) : (
-            <>
-              <AlertTriangle size={14} className="inline-block mr-1" />
-              Überschreiben
-            </>
-          )}
+          {getOverrideButtonContent()}
         </Button>
       )}
 
@@ -389,29 +451,13 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
         <Button
           size="sm"
           onClick={handleSave}
-          disabled={isSaving || isSavingInternal}
           aria-label="Änderungen speichern"
         >
-          {isValidatingLock ? (
-            <>
-              <Loader2 size={14} className="inline-block animate-spin mr-1" />
-              Prüfe Sperre...
-            </>
-          ) : isSaving || isSavingInternal ? (
-            <>
-              <Loader2 size={14} className="inline-block animate-spin mr-1" />
-              Speichern...
-            </>
-          ) : (
-            <>
-              <Save size={14} className="inline-block mr-1" />
-              Speichern
-            </>
-          )}
+          {getSaveButtonContent()}
         </Button>
       )}
 
-      {!isLoading && lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && (
+      {lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && (
         <span className="text-sm text-gray-600">
           wird bearbeitet von{' '}
           <strong>{lockInfo.lockedByName || 'Unbekannt'}</strong>
