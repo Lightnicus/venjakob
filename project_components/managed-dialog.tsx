@@ -1,7 +1,7 @@
 import { FC, ReactNode } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { useDialogManager } from "./dialog-manager";
+import { useDialogManager } from "./quote_dialogs/dialog-manager";
 
 interface ManagedDialogProps {
   title: string;

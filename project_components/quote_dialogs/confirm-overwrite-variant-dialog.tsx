@@ -2,7 +2,7 @@
 
 import { Button } from '@/components/ui/button';
 import { ManagedDialog } from '@/project_components/managed-dialog';
-import { useDialogManager } from '@/project_components/dialog-manager';
+import { useDialogManager } from './dialog-manager';
 import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
 import OfferDetail from '@/project_components/offer-detail';
 

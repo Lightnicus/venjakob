@@ -8,8 +8,6 @@ interface ManagementWrapperProps {
   permission: string;
   loading: boolean;
   children: ReactNode;
-  authUser: AuthUser | null;
-  dbUser: DbUser | null;
 }
 
 const ManagementWrapper = ({ title, permission, loading, children }: ManagementWrapperProps) => {

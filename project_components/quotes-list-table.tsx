@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { DeleteConfirmationDialog } from '@/project_components/delete-confirmation-dialog';
-import QuoteDialogs, { QUOTE_DIALOGS, useDialogManager } from '@/project_components/quotes-dialogs';
+import QuoteDialogs, { QUOTE_DIALOGS, useDialogManager } from '@/project_components/quote_dialogs/quotes-dialogs';
 
 type QuoteListItem = {
   id: string;

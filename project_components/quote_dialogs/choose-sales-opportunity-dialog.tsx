@@ -2,7 +2,7 @@ import { FC, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ManagedDialog } from '@/project_components/managed-dialog';
-import { useDialogManager } from '@/project_components/dialog-manager';
+import { useDialogManager } from './dialog-manager';
 import SalesOpportunitiesTable, {
   SaleChance,
 } from '@/project_components/sale-opportunities-table';

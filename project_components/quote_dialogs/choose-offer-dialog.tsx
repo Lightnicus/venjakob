@@ -3,7 +3,7 @@ import { OffersTable } from '@/project_components/offers-table';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FC, useState } from 'react';
-import { useDialogManager } from '@/project_components/dialog-manager';
+import { useDialogManager } from './dialog-manager';
 
 type Offer = {
   id: string;
