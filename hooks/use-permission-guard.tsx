@@ -1,14 +1,18 @@
 import React from 'react';
 import { useUser } from './use-user';
+import { AuthUser } from '@supabase/supabase-js';
+import { User as DbUser } from '@/lib/db/schema';
 
 interface PermissionGuardResult {
   isLoading: boolean;
   hasAccess: boolean;
   AccessDeniedComponent: React.FC;
+  authUser: AuthUser | null;
+  dbUser: DbUser | null;
 }
 
 export const usePermissionGuard = (requiredResource: string): PermissionGuardResult => {
-  const { hasPermission, loading: userLoading } = useUser();
+  const { hasPermission, loading: userLoading, authUser, dbUser } = useUser();
 
   const AccessDeniedComponent: React.FC = () => (
     <div className="p-4">
@@ -32,5 +36,7 @@ export const usePermissionGuard = (requiredResource: string): PermissionGuardRes
     isLoading: userLoading,
     hasAccess: hasPermission(undefined, requiredResource),
     AccessDeniedComponent,
+    authUser,
+    dbUser,
   };
 }; 

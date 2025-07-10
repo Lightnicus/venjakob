@@ -1,18 +1,22 @@
 import { ReactNode } from 'react';
 import { usePermissionGuard } from '@/hooks/use-permission-guard';
+import { AuthUser } from '@supabase/supabase-js';
+import { User as DbUser } from '@/lib/db/schema';
 
 interface ManagementWrapperProps {
   title: string;
   permission: string;
   loading: boolean;
   children: ReactNode;
+  authUser: AuthUser | null;
+  dbUser: DbUser | null;
 }
 
 const ManagementWrapper = ({ title, permission, loading, children }: ManagementWrapperProps) => {
-  const { isLoading: permissionLoading, hasAccess, AccessDeniedComponent } = usePermissionGuard(permission);
+  const { isLoading: permissionLoading, hasAccess, AccessDeniedComponent, authUser, dbUser } = usePermissionGuard(permission);
 
   // Permission loading state
-  if (permissionLoading) {
+  if (permissionLoading && !(authUser && dbUser)) {
     return (
       <div className="p-4">
         <h2 className="text-2xl font-bold mb-2">{title}</h2>
@@ -38,9 +42,6 @@ const ManagementWrapper = ({ title, permission, loading, children }: ManagementW
         );
       }
   }
-
-  // Access denied state
-  
 
   // Render main content
   return (
