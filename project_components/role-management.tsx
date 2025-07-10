@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import RoleListTable from './role-list-table';
+import ManagementWrapper from './management-wrapper';
 import type { Role, Permission } from '@/lib/db/schema';
 import { toast } from 'sonner';
 import { useTabReload } from './tabbed-interface-provider';
-import { usePermissionGuard } from '@/hooks/use-permission-guard';
 
 type RoleListItem = {
   id: string;
@@ -14,7 +14,6 @@ type RoleListItem = {
 };
 
 const RoleManagement = () => {
-  const { isLoading: permissionLoading, hasAccess, AccessDeniedComponent } = usePermissionGuard('admin');
   const [roles, setRoles] = useState<RoleListItem[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,11 +49,8 @@ const RoleManagement = () => {
   useTabReload('roles', loadData);
 
   useEffect(() => {
-    // Only load data if user has access
-    if (hasAccess && !permissionLoading) {
-      loadData();
-    }
-  }, [hasAccess, permissionLoading]);
+    loadData();
+  }, []);
 
   const handleSaveRoleChanges = async (roleId: string, roleData: { name: string; description?: string | null }) => {
     try {
@@ -167,36 +163,8 @@ const RoleManagement = () => {
     }
   };
 
-  // Permission checking in render
-  if (permissionLoading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">Rollenverwaltung</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Prüfe Berechtigungen...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasAccess) {
-    return <AccessDeniedComponent />;
-  }
-
-  if (loading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">Rollenverwaltung</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Lade Daten...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-2">Rollenverwaltung</h2>
+    <ManagementWrapper title="Rollenverwaltung" permission="admin" loading={loading}>
       <RoleListTable 
         data={roles}
         permissions={permissions}
@@ -206,7 +174,7 @@ const RoleManagement = () => {
         onCreateRole={handleCreateRole}
         onCopyRole={handleCopyRole}
       />
-    </div>
+    </ManagementWrapper>
   );
 };
 

@@ -176,4 +176,11 @@ export async function POST() {
 See the following files for real-world usage examples:
 - `app/api/users/current/route.ts` - Basic user info endpoint
 - `app/api/users/current/unlock-all/route.ts` - Simple authentication requirement
-- `app/api/articles/[id]/lock/route.ts` - Complex authentication with business logic 
+- `app/api/articles/[id]/lock/route.ts` - Complex authentication with business logic
+
+## Client-Side Permission Patterns
+
+For client-side permission handling and component patterns, see:
+- [`component-patterns.md`](./component-patterns.md) - ManagementWrapper component and permission-aware UI patterns
+- `hooks/use-permission-guard.tsx` - Client-side permission checking hook
+- `project_components/management-wrapper.tsx` - Reusable permission wrapper component 

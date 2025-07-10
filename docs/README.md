@@ -52,6 +52,13 @@ Detailed documentation for the edit lock hook:
 - Error handling strategies
 - Real-world usage examples
 
+#### [Component Patterns (`component-patterns.md`)](./component-patterns.md)
+Reusable component patterns and design principles:
+- ManagementWrapper component for permission-aware pages
+- DRY principles and code reduction strategies
+- Component composition patterns
+- Migration guides for existing components
+
 #### [Reload System (`reload-system-documentation.md`)](./reload-system-documentation.md)
 Application state management and reload strategies:
 - Data refresh patterns
@@ -71,7 +78,8 @@ Database initialization and test data:
 ### For New Developers
 1. Start with [`auth.md`](./auth.md) to understand the authentication system
 2. Review [`db.md`](./db.md) for database schema and relationships
-3. Learn dialog patterns from [`dialog-manager-docs.md`](./dialog-manager-docs.md)
+3. Learn component patterns from [`component-patterns.md`](./component-patterns.md)
+4. Understand dialog patterns from [`dialog-manager-docs.md`](./dialog-manager-docs.md)
 
 ### For Advanced Features
 1. Implement smart dialogs using [`smart-dialog-flows.md`](./smart-dialog-flows.md)
@@ -114,7 +122,7 @@ When adding new features:
 
 ### When Adding New Features
 - [ ] Document new patterns and best practices
-- [ ] Update relevant documentation files
+- [ ] Update relevant documentation files (especially [`component-patterns.md`](./component-patterns.md) for reusable components)
 - [ ] Include code examples and migration guides
 - [ ] Test documentation examples for accuracy
 

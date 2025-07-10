@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import QuotesListTable from '@/project_components/quotes-list-table';
+import ManagementWrapper from './management-wrapper';
 import type { Language } from '@/lib/db/schema';
 import { toast } from 'sonner';
 import {
@@ -11,7 +12,6 @@ import {
 } from '@/lib/api/quotes';
 import { fetchLanguages } from '@/lib/api/blocks';
 import { useTabReload } from '@/project_components/tabbed-interface-provider';
-import { usePermissionGuard } from '@/hooks/use-permission-guard';
 
 type QuoteListItem = {
   id: string;
@@ -25,7 +25,6 @@ type QuoteListItem = {
 };
 
 const QuotesManagement = () => {
-  const { isLoading: permissionLoading, hasAccess, AccessDeniedComponent } = usePermissionGuard('angebote');
   const [quotes, setQuotes] = useState<QuoteListItem[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
@@ -51,11 +50,8 @@ const QuotesManagement = () => {
   useTabReload('quotes', loadData);
 
   useEffect(() => {
-    // Only load data if user has access
-    if (hasAccess && !permissionLoading) {
-      loadData();
-    }
-  }, [hasAccess, permissionLoading]);
+    loadData();
+  }, []);
 
   const handleSaveQuoteProperties = async (quoteId: string, quoteData: Parameters<typeof saveQuotePropertiesAPI>[1], reloadData: boolean = true) => {
     try {
@@ -141,36 +137,8 @@ const QuotesManagement = () => {
     }
   };
 
-  // Permission checking in render
-  if (permissionLoading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">Angebotsverwaltung</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Prüfe Berechtigungen...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasAccess) {
-    return <AccessDeniedComponent />;
-  }
-
-  if (loading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">Angebotsverwaltung</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Lade Daten...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-2">Angebotsverwaltung</h2>
+    <ManagementWrapper title="Angebotsverwaltung" permission="angebote" loading={loading}>
       <QuotesListTable 
         data={quotes}
         languages={languages}
@@ -179,7 +147,7 @@ const QuotesManagement = () => {
         onCreateQuote={handleCreateQuote}
         onCopyQuote={handleCopyQuote}
       />
-    </div>
+    </ManagementWrapper>
   );
 };
 

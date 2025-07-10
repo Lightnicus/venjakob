@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import ArticleListTable from './article-list-table';
+import ManagementWrapper from './management-wrapper';
 import type { Language } from '@/lib/db/schema';
 import type { ArticleWithCalculations } from '@/lib/db/articles';
 import { toast } from 'sonner';
@@ -14,7 +15,6 @@ import {
 } from '@/lib/api/articles';
 import { fetchLanguages } from '@/lib/api/blocks';
 import { useTabReload } from './tabbed-interface-provider';
-import { usePermissionGuard } from '@/hooks/use-permission-guard';
 
 type ArticleListItem = {
   id: string;
@@ -28,7 +28,6 @@ type ArticleListItem = {
 };
 
 const ArticleManagement = () => {
-  const { isLoading: permissionLoading, hasAccess, AccessDeniedComponent } = usePermissionGuard('artikel');
   const [articles, setArticles] = useState<ArticleListItem[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
@@ -54,11 +53,8 @@ const ArticleManagement = () => {
   useTabReload('articles', loadData);
 
   useEffect(() => {
-    // Only load data if user has access
-    if (hasAccess && !permissionLoading) {
-      loadData();
-    }
-  }, [hasAccess, permissionLoading]);
+    loadData();
+  }, []);
 
   const handleSaveArticleProperties = async (articleId: string, articleData: Parameters<typeof saveArticlePropertiesAPI>[1], reloadData: boolean = true) => {
     try {
@@ -171,36 +167,8 @@ const ArticleManagement = () => {
     }
   };
 
-  // Permission checking in render
-  if (permissionLoading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">Artikelverwaltung</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Prüfe Berechtigungen...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasAccess) {
-    return <AccessDeniedComponent />;
-  }
-
-  if (loading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">Artikelverwaltung</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Lade Daten...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-2">Artikelverwaltung</h2>
+    <ManagementWrapper title="Artikelverwaltung" permission="artikel" loading={loading}>
       <ArticleListTable 
         data={articles}
         languages={languages}
@@ -211,7 +179,7 @@ const ArticleManagement = () => {
         onCreateArticle={handleCreateArticle}
         onCopyArticle={handleCopyArticle}
       />
-    </div>
+    </ManagementWrapper>
   );
 };
 

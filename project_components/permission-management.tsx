@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import PermissionListTable from './permission-list-table';
+import ManagementWrapper from './management-wrapper';
 import type { Permission } from '@/lib/db/schema';
 import { toast } from 'sonner';
 import { useTabReload } from './tabbed-interface-provider';
-import { usePermissionGuard } from '@/hooks/use-permission-guard';
 
 type PermissionListItem = {
   id: string;
@@ -14,7 +14,6 @@ type PermissionListItem = {
 };
 
 const PermissionManagement = () => {
-  const { isLoading: permissionLoading, hasAccess, AccessDeniedComponent } = usePermissionGuard('admin');
   const [permissions, setPermissions] = useState<PermissionListItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -51,11 +50,8 @@ const PermissionManagement = () => {
   useTabReload('permissions', loadData);
 
   useEffect(() => {
-    // Only load data if user has access
-    if (hasAccess && !permissionLoading) {
-      loadData();
-    }
-  }, [hasAccess, permissionLoading]);
+    loadData();
+  }, []);
 
   const handleSavePermissionChanges = async (
     permissionId: string, 
@@ -169,25 +165,8 @@ const PermissionManagement = () => {
     }
   };
 
-  // Permission checking in render
-  if (permissionLoading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">Berechtigungsverwaltung</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Prüfe Berechtigungen...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasAccess) {
-    return <AccessDeniedComponent />;
-  }
-
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-2">Berechtigungsverwaltung</h2>
+    <ManagementWrapper title="Berechtigungsverwaltung" permission="admin" loading={loading}>
       <PermissionListTable 
         data={permissions}
         onSavePermissionChanges={handleSavePermissionChanges}
@@ -195,7 +174,7 @@ const PermissionManagement = () => {
         onCreatePermission={handleCreatePermission}
         onCopyPermission={handleCopyPermission}
       />
-    </div>
+    </ManagementWrapper>
   );
 };
 

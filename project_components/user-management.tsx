@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import UserListTable from './user-list-table';
+import ManagementWrapper from './management-wrapper';
 import type { User, Role } from '@/lib/db/schema';
 import { toast } from 'sonner';
 import { useTabReload } from './tabbed-interface-provider';
-import { usePermissionGuard } from '@/hooks/use-permission-guard';
 
 type UserListItem = {
   id: string;
@@ -14,7 +14,6 @@ type UserListItem = {
 };
 
 const UserManagement = () => {
-  const { isLoading: permissionLoading, hasAccess, AccessDeniedComponent } = usePermissionGuard('admin');
   const [users, setUsers] = useState<UserListItem[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,11 +76,8 @@ const UserManagement = () => {
   useTabReload('users', loadData);
 
   useEffect(() => {
-    // Only load data if user has access
-    if (hasAccess && !permissionLoading) {
-      loadData();
-    }
-  }, [hasAccess, permissionLoading]);
+    loadData();
+  }, []);
 
   const handleSaveUserChanges = async (
     userId: string, 
@@ -212,36 +208,8 @@ const UserManagement = () => {
     }
   };
 
-  // Permission checking in render
-  if (permissionLoading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">Benutzerverwaltung</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Prüfe Berechtigungen...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasAccess) {
-    return <AccessDeniedComponent />;
-  }
-
-  if (loading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">Benutzerverwaltung</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Lade Daten...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-2">Benutzerverwaltung</h2>
+    <ManagementWrapper title="Benutzerverwaltung" permission="admin" loading={loading}>
       <UserListTable 
         data={users}
         roles={roles}
@@ -251,7 +219,7 @@ const UserManagement = () => {
         onCreateUser={handleCreateUser}
         onCopyUser={handleCopyUser}
       />
-    </div>
+    </ManagementWrapper>
   );
 };
 

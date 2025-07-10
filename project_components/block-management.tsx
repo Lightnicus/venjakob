@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import BlockListTable from './block-list-table';
+import ManagementWrapper from './management-wrapper';
 import type { Language } from '@/lib/db/schema';
 import { toast } from 'sonner';
 import {
@@ -13,7 +14,6 @@ import {
 } from '@/lib/api/blocks';
 import type { BlockWithContent } from '@/lib/db/blocks';
 import { useTabReload } from './tabbed-interface-provider';
-import { usePermissionGuard } from '@/hooks/use-permission-guard';
 
 type BlockListItem = {
   id: string;
@@ -27,7 +27,6 @@ type BlockListItem = {
 };
 
 const BlockManagement = () => {
-  const { isLoading: permissionLoading, hasAccess, AccessDeniedComponent } = usePermissionGuard('blocks');
   const [blocks, setBlocks] = useState<BlockListItem[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
@@ -53,27 +52,9 @@ const BlockManagement = () => {
   useTabReload('blocks', loadData);
 
   useEffect(() => {
-    // Only load data if user has access
-    if (hasAccess && !permissionLoading) {
-      loadData();
-    }
-  }, [hasAccess, permissionLoading]);
+    loadData();
+  }, []);
 
-  // Permission checking in render
-  if (permissionLoading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">Blockverwaltung</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Prüfe Berechtigungen...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!hasAccess) {
-    return <AccessDeniedComponent />;
-  }
 
   const handleSaveBlockChanges = async (blockId: string, blockContents: Parameters<typeof saveBlockContentAPI>[1]) => {
     try {
@@ -165,20 +146,8 @@ const BlockManagement = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="p-4">
-        <h2 className="text-2xl font-bold mb-2">Blockverwaltung</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Lade Daten...</div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-2">Blockverwaltung</h2>
+    <ManagementWrapper title="Blockverwaltung" permission="blocks" loading={loading}>
       <BlockListTable 
         data={blocks}
         languages={languages}
@@ -188,7 +157,7 @@ const BlockManagement = () => {
         onCreateBlock={handleCreateBlock}
         onCopyBlock={handleCopyBlock}
       />
-    </div>
+    </ManagementWrapper>
   );
 };
 
