@@ -14,7 +14,7 @@ const ManagementWrapper = ({ title, permission, loading, children }: ManagementW
   const { isLoading: permissionLoading, hasAccess, AccessDeniedComponent, authUser, dbUser } = usePermissionGuard(permission);
 
   // Permission loading state
-  if (permissionLoading && !(authUser && dbUser)) {
+  if (permissionLoading) {
     return (
       <div className="p-4">
         <h2 className="text-2xl font-bold mb-2">{title}</h2>
@@ -24,7 +24,8 @@ const ManagementWrapper = ({ title, permission, loading, children }: ManagementW
       </div>
     );
   } else {
-    if (!hasAccess && !loading) {
+    if (!hasAccess && !loading && authUser && dbUser) {
+        console.log('Access denied', hasAccess, loading, authUser, dbUser);
         return <AccessDeniedComponent />;
       }
     
