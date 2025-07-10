@@ -79,13 +79,15 @@ const QuotesManagement = () => {
     }
   };
 
-  const handleCreateQuote = async (): Promise<QuoteListItem> => {
+  const handleCreateQuote = async (salesOpportunityId?: string): Promise<QuoteListItem> => {
     try {
-      // This would need a sales opportunity ID in a real implementation
-      // For now, we'll use a placeholder
+      if (!salesOpportunityId) {
+        throw new Error('Sales opportunity ID is required');
+      }
+
       const newQuote = await createNewQuoteAPI({
         title: 'Neues Angebot',
-        salesOpportunityId: '00000000-0000-0000-0000-000000000000', // Placeholder - would come from a dialog
+        salesOpportunityId: salesOpportunityId,
         validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
       });
       toast.success('Neues Angebot erstellt');
@@ -103,6 +105,7 @@ const QuotesManagement = () => {
       };
       
       setQuotes(prev => [...prev, quoteListItem]);
+      await loadData(); // Reload to get updated sales opportunity data
       return quoteListItem;
     } catch (error) {
       console.error('Error creating quote:', error);

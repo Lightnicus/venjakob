@@ -161,6 +161,7 @@ const ChooseSalesOpportunityDialogComponent: FC<{
 }> = ({ dialogData }) => {
   const { openDialog } = useDialogManager();
   const [salesOpportunities, setSalesOpportunities] = useState<SaleChance[]>([]);
+  const [originalSalesOpportunities, setOriginalSalesOpportunities] = useState<SalesOpportunityListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load sales opportunities data
@@ -170,10 +171,12 @@ const ChooseSalesOpportunityDialogComponent: FC<{
       const data = await fetchSalesOpportunitiesList();
       const transformedData = data.map(transformSalesOpportunityToSaleChance);
       setSalesOpportunities(transformedData);
+      setOriginalSalesOpportunities(data);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Fehler beim Laden der Verkaufschancen';
       toast.error(errorMessage);
       setSalesOpportunities([]);
+      setOriginalSalesOpportunities([]);
     } finally {
       setIsLoading(false);
     }
@@ -189,10 +192,17 @@ const ChooseSalesOpportunityDialogComponent: FC<{
     const hasExistingQuotes = selectedChance.angebote > 0;
     const isCopyingFromExisting = dialogData?.isCopyingFromExisting ?? false;
     
+    // Find the original sales opportunity data to get the ID
+    const originalSalesOpportunity = originalSalesOpportunities.find(orig => 
+      (orig.keyword || orig.clientName || 'Unbekannt') === selectedChance.titel &&
+      orig.clientName === selectedChance.kunde
+    );
+    
     if (isCopyingFromExisting) {
       // User is copying from existing quote -> go to language selection
       openDialog(QUOTE_DIALOGS.CHOOSE_QUOTE_LANGUAGE, { 
         selectedSalesOpportunity: selectedChance,
+        originalSalesOpportunity: originalSalesOpportunity,
         selectedQuote: dialogData?.selectedQuote,
         isCopyingFromExisting: true 
       });
@@ -200,12 +210,14 @@ const ChooseSalesOpportunityDialogComponent: FC<{
       // No existing quotes for this sales opportunity -> skip to language selection
       openDialog(QUOTE_DIALOGS.CHOOSE_QUOTE_LANGUAGE, { 
         selectedSalesOpportunity: selectedChance,
+        originalSalesOpportunity: originalSalesOpportunity,
         skipVariantQuestion: true 
       });
     } else {
       // Has existing quotes -> ask if user wants to create variant or new version
       openDialog(QUOTE_DIALOGS.QUOTE_AS_NEW_VARIANT, { 
         selectedSalesOpportunity: selectedChance,
+        originalSalesOpportunity: originalSalesOpportunity,
         hasExistingQuotes: true 
       });
     }
@@ -232,6 +244,7 @@ const QuoteAsNewVariantDialogComponent: FC<{
   fromVariantSelection?: boolean;
   dialogData?: { 
     selectedSalesOpportunity?: SaleChance; 
+    originalSalesOpportunity?: SalesOpportunityListItem;
     hasExistingQuotes?: boolean;
   };
 }> = ({ fromVariantSelection, dialogData }) => {
@@ -241,6 +254,7 @@ const QuoteAsNewVariantDialogComponent: FC<{
     // Creating new variant -> go to language selection
     openDialog(QUOTE_DIALOGS.CHOOSE_QUOTE_LANGUAGE, { 
       selectedSalesOpportunity: dialogData?.selectedSalesOpportunity,
+      originalSalesOpportunity: dialogData?.originalSalesOpportunity,
       isNewVariant: true 
     });
   };
@@ -257,7 +271,8 @@ const QuoteAsNewVariantDialogComponent: FC<{
       // Has existing quotes -> show variant selection
       openDialog(QUOTE_DIALOGS.CHOOSE_QUOTE_VARIANT, { 
         isCreatingNewVersion: true,
-        selectedSalesOpportunity: dialogData?.selectedSalesOpportunity 
+        selectedSalesOpportunity: dialogData?.selectedSalesOpportunity,
+        originalSalesOpportunity: dialogData?.originalSalesOpportunity
       });
     }
   };
@@ -266,9 +281,10 @@ const QuoteAsNewVariantDialogComponent: FC<{
 };
 
 const ChooseQuoteLanguageDialogComponent: FC<{ 
-  onCreateQuote: () => Promise<any>;
+  onCreateQuote: (salesOpportunityId?: string) => Promise<any>;
   dialogData?: { 
     selectedSalesOpportunity?: SaleChance; 
+    originalSalesOpportunity?: SalesOpportunityListItem;
     skipVariantQuestion?: boolean;
     isNewVariant?: boolean;
   };
@@ -277,9 +293,13 @@ const ChooseQuoteLanguageDialogComponent: FC<{
 
   const handleErstellen = async () => {
     try {
-      // Pass the sales opportunity context to the create function if needed
-      // This could be enhanced to pass selectedSalesOpportunity.id to the API
-      await onCreateQuote();
+      // Pass the selected sales opportunity ID to the create function
+      const salesOpportunityId = dialogData?.originalSalesOpportunity?.id;
+      if (!salesOpportunityId) {
+        toast.error('Keine Verkaufschance ausgewählt');
+        return;
+      }
+      await onCreateQuote(salesOpportunityId);
       closeDialog();
     } catch (error) {
       console.error('Error creating quote:', error);
@@ -298,6 +318,7 @@ const ChooseQuoteVariantDialogComponent: FC<{
   isCreatingNewVersion?: boolean;
   dialogData?: { 
     selectedSalesOpportunity?: SaleChance;
+    originalSalesOpportunity?: SalesOpportunityListItem;
   };
 }> = ({ isCreatingNewVersion = false, dialogData }) => {
   const { openDialog } = useDialogManager();
