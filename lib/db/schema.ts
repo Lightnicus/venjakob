@@ -241,24 +241,19 @@ export const quotePositions = pgTable('quote_positions', {
   versionId: uuid('version_id').notNull().references(() => quoteVersions.id, { onDelete: 'cascade' }),
   articleId: uuid('article_id').references(() => articles.id),
   blockId: uuid('block_id').references(() => blocks.id),
-  originalArticleId: uuid('original_article_id').references(() => articles.id),
-  originalBlockId: uuid('original_block_id').references(() => blocks.id),
   positionNumber: integer('position_number').notNull(),
   quantity: numeric('quantity').notNull().default('1'),
   unitPrice: numeric('unit_price'),
   totalPrice: numeric('total_price'),
   articleCost: numeric('article_cost'),
   description: text('description'),
+  title: text('title'),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 }, (table) => ({
   // Ensure either articleId or blockId is set, but not both
   articleOrBlockCheck: check('article_or_block_check', 
     sql`(${table.articleId} IS NOT NULL AND ${table.blockId} IS NULL) OR (${table.articleId} IS NULL AND ${table.blockId} IS NOT NULL)`
-  ),
-  // Ensure either originalArticleId or originalBlockId is set, but not both
-  originalArticleOrBlockCheck: check('original_article_or_block_check', 
-    sql`(${table.originalArticleId} IS NOT NULL AND ${table.originalBlockId} IS NULL) OR (${table.originalArticleId} IS NULL AND ${table.originalBlockId} IS NOT NULL)`
   ),
   // Ensure position number is unique within a version
   versionPositionUnique: unique('version_position_unique').on(table.versionId, table.positionNumber),

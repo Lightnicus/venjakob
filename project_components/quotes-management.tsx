@@ -133,6 +133,7 @@ const QuotesManagement = () => {
             title={result.quote.title || result.quote.quoteNumber} 
             quoteId={result.quote.id}
             variantId={result.variant.id}
+            versionId={result.version.id}
             language={languageLabel} 
           />,
           closable: true

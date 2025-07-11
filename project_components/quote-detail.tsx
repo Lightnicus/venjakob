@@ -15,10 +15,11 @@ type QuoteDetailProps = {
   title: string;
   quoteId?: string;
   variantId?: string;
+  versionId?: string;
   language?: string;
 };
 
-const QuoteDetail: React.FC<QuoteDetailProps> = ({ title, quoteId, variantId, language }) => {
+const QuoteDetail: React.FC<QuoteDetailProps> = ({ title, quoteId, variantId, versionId, language }) => {
   const [tab, setTab] = useState('bloecke');
   const [dropdownValue, setDropdownValue] = useState('Kalkulation');
   const [isEditing, setIsEditing] = useState(false);
@@ -29,7 +30,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ title, quoteId, variantId, la
     openNewTab({
       id: `angebot-variante-${Date.now()}`,
       title: `${title} (${newVariantId})`,
-      content: <QuoteDetail title={title} quoteId={quoteId} variantId={newVariantId} language={language} />,
+      content: <QuoteDetail title={title} quoteId={quoteId} variantId={newVariantId} versionId={versionId} language={language} />,
       closable: true
     });
   };
@@ -54,6 +55,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ title, quoteId, variantId, la
         <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-2" tabIndex={0} aria-label="Angebots-Titel">{title}</h2>
         {quoteId && <p className="text-sm text-gray-500 mb-2">Angebot-ID: {quoteId}</p>}
         {variantId && <p className="text-sm text-gray-500 mb-2">Varianten-ID: {variantId}</p>}
+        {versionId && <p className="text-sm text-gray-500 mb-2">Versions-ID: {versionId}</p>}
         {language && <p className="text-sm text-gray-500 mb-2">Sprache: {language}</p>}
         <div className="flex flex-wrap gap-2 items-center mb-2">
           <Button 
@@ -111,7 +113,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ title, quoteId, variantId, la
           <TabsTrigger value="versionen" className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100">Versionen</TabsTrigger>
         </TabsList>
         <TabsContent value="bloecke" className="flex-1 overflow-auto">
-          <InteractiveSplitPanel />
+          <InteractiveSplitPanel initialTreeData={[]} />
         </TabsContent>
         <TabsContent value="eigenschaften" className="flex-1 overflow-auto flex items-center justify-center">
           <OfferProperties {...offerPropertiesData} />

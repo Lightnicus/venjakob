@@ -653,8 +653,6 @@ The project provides comprehensive helper functions for database operations, org
 
 **Quote Numbering**: Quote numbers are generated in the format `ANG-YYYY-XXXX` where YYYY is the current year and XXXX is a zero-padded number starting from the `QUOTE_NUMBER_START` environment variable (defaults to 1). The numbering continues incrementally from `QUOTE_NUMBER_START + existing_quote_count`.
 
-**Note**: Quote positions now support original source tracking with `originalArticleId` and `originalBlockId` fields that reference the source articles or blocks. A check constraint ensures exactly one of these original source fields is set.
-
 #### Advanced Operations
 - `copyQuote(originalQuoteId)` - Copy quote (basic copy, full copy with variants/versions TODO)
 

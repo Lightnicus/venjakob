@@ -3,7 +3,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ArboristTree } from './arborist-tree';
 import { CustomNode, MyTreeNodeData } from './custom-node';
-import initialTreeDataRaw from '@/data/tree-data.json';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { NodeApi, TreeApi } from 'react-arborist';
@@ -21,9 +20,13 @@ import type { Language } from '@/lib/db/schema';
 import { fetchBlocksWithContent, fetchLanguages } from '@/lib/api/blocks';
 import type { BlockWithContent } from '@/lib/db/blocks';
 
-const initialTreeData: MyTreeNodeData[] = initialTreeDataRaw as MyTreeNodeData[];
+interface InteractiveSplitPanelProps {
+  initialTreeData?: MyTreeNodeData[];
+}
 
-const InteractiveSplitPanel: React.FC = () => {
+const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({ 
+  initialTreeData = [] 
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [treeData, setTreeData] = useState<readonly MyTreeNodeData[]>(initialTreeData);

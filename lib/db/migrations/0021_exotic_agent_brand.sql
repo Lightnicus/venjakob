@@ -1,0 +1,1 @@
+ALTER TABLE "quote_positions" ADD COLUMN "title" text;
