@@ -276,6 +276,86 @@ describe('Context-Aware Routing', () => {
 3. **Monitor Performance**: Track data fetching and routing times
 4. **Version Dialog Data**: Plan for backwards compatibility in dialog data structures
 
+## Updated Quote Creation Flow
+
+### Language-Driven Creation (2024 Update)
+
+The quote creation system has been enhanced with multi-parameter creation flows that support complete quote structure creation in single operations:
+
+#### Extended Creation Parameters
+
+```tsx
+const handleCreateQuote = async (
+  salesOpportunityId?: string,
+  quoteId?: string,
+  variantId?: string,
+  versionId?: string,
+  languageId?: string
+): Promise<QuoteListItem> => {
+  // Flow 1: Create new quote with variant and version
+  if (!quoteId && !variantId && !versionId && languageId) {
+    const result = await createQuoteWithVariantAndVersionAPI({
+      title: 'Neues Angebot',
+      salesOpportunityId,
+      validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+      languageId
+    });
+    
+    // Open tab with complete context
+    openNewTab({
+      id: `quote-${result.quote.id}`,
+      title: `${result.quote.title} (${languageLabel})`,
+      content: <QuoteDetail 
+        quoteId={result.quote.id}
+        variantId={result.variant.id}
+        language={languageLabel} 
+      />,
+      closable: true
+    });
+    
+    return result;
+  }
+  
+  // Additional flows for variant/version creation...
+};
+```
+
+#### Language Selection Integration
+
+The `ChooseOfferLanguageDialog` now properly integrates with the creation flow:
+
+```tsx
+const ChooseQuoteLanguageDialogComponent: FC<{ 
+  onCreateQuote: (salesOpportunityId?: string, quoteId?: string, variantId?: string, versionId?: string, languageId?: string) => Promise<any>;
+  dialogData?: DialogData;
+}> = ({ onCreateQuote, dialogData }) => {
+  const handleErstellen = async (languageId: string) => {
+    const salesOpportunityId = dialogData?.originalSalesOpportunity?.id;
+    await onCreateQuote(salesOpportunityId, undefined, undefined, undefined, languageId);
+    closeDialog();
+  };
+
+  return (
+    <ChooseOfferLanguageDialog onErstellen={handleErstellen} />
+  );
+};
+```
+
+#### Key Benefits
+
+1. **Complete Structure Creation**: Quote, variant, and version created in single transaction
+2. **Language-Aware**: Selected language properly flows through to creation
+3. **Context-Rich Tabs**: Opened tabs receive all necessary IDs for proper context
+4. **Environment Configurable**: Quote numbering uses `QUOTE_NUMBER_START` env variable
+
+#### Flow Decision Matrix (Updated)
+
+| Parameters Provided | Result | Created Structure |
+|-------------------|---------|------------------|
+| `salesOpportunityId` + `languageId` | New quote with full structure | Quote → Variant(1) → Version(1) |
+| `quoteId` + `languageId` | New variant for existing quote | Variant(N+1) → Version(1) |
+| `quoteId` + `variantId` | New version for existing variant | Version(N+1) |
+
 ## Future Enhancements
 
 ### Planned Improvements
@@ -284,6 +364,7 @@ describe('Context-Aware Routing', () => {
 - **Analytics Integration**: Track which paths users take through flows
 - **A/B Testing**: Test different routing strategies
 - **Undo/Redo**: Allow users to change their path through the flow
+- **Smart Variant/Version Creation**: Implement remaining creation flows (Flows 2 & 3)
 
 ### Extension Points
 - **Custom Validators**: Allow custom data validation logic

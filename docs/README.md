@@ -43,6 +43,13 @@ Multi-user edit conflict prevention system:
 - Lock lifecycle management
 - User interface integration
 
+#### Quote Creation System
+Extended quote creation workflows with support for:
+- Multi-parameter creation flows (quote → variant → version)
+- Language-driven creation with proper dialog integration
+- Environment-configurable quote numbering
+- Automatic tab opening with complete context
+
 ### Development Tools & Hooks
 
 #### [useEditLock Hook (`use-edit-lock.md`)](./use-edit-lock.md)

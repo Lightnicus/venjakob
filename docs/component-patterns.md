@@ -196,11 +196,101 @@ All management components follow the same implementation pattern:
 3. **Error Handling**: Implement consistent error handling across components
 4. **Performance**: Avoid unnecessary re-renders with proper state management
 
+## Extended Creation Patterns
+
+### Multi-Parameter Creation Functions
+
+For complex entities with hierarchical relationships (like quotes → variants → versions), use extended parameter signatures that support multiple creation flows:
+
+```typescript
+// Extended signature supports multiple creation scenarios
+const handleCreateQuote = async (
+  salesOpportunityId?: string,  // Required base parameter
+  quoteId?: string,            // Optional: create variant for existing quote
+  variantId?: string,          // Optional: create version for existing variant
+  versionId?: string,          // Reserved for future flows
+  languageId?: string          // Optional: language selection context
+): Promise<QuoteListItem> => {
+  // Flow 1: Complete new structure
+  if (!quoteId && !variantId && !versionId && languageId) {
+    return await createCompleteQuoteStructure(salesOpportunityId, languageId);
+  }
+  
+  // Flow 2: New variant for existing quote
+  if (quoteId && !variantId && !versionId && languageId) {
+    return await createVariantForExistingQuote(quoteId, languageId);
+  }
+  
+  // Flow 3: New version for existing variant
+  if (quoteId && variantId && !versionId) {
+    return await createVersionForExistingVariant(variantId);
+  }
+  
+  // Fallback for backward compatibility
+  return await createBasicQuote(salesOpportunityId);
+};
+```
+
+#### Key Principles
+
+1. **Progressive Enhancement**: Start with basic functionality, add complexity gradually
+2. **Backward Compatibility**: Always maintain existing function signatures
+3. **Clear Flow Logic**: Use parameter presence to determine creation flow
+4. **Single Responsibility**: Each flow handles one specific creation scenario
+
+#### Dialog Integration Pattern
+
+For creation flows involving user input dialogs:
+
+```typescript
+// Dialog component passes selected data to creation function
+const LanguageSelectionDialog: FC<{
+  onCreateQuote: (salesOpportunityId?: string, quoteId?: string, variantId?: string, versionId?: string, languageId?: string) => Promise<any>;
+}> = ({ onCreateQuote }) => {
+  const handleLanguageSelected = async (languageId: string) => {
+    // Pass language ID to creation function
+    await onCreateQuote(salesOpportunityId, undefined, undefined, undefined, languageId);
+    closeDialog();
+  };
+  
+  return <LanguageSelector onSelect={handleLanguageSelected} />;
+};
+```
+
+#### Tab Opening with Context
+
+After successful creation, open tabs with complete context:
+
+```typescript
+// Open tab with all necessary IDs for proper context
+const result = await createQuoteWithVariantAndVersion(data);
+
+openNewTab({
+  id: `quote-${result.quote.id}`,
+  title: `${result.quote.title} (${languageLabel})`,
+  content: <QuoteDetail 
+    quoteId={result.quote.id}
+    variantId={result.variant.id}     // Pass created variant ID
+    language={languageLabel} 
+  />,
+  closable: true
+});
+```
+
+#### Benefits
+
+- **Flexibility**: Single function handles multiple creation scenarios
+- **Maintainability**: Clear parameter-based flow control
+- **User Experience**: Context-aware tab opening with proper data
+- **Type Safety**: Full TypeScript support for all parameters
+
 ## Related Documentation
 
 - [Authentication System](./auth.md) - Server-side authentication utilities
 - [Dialog Manager System](./dialog-manager-docs.md) - Modal and dialog patterns
+- [Smart Dialog Flows](./smart-dialog-flows.md) - Advanced dialog routing patterns
 - [useEditLock Hook](./use-edit-lock.md) - Edit conflict prevention patterns
+- [Database Schema](./db.md) - Database operations and quote creation functions
 
 ---
 

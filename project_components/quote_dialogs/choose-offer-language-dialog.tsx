@@ -3,22 +3,19 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { ManagedDialog } from '@/project_components/managed-dialog';
 import { useDialogManager } from './dialog-manager';
-import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
-import OfferDetail from '@/project_components/offer-detail';
 import { fetchLanguages } from '@/lib/api/blocks';
 import type { Language } from '@/lib/db/schema';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
 type ChooseOfferLanguageDialogProps = {
-  onErstellen?: () => void;
+  onErstellen?: (languageId: string) => void;
 };
 
 const ChooseOfferLanguageDialog: FC<ChooseOfferLanguageDialogProps> = ({ onErstellen }) => {
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
   const [language, setLanguage] = useState('');
-  const { openNewTab } = useTabbedInterface();
   const { closeDialog } = useDialogManager();
 
   // Load languages from database
@@ -53,28 +50,19 @@ const ChooseOfferLanguageDialog: FC<ChooseOfferLanguageDialogProps> = ({ onErste
       return;
     }
 
-    // Call the original onErstellen callback if provided
+    // Get the selected language
+    const selectedLanguage = languages.find(l => l.value === language);
+    if (!selectedLanguage) {
+      toast.error('Ausgewählte Sprache nicht gefunden');
+      return;
+    }
+
+    // Call the original onErstellen callback if provided with language ID
     if (onErstellen) {
-      onErstellen();
+      onErstellen(selectedLanguage.id);
     }
     
-    // Get the selected language label
-    const selectedLanguage = languages.find(l => l.value === language);
-    const languageLabel = selectedLanguage?.label || 'Unbekannt';
-    
-    // Open a new tab with OfferDetail
-    const tabId = `offer-${Date.now()}`;
-    openNewTab({
-      id: tabId,
-      title: `Neues Angebot (${languageLabel})`,
-      content: <OfferDetail 
-        title={`Neues Angebot in ${languageLabel}`} 
-        language={languageLabel} 
-      />,
-      closable: true
-    });
-    
-    // Close the dialog
+    // Close the dialog - tab opening will be handled by QuotesManagement
     closeDialog();
   };
 

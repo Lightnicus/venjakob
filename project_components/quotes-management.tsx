@@ -8,10 +8,12 @@ import {
   saveQuotePropertiesAPI,
   deleteQuoteAPI,
   createNewQuoteAPI,
+  createQuoteWithVariantAndVersionAPI,
   copyQuoteAPI,
 } from '@/lib/api/quotes';
 import { fetchLanguages } from '@/lib/api/blocks';
-import { useTabReload } from '@/project_components/tabbed-interface-provider';
+import { useTabReload, useTabbedInterface } from '@/project_components/tabbed-interface-provider';
+import QuoteDetail from '@/project_components/quote-detail';
 
 type QuoteListItem = {
   id: string;
@@ -28,6 +30,7 @@ const QuotesManagement = () => {
   const [quotes, setQuotes] = useState<QuoteListItem[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
+  const { openNewTab } = useTabbedInterface();
 
   const loadData = async () => {
     try {
@@ -79,12 +82,80 @@ const QuotesManagement = () => {
     }
   };
 
-  const handleCreateQuote = async (salesOpportunityId?: string): Promise<QuoteListItem> => {
+  const handleCreateQuote = async (
+    salesOpportunityId?: string,
+    quoteId?: string,
+    variantId?: string,
+    versionId?: string,
+    languageId?: string
+  ): Promise<QuoteListItem> => {
     try {
       if (!salesOpportunityId) {
         throw new Error('Sales opportunity ID is required');
       }
 
+      // Flow 1: Create new quote with variant and version (none of the new parameters supplied)
+      if (!quoteId && !variantId && !versionId && languageId) {
+        const result = await createQuoteWithVariantAndVersionAPI({
+          title: 'Neues Angebot',
+          salesOpportunityId: salesOpportunityId,
+          validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days from now
+          languageId: languageId
+        });
+        
+        toast.success('Neues Angebot mit Variante und Version erstellt');
+        
+        // Convert to QuoteListItem format
+        const quoteListItem: QuoteListItem = {
+          id: result.quote.id,
+          quoteNumber: result.quote.quoteNumber,
+          title: result.quote.title,
+          salesOpportunityKeyword: null, // New quotes don't have sales opportunity data loaded
+          variantsCount: 1, // We just created one variant
+          validUntil: result.quote.validUntil,
+          createdAt: result.quote.createdAt,
+          updatedAt: result.quote.updatedAt
+        };
+        
+        setQuotes(prev => [...prev, quoteListItem]);
+        await loadData(); // Reload to get updated sales opportunity data
+        
+        // Get the selected language label for tab title
+        const selectedLanguage = languages.find(l => l.id === languageId);
+        const languageLabel = selectedLanguage?.label || 'Unbekannt';
+        
+        // Open a new tab with QuoteDetail
+        const tabId = `quote-${result.quote.id}`;
+        openNewTab({
+          id: tabId,
+          title: `${result.quote.title || result.quote.quoteNumber} (${languageLabel})`,
+          content: <QuoteDetail 
+            title={result.quote.title || result.quote.quoteNumber} 
+            quoteId={result.quote.id}
+            variantId={result.variant.id}
+            language={languageLabel} 
+          />,
+          closable: true
+        });
+        
+        return quoteListItem;
+      }
+
+      // Flow 2: Create new variant for existing quote (quoteId supplied, but not variantId/versionId)
+      if (quoteId && !variantId && !versionId && languageId) {
+        // TODO: Implement variant creation flow
+        toast.info('Erstelle neue Variante für vorhandenes Angebot (wird später implementiert)');
+        throw new Error('Variant creation flow not yet implemented');
+      }
+
+      // Flow 3: Create new version for existing variant (quoteId and variantId supplied, but not versionId)
+      if (quoteId && variantId && !versionId) {
+        // TODO: Implement version creation flow
+        toast.info('Erstelle neue Version für vorhandene Variante (wird später implementiert)');
+        throw new Error('Version creation flow not yet implemented');
+      }
+
+      // Fallback to original flow for backward compatibility
       const newQuote = await createNewQuoteAPI({
         title: 'Neues Angebot',
         salesOpportunityId: salesOpportunityId,

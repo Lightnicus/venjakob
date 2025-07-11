@@ -40,7 +40,7 @@ interface DataAvailability {
 }
 
 interface QuoteDialogsProps {
-  onCreateQuote: () => Promise<any>;
+  onCreateQuote: (salesOpportunityId?: string, quoteId?: string, variantId?: string, versionId?: string, languageId?: string) => Promise<any>;
   children: React.ReactNode;
 }
 
@@ -281,7 +281,7 @@ const QuoteAsNewVariantDialogComponent: FC<{
 };
 
 const ChooseQuoteLanguageDialogComponent: FC<{ 
-  onCreateQuote: (salesOpportunityId?: string) => Promise<any>;
+  onCreateQuote: (salesOpportunityId?: string, quoteId?: string, variantId?: string, versionId?: string, languageId?: string) => Promise<any>;
   dialogData?: { 
     selectedSalesOpportunity?: SaleChance; 
     originalSalesOpportunity?: SalesOpportunityListItem;
@@ -291,15 +291,15 @@ const ChooseQuoteLanguageDialogComponent: FC<{
 }> = ({ onCreateQuote, dialogData }) => {
   const { closeDialog } = useDialogManager();
 
-  const handleErstellen = async () => {
+  const handleErstellen = async (languageId: string) => {
     try {
-      // Pass the selected sales opportunity ID to the create function
+      // Pass the selected sales opportunity ID and language ID to the create function
       const salesOpportunityId = dialogData?.originalSalesOpportunity?.id;
       if (!salesOpportunityId) {
         toast.error('Keine Verkaufschance ausgewählt');
         return;
       }
-      await onCreateQuote(salesOpportunityId);
+      await onCreateQuote(salesOpportunityId, undefined, undefined, undefined, languageId);
       closeDialog();
     } catch (error) {
       console.error('Error creating quote:', error);
@@ -347,13 +347,14 @@ const ChooseQuoteVariantDialogComponent: FC<{
   );
 };
 
-const ConfirmOverwriteVariantDialogComponent: FC<{ onCreateQuote: () => Promise<any> }> = ({
+const ConfirmOverwriteVariantDialogComponent: FC<{ onCreateQuote: (salesOpportunityId?: string, quoteId?: string, variantId?: string, versionId?: string, languageId?: string) => Promise<any> }> = ({
   onCreateQuote
 }) => {
   const { closeDialog } = useDialogManager();
 
   const handleConfirm = async () => {
     try {
+      // TODO: Pass appropriate parameters for variant creation
       await onCreateQuote();
       closeDialog();
     } catch (error) {
@@ -384,7 +385,7 @@ const VersionsForQuoteVariantDialogComponent: FC<{
 };
 
 // Dialog configuration for DialogRenderer
-const createQuoteDialogComponents = (onCreateQuote: () => Promise<any>) => [
+const createQuoteDialogComponents = (onCreateQuote: (salesOpportunityId?: string, quoteId?: string, variantId?: string, versionId?: string, languageId?: string) => Promise<any>) => [
   { id: QUOTE_DIALOGS.SMART_ENTRY, component: SmartEntryDialogComponent },
   { 
     id: QUOTE_DIALOGS.NEW_QUOTE, 

@@ -46,6 +46,30 @@ export async function createNewQuoteAPI(quoteData: {
   return response.json();
 }
 
+// Create a new quote with variant and version
+export async function createQuoteWithVariantAndVersionAPI(quoteData: {
+  title: string;
+  salesOpportunityId: string;
+  validUntil?: string;
+  languageId: string;
+}): Promise<{
+  quote: Quote;
+  variant: any;
+  version: any;
+}> {
+  const response = await fetch('/api/quotes/with-variant-version', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(quoteData),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create quote with variant and version');
+  }
+  return response.json();
+}
+
 // Save quote properties
 export async function saveQuotePropertiesAPI(
   quoteId: string,

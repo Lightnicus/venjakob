@@ -23,6 +23,9 @@ SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
 
 # Database Configuration
 DATABASE_URL=your_supabase_database_url_here
+
+# Quote Configuration
+QUOTE_NUMBER_START=1000  # Starting number for quote numbering (ANG-YYYY-XXXX)
 ```
 
 ### 3. Database Migration
@@ -627,20 +630,28 @@ The project provides comprehensive helper functions for database operations, org
 - `getQuoteWithDetails(quoteId)` - Get complete quote with variants, versions, and positions
 - `getQuotesList()` - Optimized query for table displays with variant counts
 - `createQuote(quoteData)` - Create new quote
+- `createNewQuote(quoteData)` - Create new quote with automatic numbering (uses QUOTE_NUMBER_START env variable)
+- `createQuoteWithVariantAndVersion(quoteData)` - Create complete quote structure with first variant and version in single transaction
 - `saveQuote(quoteId, quoteData)` - Update quote with edit lock check
 - `deleteQuote(quoteId)` - Delete quote and all related data (cascade)
 
 #### Variant Management
 - `getQuoteVariantsByQuote(quoteId)` - Get variants for a quote with versions
 - `createQuoteVariant(variantData)` - Create new quote variant
+- `getNextVariantDescriptor(quoteId)` - Get next variant descriptor number ("1", "2", "3", etc.)
+- `createVariantForQuote(quoteId, languageId)` - Create new variant with auto-incremented descriptor and first version
 
 #### Version Management
 - `getQuoteVersionsByVariant(variantId)` - Get versions for a variant with positions
 - `createQuoteVersion(versionData)` - Create new version (handles latest version flag)
+- `getNextVersionNumber(variantId)` - Get next version number ("1", "2", "3", etc.)
+- `createVersionForVariant(variantId)` - Create new version with auto-incremented number and proper latest flag handling
 
 #### Position Management
 - `getQuotePositionsByVersion(versionId)` - Get positions for a version with article/block details
 - `addQuotePosition(positionData)` - Add position to quote version
+
+**Quote Numbering**: Quote numbers are generated in the format `ANG-YYYY-XXXX` where YYYY is the current year and XXXX is a zero-padded number starting from the `QUOTE_NUMBER_START` environment variable (defaults to 1). The numbering continues incrementally from `QUOTE_NUMBER_START + existing_quote_count`.
 
 **Note**: Quote positions now support original source tracking with `originalArticleId` and `originalBlockId` fields that reference the source articles or blocks. A check constraint ensures exactly one of these original source fields is set.
 

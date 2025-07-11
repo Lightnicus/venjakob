@@ -123,9 +123,10 @@ export async function createNewQuote(quoteData: {
       throw new Error('Benutzer nicht authentifiziert');
     }
 
-    // Generate a unique quote number
+    // Generate a unique quote number using env variable as starting point
     const quoteCount = await db.select({ count: count(quotes.id) }).from(quotes);
-    const nextNumber = (Number(quoteCount[0]?.count || 0) + 1);
+    const startNumber = Number(process.env.QUOTE_NUMBER_START || 1);
+    const nextNumber = startNumber + (Number(quoteCount[0]?.count || 0));
     const quoteNumber = `ANG-${new Date().getFullYear()}-${String(nextNumber).padStart(4, '0')}`;
 
     const newQuoteData = {
@@ -713,6 +714,189 @@ export async function addAsPosition(
   } catch (error) {
     console.error('Error adding position:', error);
     throw new Error('Failed to add position');
+  }
+}
+
+// Get next variant descriptor for a quote (returns "1", "2", "3", etc.)
+export async function getNextVariantDescriptor(quoteId: string): Promise<string> {
+  try {
+    const [maxVariantResult] = await db
+      .select({ maxDescriptor: quoteVariants.variantDescriptor })
+      .from(quoteVariants)
+      .where(eq(quoteVariants.quoteId, quoteId))
+      .orderBy(desc(sql`CAST(${quoteVariants.variantDescriptor} AS INTEGER)`))
+      .limit(1);
+
+    const maxDescriptor = Number(maxVariantResult?.maxDescriptor || 0);
+    return String(maxDescriptor + 1);
+  } catch (error) {
+    console.error('Error getting next variant descriptor:', error);
+    throw new Error('Failed to get next variant descriptor');
+  }
+}
+
+// Get next version number for a variant (returns "1", "2", "3", etc.)
+export async function getNextVersionNumber(variantId: string): Promise<string> {
+  try {
+    const [maxVersionResult] = await db
+      .select({ maxVersion: quoteVersions.versionNumber })
+      .from(quoteVersions)
+      .where(eq(quoteVersions.variantId, variantId))
+      .orderBy(desc(sql`CAST(${quoteVersions.versionNumber} AS INTEGER)`))
+      .limit(1);
+
+    const maxVersion = Number(maxVersionResult?.maxVersion || 0);
+    return String(maxVersion + 1);
+  } catch (error) {
+    console.error('Error getting next version number:', error);
+    throw new Error('Failed to get next version number');
+  }
+}
+
+// Create a complete quote with first variant and version
+export async function createQuoteWithVariantAndVersion(quoteData: {
+  title: string;
+  salesOpportunityId: string;
+  validUntil?: string;
+  languageId: string;
+}): Promise<{
+  quote: Quote;
+  variant: QuoteVariant;
+  version: QuoteVersion;
+}> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    return await db.transaction(async (tx) => {
+      // Create quote
+      const quoteCount = await tx.select({ count: count(quotes.id) }).from(quotes);
+      const startNumber = Number(process.env.QUOTE_NUMBER_START || 1);
+      const nextNumber = startNumber + (Number(quoteCount[0]?.count || 0));
+      const quoteNumber = `ANG-${new Date().getFullYear()}-${String(nextNumber).padStart(4, '0')}`;
+
+      const [newQuote] = await tx.insert(quotes).values({
+        ...quoteData,
+        quoteNumber,
+        createdBy: user.dbUser.id,
+        modifiedBy: user.dbUser.id,
+      }).returning();
+
+      // Create first variant with descriptor "1"
+      const [newVariant] = await tx.insert(quoteVariants).values({
+        quoteId: newQuote.id,
+        variantDescriptor: "1",
+        languageId: quoteData.languageId,
+        isDefault: true,
+        createdBy: user.dbUser.id,
+        modifiedBy: user.dbUser.id,
+      }).returning();
+
+      // Create first version with number "1"
+      const [newVersion] = await tx.insert(quoteVersions).values({
+        variantId: newVariant.id,
+        versionNumber: "1",
+        isLatest: true,
+        createdBy: user.dbUser.id,
+        modifiedBy: user.dbUser.id,
+      }).returning();
+
+      return {
+        quote: newQuote,
+        variant: newVariant,
+        version: newVersion,
+      };
+    });
+  } catch (error) {
+    console.error('Error creating quote with variant and version:', error);
+    throw new Error('Failed to create quote with variant and version');
+  }
+}
+
+// Create a new variant for an existing quote
+export async function createVariantForQuote(
+  quoteId: string,
+  languageId: string
+): Promise<{
+  variant: QuoteVariant;
+  version: QuoteVersion;
+}> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    return await db.transaction(async (tx) => {
+      // Get next variant descriptor
+      const nextDescriptor = await getNextVariantDescriptor(quoteId);
+
+      // Create new variant
+      const [newVariant] = await tx.insert(quoteVariants).values({
+        quoteId,
+        variantDescriptor: nextDescriptor,
+        languageId,
+        isDefault: false,
+        createdBy: user.dbUser.id,
+        modifiedBy: user.dbUser.id,
+      }).returning();
+
+      // Create first version for this variant
+      const [newVersion] = await tx.insert(quoteVersions).values({
+        variantId: newVariant.id,
+        versionNumber: "1",
+        isLatest: true,
+        createdBy: user.dbUser.id,
+        modifiedBy: user.dbUser.id,
+      }).returning();
+
+      return {
+        variant: newVariant,
+        version: newVersion,
+      };
+    });
+  } catch (error) {
+    console.error('Error creating variant for quote:', error);
+    throw new Error('Failed to create variant for quote');
+  }
+}
+
+// Create a new version for an existing variant
+export async function createVersionForVariant(
+  variantId: string
+): Promise<QuoteVersion> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    return await db.transaction(async (tx) => {
+      // Get next version number
+      const nextVersionNumber = await getNextVersionNumber(variantId);
+
+      // Unmark all other versions as latest
+      await tx
+        .update(quoteVersions)
+        .set({ isLatest: false })
+        .where(eq(quoteVersions.variantId, variantId));
+
+      // Create new version
+      const [newVersion] = await tx.insert(quoteVersions).values({
+        variantId,
+        versionNumber: nextVersionNumber,
+        isLatest: true,
+        createdBy: user.dbUser.id,
+        modifiedBy: user.dbUser.id,
+      }).returning();
+
+      return newVersion;
+    });
+  } catch (error) {
+    console.error('Error creating version for variant:', error);
+    throw new Error('Failed to create version for variant');
   }
 }
 
