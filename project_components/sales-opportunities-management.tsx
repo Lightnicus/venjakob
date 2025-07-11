@@ -17,7 +17,7 @@ const SalesOpportunitiesManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   // Load sales opportunities data
-  const loadSalesOpportunities = async () => {
+  const loadSalesOpportunities = useCallback(async () => {
     try {
       setIsLoading(true);
       const data = await fetchSalesOpportunitiesList();
@@ -28,7 +28,7 @@ const SalesOpportunitiesManagement = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   // Set up reload functionality for sales opportunities
   useTabReload('sales-opportunities', loadSalesOpportunities);

@@ -17,7 +17,11 @@ import { useTabbedInterface } from '@/project_components/tabbed-interface-provid
 import { toast } from 'sonner';
 import { Edit3, Save } from 'lucide-react';
 import type { MyTreeNodeData } from '@/project_components/custom-node';
-import { fetchQuotePositionsByVersion } from '@/lib/api/quotes';
+import { 
+  fetchQuotePositionsByVersion, 
+  fetchLatestVariantForQuote, 
+  fetchLatestVersionForVariant 
+} from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 
 type QuoteDetailProps = {
@@ -40,6 +44,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [treeData, setTreeData] = useState<MyTreeNodeData[]>([]);
   const [loadingPositions, setLoadingPositions] = useState(false);
+  const [resolvedVariantId, setResolvedVariantId] = useState<string | undefined>(variantId);
+  const [resolvedVersionId, setResolvedVersionId] = useState<string | undefined>(versionId);
+  const [loadingIds, setLoadingIds] = useState(false);
   const { openNewTab } = useTabbedInterface();
 
   // Transform quote positions into tree data format
@@ -58,12 +65,54 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     return treeData;
   };
 
-  // Load quote positions when versionId changes
+  // Resolve missing variantId and versionId
+  useEffect(() => {
+    const resolveIds = async () => {
+      if (!quoteId) return;
+
+      try {
+        setLoadingIds(true);
+        let currentVariantId = variantId;
+        let currentVersionId = versionId;
+
+        // If no variantId and no versionId, fetch latest variant and its latest version
+        if (!variantId && !versionId) {
+          const latestVariant = await fetchLatestVariantForQuote(quoteId);
+          if (latestVariant) {
+            currentVariantId = latestVariant.id;
+            const latestVersion = await fetchLatestVersionForVariant(latestVariant.id);
+            if (latestVersion) {
+              currentVersionId = latestVersion.id;
+            }
+          }
+        }
+        // If variantId is provided but no versionId, fetch latest version for that variant
+        else if (variantId && !versionId) {
+          const latestVersion = await fetchLatestVersionForVariant(variantId);
+          if (latestVersion) {
+            currentVersionId = latestVersion.id;
+          }
+        }
+
+        setResolvedVariantId(currentVariantId);
+        setResolvedVersionId(currentVersionId);
+      } catch (error) {
+        console.error('Error resolving variant/version IDs:', error);
+        toast.error('Fehler beim Laden der Varianten-/Versionsdaten');
+      } finally {
+        setLoadingIds(false);
+      }
+    };
+
+    resolveIds();
+  }, [quoteId, variantId, versionId]);
+
+  // Load quote positions when resolvedVersionId changes
   useEffect(() => {
     const loadPositions = async () => {
-      if (!versionId) {
+      if (!resolvedVersionId) {
         console.log(
-          'QuoteDetail: No versionId provided, setting empty tree data',
+          'QuoteDetail: No resolvedVersionId available, setting empty tree data',
         );
         setTreeData([]);
         return;
@@ -71,7 +120,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
 
       try {
         setLoadingPositions(true);
-        const positions = await fetchQuotePositionsByVersion(versionId);
+        const positions = await fetchQuotePositionsByVersion(resolvedVersionId);
         const transformedData = transformPositionsToTreeData(positions);
         setTreeData(transformedData);
       } catch (error) {
@@ -84,10 +133,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     };
 
     loadPositions();
-  }, [versionId]);
+  }, [resolvedVersionId]);
 
   const handleCreateVariant = () => {
-    const newVariantId = variantId ? `${variantId}-neu` : 'V1';
+    const newVariantId = resolvedVariantId ? `${resolvedVariantId}-neu` : 'V1';
     openNewTab({
       id: `angebot-variante-${Date.now()}`,
       title: `${title} (${newVariantId})`,
@@ -96,7 +145,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           title={title}
           quoteId={quoteId}
           variantId={newVariantId}
-          versionId={versionId}
+          versionId={resolvedVersionId}
           language={language}
         />
       ),
@@ -131,13 +180,21 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         {quoteId && (
           <p className="text-sm text-gray-500 mb-2">Angebot-ID: {quoteId}</p>
         )}
-        {variantId && (
-          <p className="text-sm text-gray-500 mb-2">
-            Varianten-ID: {variantId}
-          </p>
-        )}
-        {versionId && (
-          <p className="text-sm text-gray-500 mb-2">Versions-ID: {versionId}</p>
+        {loadingIds ? (
+          <p className="text-sm text-gray-500 mb-2">Lade Varianten- und Versionsdaten...</p>
+        ) : (
+          <>
+            {resolvedVariantId && (
+              <p className="text-sm text-gray-500 mb-2">
+                Varianten-ID: {resolvedVariantId} {!variantId && '(automatisch ermittelt)'}
+              </p>
+            )}
+            {resolvedVersionId && (
+              <p className="text-sm text-gray-500 mb-2">
+                Versions-ID: {resolvedVersionId} {!versionId && '(automatisch ermittelt)'}
+              </p>
+            )}
+          </>
         )}
         {language && (
           <p className="text-sm text-gray-500 mb-2">Sprache: {language}</p>
@@ -236,7 +293,13 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="bloecke" className="flex-1 overflow-auto">
-          <InteractiveSplitPanel initialTreeData={treeData} />
+          {loadingPositions || loadingIds ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-500">Lade Angebotspositionen...</p>
+            </div>
+          ) : (
+            <InteractiveSplitPanel initialTreeData={treeData} />
+          )}
         </TabsContent>
         <TabsContent
           value="eigenschaften"

@@ -760,6 +760,55 @@ export async function getNextVersionNumber(variantId: string): Promise<string> {
   }
 }
 
+// Get latest variant for a quote (highest variant descriptor)
+export async function getLatestVariantForQuote(quoteId: string): Promise<QuoteVariant | null> {
+  try {
+    const [latestVariant] = await db
+      .select()
+      .from(quoteVariants)
+      .where(eq(quoteVariants.quoteId, quoteId))
+      .orderBy(desc(sql`CAST(${quoteVariants.variantDescriptor} AS INTEGER)`))
+      .limit(1);
+
+    return latestVariant || null;
+  } catch (error) {
+    console.error('Error getting latest variant:', error);
+    throw new Error('Failed to get latest variant');
+  }
+}
+
+// Get latest version for a variant (either marked as latest or highest version number)
+export async function getLatestVersionForVariant(variantId: string): Promise<QuoteVersion | null> {
+  try {
+    // First try to get the version marked as latest
+    const [latestVersion] = await db
+      .select()
+      .from(quoteVersions)
+      .where(and(
+        eq(quoteVersions.variantId, variantId),
+        eq(quoteVersions.isLatest, true)
+      ))
+      .limit(1);
+
+    if (latestVersion) {
+      return latestVersion;
+    }
+
+    // If no version is marked as latest, get the one with highest version number
+    const [highestVersion] = await db
+      .select()
+      .from(quoteVersions)
+      .where(eq(quoteVersions.variantId, variantId))
+      .orderBy(desc(sql`CAST(${quoteVersions.versionNumber} AS INTEGER)`))
+      .limit(1);
+
+    return highestVersion || null;
+  } catch (error) {
+    console.error('Error getting latest version:', error);
+    throw new Error('Failed to get latest version');
+  }
+}
+
 // Helper function to create quote positions for mandatory and standard blocks
 async function createStandardBlockPositions(
   tx: any,

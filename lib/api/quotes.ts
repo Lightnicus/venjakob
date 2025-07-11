@@ -120,4 +120,22 @@ export async function fetchQuotePositionsByVersion(versionId: string): Promise<Q
     throw new Error('Failed to fetch quote positions');
   }
   return response.json();
+}
+
+// Fetch latest variant for a quote
+export async function fetchLatestVariantForQuote(quoteId: string): Promise<any | null> {
+  const response = await fetch(`/api/quotes/${quoteId}/latest-variant`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch latest variant');
+  }
+  return response.json();
+}
+
+// Fetch latest version for a variant
+export async function fetchLatestVersionForVariant(variantId: string): Promise<any | null> {
+  const response = await fetch(`/api/quotes/variants/${variantId}/latest-version`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch latest version');
+  }
+  return response.json();
 } 
