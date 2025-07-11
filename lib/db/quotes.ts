@@ -8,6 +8,7 @@ import {
   salesOpportunities,
   articles,
   blocks,
+  blockContent,
   languages,
   users,
   changeHistory,
@@ -666,34 +667,44 @@ export async function addAsPosition(
 
     const nextPositionNumber = (maxPositionResult?.maxPosition || 0) + 1;
 
-    // Copy the article or block and create position data
+    // Create position data referencing original articles/blocks directly
     let positionData;
     
     if (articleId) {
-      const copiedArticle = await copyArticle(articleId);
+      // Get article details for pricing
+      const [article] = await db
+        .select()
+        .from(articles)
+        .where(eq(articles.id, articleId));
+
+      if (!article) {
+        throw new Error('Article not found');
+      }
+
       positionData = {
         versionId,
-        articleId: copiedArticle.id,
+        articleId: article.id,
         blockId: null,
         positionNumber: nextPositionNumber,
         quantity: '1',
-        unitPrice: copiedArticle.price,
-        totalPrice: copiedArticle.price,
+        unitPrice: article.price,
+        totalPrice: article.price,
         articleCost: null,
         description: null,
+        title: null,
       };
     } else if (blockId) {
-      const copiedBlock = await copyBlock(blockId);
       positionData = {
         versionId,
         articleId: null,
-        blockId: copiedBlock.id,
+        blockId: blockId,
         positionNumber: nextPositionNumber,
         quantity: '1',
         unitPrice: null,
         totalPrice: null,
         articleCost: null,
         description: null,
+        title: null,
       };
     } else {
       throw new Error('Either articleId or blockId must be provided');
@@ -749,6 +760,62 @@ export async function getNextVersionNumber(variantId: string): Promise<string> {
   }
 }
 
+// Helper function to create quote positions for mandatory and standard blocks
+async function createStandardBlockPositions(
+  tx: any,
+  versionId: string,
+  languageId: string
+): Promise<void> {
+  // Get all mandatory and standard blocks, ordered by position then name
+  const standardBlocks = await tx
+    .select({
+      id: blocks.id,
+      name: blocks.name,
+      position: blocks.position,
+      standard: blocks.standard,
+      mandatory: blocks.mandatory,
+    })
+    .from(blocks)
+    .where(or(eq(blocks.standard, true), eq(blocks.mandatory, true)))
+    .orderBy(asc(blocks.position), asc(blocks.name));
+
+  // For each block, create a quote position
+  let positionNumber = 1;
+  
+  for (const block of standardBlocks) {
+    // Get block content for the specified language
+    const [content] = await tx
+      .select({
+        title: blockContent.title,
+        content: blockContent.content,
+      })
+      .from(blockContent)
+      .where(
+        and(
+          eq(blockContent.blockId, block.id),
+          eq(blockContent.languageId, languageId)
+        )
+      )
+      .limit(1);
+
+    // Create quote position with block reference
+    await tx.insert(quotePositions).values({
+      versionId: versionId,
+      blockId: block.id,
+      articleId: null,
+      positionNumber: positionNumber,
+      quantity: '1',
+      unitPrice: null,
+      totalPrice: null,
+      articleCost: null,
+      title: content?.title || '',
+      description: content?.content || '',
+    });
+
+    positionNumber++;
+  }
+}
+
 // Create a complete quote with first variant and version
 export async function createQuoteWithVariantAndVersion(quoteData: {
   title: string;
@@ -798,6 +865,9 @@ export async function createQuoteWithVariantAndVersion(quoteData: {
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,
       }).returning();
+
+      // Add mandatory and standard blocks as quote positions
+      await createStandardBlockPositions(tx, newVersion.id, quoteData.languageId);
 
       return {
         quote: newQuote,

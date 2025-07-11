@@ -1,4 +1,5 @@
 import type { Quote } from '@/lib/db/schema';
+import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 
 // Fetch minimal quotes list data
 export async function fetchQuotesList(): Promise<{
@@ -108,6 +109,15 @@ export async function copyQuoteAPI(originalQuote: { id: string }): Promise<Quote
   });
   if (!response.ok) {
     throw new Error('Failed to copy quote');
+  }
+  return response.json();
+}
+
+// Fetch quote positions for a specific version
+export async function fetchQuotePositionsByVersion(versionId: string): Promise<QuotePositionWithDetails[]> {
+  const response = await fetch(`/api/quotes/versions/${versionId}/positions`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch quote positions');
   }
   return response.json();
 } 

@@ -33,7 +33,7 @@ const OffersTreeTab: React.FC<OffersTreeTabProps> = ({
     if (offerId) {
       // In a real app, you might load offer-specific tree data here
       // For now, we just use the initial data
-      console.log(`Could load specific tree data for offer ${offerId}`);
+  
     }
   }, [offerId]);
 
@@ -60,7 +60,7 @@ const OffersTreeTab: React.FC<OffersTreeTabProps> = ({
       );
 
       // You could fetch additional data related to this node if needed
-      console.log(`Node selected: ${selectedNode.data.name}`);
+  
     } else {
       setSelectedNodeId(undefined);
       setSelectedNodeInfo(null);

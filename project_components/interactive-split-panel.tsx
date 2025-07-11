@@ -40,6 +40,11 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
 
+  // Update tree data when initialTreeData prop changes
+  useEffect(() => {
+    setTreeData(initialTreeData);
+  }, [initialTreeData]);
+
   // Load blocks and languages on component mount
   useEffect(() => {
     const loadData = async () => {
@@ -87,7 +92,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       setSelectedNode(node);
       setSelectedNodeType(node.data.type);
       setFormDescriptionHtml(undefined);
-      console.log(`Node selected: ${node.data.name}`);
+
     } else {
       setSelectedNodeId(undefined);
       setSelectedNode(null);
@@ -208,7 +213,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
           <div className="flex-1 overflow-auto">
             <ArboristTree<MyTreeNodeData>
               ref={treeRef}
-              initialData={treeData}
+              data={treeData}
               openByDefault={false}
               width="100%"
               height={600}

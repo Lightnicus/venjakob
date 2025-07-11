@@ -12,15 +12,10 @@ import type { ColumnDef, Row } from '@tanstack/react-table';
 import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
 import QuoteDetail from '@/project_components/quote-detail';
 import type { Language } from '@/lib/db/schema';
-import { MoreVertical, Edit, Copy, Trash2 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+import { Edit, Copy, Trash2 } from 'lucide-react';
 import { DeleteConfirmationDialog } from '@/project_components/delete-confirmation-dialog';
 import QuoteDialogs, { QUOTE_DIALOGS, useDialogManager } from '@/project_components/quote_dialogs/quotes-dialogs';
+import { TableActionsCell, TableAction } from '@/project_components/table-actions-cell';
 
 type QuoteListItem = {
   id: string;
@@ -58,6 +53,7 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
   const [selectedStatus, setSelectedStatus] = useState('Alle');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [quoteToDelete, setQuoteToDelete] = useState<QuoteListItem | null>(null);
+  const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null);
   const [selectedQuoteNumber, setSelectedQuoteNumber] = useState('ANG-2023-0001');
   const [selectedVariantIdentifier, setSelectedVariantIdentifier] = useState('A');
 
@@ -102,11 +98,14 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
   const handleDeleteConfirm = async () => {
     if (quoteToDelete) {
       try {
+        setDeletingQuoteId(quoteToDelete.id);
         await onDeleteQuote(quoteToDelete.id);
         setDeleteDialogOpen(false);
         setQuoteToDelete(null);
       } catch (error) {
         console.error('Error deleting quote:', error);
+      } finally {
+        setDeletingQuoteId(null);
       }
     }
   };
@@ -175,49 +174,34 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
     },
     {
       id: 'actions',
-      header: '',
-      cell: ({ row }) => (
-        <DropdownMenu>
-          <DropdownMenuTrigger 
-            asChild
-            onClick={(e) => e.stopPropagation()}
-          >
-            <Button variant="ghost" size="sm">
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              handleEditQuote(row.original);
-            }}>
-              <Edit className="mr-2 h-4 w-4" />
-              Bearbeiten
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={(e) => {
-              e.stopPropagation();
-              handleCopyQuote(row.original);
-            }}>
-              <Copy className="mr-2 h-4 w-4" />
-              Kopieren
-            </DropdownMenuItem>
-            <DropdownMenuItem 
-              onClick={(e) => {
-                e.stopPropagation();
-                handleDeleteClick(row.original);
-              }}
-              className="text-red-600"
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Löschen
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ),
+      header: 'Aktionen',
+      cell: ({ row }) => {
+        const actions: TableAction[] = [
+          {
+            icon: Edit,
+            title: 'Bearbeiten',
+            onClick: () => handleEditQuote(row.original),
+          },
+          {
+            icon: Copy,
+            title: 'Kopieren',
+            onClick: () => handleCopyQuote(row.original),
+          },
+          {
+            icon: Trash2,
+            title: 'Löschen',
+            onClick: () => handleDeleteClick(row.original),
+            variant: 'destructive' as const,
+            isLoading: deletingQuoteId === row.original.id,
+          },
+        ];
+
+        return <TableActionsCell actions={actions} />;
+      },
       enableSorting: false,
       enableGlobalFilter: false,
     },
-  ], []);
+  ], [deletingQuoteId]);
 
   // Filter data based on selected status
   const filteredData = data.filter(quote => {

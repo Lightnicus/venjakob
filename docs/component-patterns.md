@@ -196,6 +196,190 @@ All management components follow the same implementation pattern:
 3. **Error Handling**: Implement consistent error handling across components
 4. **Performance**: Avoid unnecessary re-renders with proper state management
 
+## Table Action Components
+
+### TableActionButton & TableActionsCell
+
+Reusable components for handling table row actions with automatic loading states and consistent styling.
+
+#### Purpose
+
+Eliminates duplicate code across table components by providing:
+- Consistent action button styling and behavior
+- Automatic loading state management for async actions
+- Event handling to prevent row clicks when clicking actions
+- Accessible tooltips and disabled states
+
+#### Components
+
+##### TableActionButton
+
+A single action button with loading state management:
+
+```typescript
+import { TableActionButton } from '@/project_components/table-action-button';
+import { Edit } from 'lucide-react';
+
+<TableActionButton
+  icon={Edit}
+  title="Bearbeiten"
+  onClick={async () => {
+    await handleEdit();
+  }}
+  variant="ghost"
+/>
+```
+
+##### TableActionsCell
+
+A container for multiple action buttons:
+
+```typescript
+import { TableActionsCell, TableAction } from '@/project_components/table-actions-cell';
+import { Edit, Copy, Trash2 } from 'lucide-react';
+
+const actions: TableAction[] = [
+  {
+    icon: Edit,
+    title: 'Bearbeiten',
+    onClick: () => handleEdit(row.original),
+  },
+  {
+    icon: Copy,
+    title: 'Kopieren',
+    onClick: () => handleCopy(row.original),
+  },
+  {
+    icon: Trash2,
+    title: 'Löschen',
+    onClick: () => handleDelete(row.original),
+    variant: 'destructive',
+  },
+];
+
+return <TableActionsCell actions={actions} />;
+```
+
+##### External Loading State Example
+
+For complex operations like delete confirmation dialogs:
+
+```typescript
+const [deletingItemId, setDeletingItemId] = useState<string | null>(null);
+
+const handleDeleteConfirm = async () => {
+  if (itemToDelete) {
+    try {
+      setDeletingItemId(itemToDelete.id);
+      await onDeleteItem(itemToDelete.id);
+    } finally {
+      setDeletingItemId(null);
+    }
+  }
+};
+
+const actions: TableAction[] = [
+  {
+    icon: Trash2,
+    title: 'Löschen',
+    onClick: () => openDeleteDialog(row.original),
+    variant: 'destructive',
+    isLoading: deletingItemId === row.original.id, // External loading state
+  },
+];
+```
+
+#### Features
+
+- **Loading States**: Automatically shows spinner during async operations
+- **External Loading Control**: Supports external loading state management for complex flows
+- **Event Handling**: Prevents row clicks when clicking action buttons
+- **Consistent Styling**: Uniform 8x8 icon buttons with proper spacing
+- **Accessibility**: Title attributes for tooltips and proper disabled states
+- **Error Handling**: Catches and logs action errors automatically
+
+#### Usage in Table Columns
+
+```typescript
+{
+  id: 'actions',
+  header: 'Aktionen',
+  cell: ({ row }) => {
+    const actions: TableAction[] = [
+      {
+        icon: Edit,
+        title: 'Bearbeiten',
+        onClick: () => handleEdit(row.original),
+      },
+      {
+        icon: Copy,
+        title: 'Kopieren',
+        onClick: () => handleCopy(row.original),
+      },
+      {
+        icon: Trash2,
+        title: 'Löschen',
+        onClick: () => handleDelete(row.original),
+        variant: 'destructive',
+      },
+    ];
+
+    return <TableActionsCell actions={actions} />;
+  },
+  enableSorting: false,
+  enableGlobalFilter: false,
+},
+```
+
+#### TableAction Interface
+
+```typescript
+interface TableAction {
+  icon: LucideIcon;           // Lucide icon component
+  title: string;              // Tooltip text
+  onClick: () => Promise<void> | void;  // Action handler
+  variant?: 'default' | 'destructive' | 'ghost';  // Button variant
+  className?: string;         // Additional CSS classes
+  disabled?: boolean;         // Disabled state
+  isLoading?: boolean;        // External loading state (overrides internal loading)
+}
+```
+
+#### Benefits
+
+- **DRY Principle**: Eliminates duplicate action button code across tables
+- **Consistent UX**: Uniform loading states and interactions
+- **Type Safety**: Full TypeScript support with proper interfaces
+- **Maintainability**: Single source of truth for table action behavior
+- **Accessibility**: Built-in tooltip and disabled state support
+
+#### Current Usage
+
+Implemented in:
+- **QuotesListTable** - Edit, Copy, Delete actions with loading states
+- **SalesOpportunitiesListTable** - Edit, Copy, Delete actions with loading states
+
+#### Migration Guide
+
+To migrate existing table action columns:
+
+1. **Import the components**:
+   ```typescript
+   import { TableActionsCell, TableAction } from '@/project_components/table-actions-cell';
+   ```
+
+2. **Define actions array**:
+   ```typescript
+   const actions: TableAction[] = [
+     // Define your actions
+   ];
+   ```
+
+3. **Replace action column cell**:
+   ```typescript
+   cell: ({ row }) => <TableActionsCell actions={actions} />
+   ```
+
 ## Extended Creation Patterns
 
 ### Multi-Parameter Creation Functions

@@ -1,13 +1,13 @@
 import React, { useMemo, useCallback } from 'react';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { Edit, Copy, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { FilterableTable } from '@/project_components/filterable-table';
 import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
 import SalesOpportunityDetail from '@/project_components/sales-opportunity-detail';
 import type { SalesOpportunityListItem } from '@/lib/api/sales-opportunities';
 import type { SalesOpportunity } from '@/lib/db/schema';
 import { DeleteConfirmationDialog } from '@/project_components/delete-confirmation-dialog';
+import { TableActionsCell, TableAction } from '@/project_components/table-actions-cell';
 import { toast } from 'sonner';
 
 interface SalesOpportunitiesListTableProps {
@@ -28,6 +28,7 @@ const SalesOpportunitiesListTable: React.FC<SalesOpportunitiesListTableProps> = 
   const { openNewTab } = useTabbedInterface();
   const [deleteConfirmOpen, setDeleteConfirmOpen] = React.useState(false);
   const [salesOpportunityToDelete, setSalesOpportunityToDelete] = React.useState<SalesOpportunityListItem | null>(null);
+  const [deletingSalesOpportunityId, setDeletingSalesOpportunityId] = React.useState<string | null>(null);
 
   // Open sales opportunity details in new tab
   const handleOpenSalesOpportunityDetails = useCallback((salesOpportunity: SalesOpportunityListItem) => {
@@ -57,11 +58,14 @@ const SalesOpportunitiesListTable: React.FC<SalesOpportunitiesListTableProps> = 
   const handleDeleteConfirm = useCallback(async () => {
     if (salesOpportunityToDelete) {
       try {
+        setDeletingSalesOpportunityId(salesOpportunityToDelete.id);
         await onDeleteSalesOpportunity(salesOpportunityToDelete.id);
         setDeleteConfirmOpen(false);
         setSalesOpportunityToDelete(null);
       } catch (error) {
         console.error('Error deleting sales opportunity:', error);
+      } finally {
+        setDeletingSalesOpportunityId(null);
       }
     }
   }, [salesOpportunityToDelete, onDeleteSalesOpportunity]);
@@ -136,49 +140,32 @@ const SalesOpportunitiesListTable: React.FC<SalesOpportunitiesListTableProps> = 
     {
       id: 'actions',
       header: 'Aktionen',
-      cell: ({ row }) => (
-        <div className="flex gap-1">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleOpenSalesOpportunityDetails(row.original);
-            }}
-            title="Bearbeiten"
-          >
-            <Edit className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCopySalesOpportunity(row.original);
-            }}
-            title="Kopieren"
-          >
-            <Copy className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDeleteClick(row.original);
-            }}
-            title="Löschen"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
+      cell: ({ row }) => {
+        const actions: TableAction[] = [
+          {
+            icon: Edit,
+            title: 'Bearbeiten',
+            onClick: () => handleOpenSalesOpportunityDetails(row.original),
+          },
+          {
+            icon: Copy,
+            title: 'Kopieren',
+            onClick: () => handleCopySalesOpportunity(row.original),
+          },
+          {
+            icon: Trash2,
+            title: 'Löschen',
+            onClick: () => handleDeleteClick(row.original),
+            variant: 'destructive' as const,
+            isLoading: deletingSalesOpportunityId === row.original.id,
+          },
+        ];
+
+        return <TableActionsCell actions={actions} />;
+      },
       enableSorting: false,
     },
-  ], [handleOpenSalesOpportunityDetails, handleCopySalesOpportunity, handleDeleteClick, isLoading]);
+  ], [handleOpenSalesOpportunityDetails, handleCopySalesOpportunity, handleDeleteClick, isLoading, deletingSalesOpportunityId]);
 
   const handleRowClick = useCallback((row: Row<SalesOpportunityListItem>) => {
     handleOpenSalesOpportunityDetails(row.original);
