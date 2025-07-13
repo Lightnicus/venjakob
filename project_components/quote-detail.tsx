@@ -16,14 +16,7 @@ import { useTabbedInterface } from '@/project_components/tabbed-interface-provid
 import { toast } from 'sonner';
 import { Edit3, Save } from 'lucide-react';
 import type { MyTreeNodeData } from '@/project_components/custom-node';
-import { 
-  fetchQuotePositionsByVersion, 
-  fetchLatestVariantForQuote, 
-  fetchLatestVersionForVariant,
-  fetchQuoteWithDetails,
-  fetchVariantById,
-  fetchVersionById
-} from '@/lib/api/quotes';
+import { fetchCompleteQuoteData } from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 
 type QuoteDetailProps = {
@@ -72,142 +65,62 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     return treeData;
   };
 
-  // Resolve missing variantId and versionId
+  // Fetch all quote data in one consolidated call
   useEffect(() => {
-    const resolveIds = async () => {
+    const fetchAllData = async () => {
       if (!quoteId) return;
 
       try {
         setLoadingIds(true);
-        let currentVariantId = variantId;
-        let currentVersionId = versionId;
-
-        // If no variantId and no versionId, fetch latest variant and its latest version
-        if (!variantId && !versionId) {
-          const latestVariant = await fetchLatestVariantForQuote(quoteId);
-          if (latestVariant) {
-            currentVariantId = latestVariant.id;
-            const latestVersion = await fetchLatestVersionForVariant(latestVariant.id);
-            if (latestVersion) {
-              currentVersionId = latestVersion.id;
-            }
-          }
+        setLoadingDisplayData(true);
+        setLoadingPositions(true);
+        
+        // Fetch all data in one consolidated API call
+        const completeData = await fetchCompleteQuoteData(quoteId, variantId, versionId);
+        
+        // Update resolved IDs
+        setResolvedVariantId(completeData.resolvedVariantId || undefined);
+        setResolvedVersionId(completeData.resolvedVersionId || undefined);
+        
+        // Update display data
+        if (completeData.quote) {
+          setQuoteNumber(completeData.quote.quoteNumber || '');
         }
-        // If variantId is provided but no versionId, fetch latest version for that variant
-        else if (variantId && !versionId) {
-          const latestVersion = await fetchLatestVersionForVariant(variantId);
-          if (latestVersion) {
-            currentVersionId = latestVersion.id;
-          }
+        
+        if (completeData.variant) {
+          setVariantNumber(completeData.variant.variantNumber?.toString() || '');
         }
-
-        setResolvedVariantId(currentVariantId);
-        setResolvedVersionId(currentVersionId);
+        
+        if (completeData.version) {
+          setVersionNumber(completeData.version.versionNumber || '');
+        }
+        
+        // Set offer properties data
+        if (completeData.offerPropsData) {
+          setOfferPropsData(completeData.offerPropsData);
+        }
+        
+        // Update positions tree data
+        if (completeData.positions) {
+          const transformedData = transformPositionsToTreeData(completeData.positions);
+          setTreeData(transformedData);
+        } else {
+          setTreeData([]);
+        }
+        
       } catch (error) {
-        console.error('Error resolving variant/version IDs:', error);
-        toast.error('Fehler beim Laden der Varianten-/Versionsdaten');
+        console.error('Error fetching complete quote data:', error);
+        toast.error('Fehler beim Laden der Angebotsdaten');
+        setTreeData([]);
       } finally {
         setLoadingIds(false);
-      }
-    };
-
-    resolveIds();
-  }, [quoteId, variantId, versionId]);
-
-  // Fetch display data when resolved IDs change
-  useEffect(() => {
-    const fetchDisplayData = async () => {
-      if (!quoteId || !resolvedVariantId || !resolvedVersionId) return;
-
-      try {
-        setLoadingDisplayData(true);
-        
-        // Fetch quote data with details, variant data, and version data in parallel
-        const [quoteData, variantData, versionData] = await Promise.all([
-          fetchQuoteWithDetails(quoteId),
-          fetchVariantById(resolvedVariantId),
-          fetchVersionById(resolvedVersionId)
-        ]);
-
-        if (quoteData) {
-          setQuoteNumber(quoteData.quoteNumber || '');
-        }
-        
-        if (variantData) {
-          setVariantNumber(variantData.variantNumber?.toString() || '');
-        }
-        
-        // Map database data to OfferProperties format when we have both quote and variant data
-        if (quoteData && variantData) {
-          const mappedOfferProps = {
-            kunde: {
-              id: quoteData.salesOpportunity?.client?.foreignId || '',
-              name: quoteData.salesOpportunity?.client?.name || '',
-              adresse: quoteData.salesOpportunity?.client?.address || '',
-              telefon: quoteData.salesOpportunity?.client?.phone || '',
-              casLink: quoteData.salesOpportunity?.client?.casLink || ''
-            },
-            empfaenger: {
-              anrede: quoteData.salesOpportunity?.contactPerson?.salutation || '',
-              name: quoteData.salesOpportunity?.contactPerson?.firstName || '',
-              nachname: quoteData.salesOpportunity?.contactPerson?.name || '',
-              telefon: quoteData.salesOpportunity?.contactPerson?.phone || '',
-              email: quoteData.salesOpportunity?.contactPerson?.email || ''
-            },
-            preis: {
-              showUnitPrices: false,
-              calcTotal: false,
-              total: 0,
-              discount: 0,
-              discountPercent: false,
-              discountValue: 0
-            },
-            bemerkung: variantData.variantDescriptor || ''
-          };
-          setOfferPropsData(mappedOfferProps);
-        }
-        
-        if (versionData) {
-          setVersionNumber(versionData.versionNumber || '');
-        }
-      } catch (error) {
-        console.error('Error fetching display data:', error);
-        toast.error('Fehler beim Laden der Anzeige-Daten');
-      } finally {
         setLoadingDisplayData(false);
-      }
-    };
-
-    fetchDisplayData();
-  }, [quoteId, resolvedVariantId, resolvedVersionId]);
-
-  // Load quote positions when resolvedVersionId changes
-  useEffect(() => {
-    const loadPositions = async () => {
-      if (!resolvedVersionId) {
-        console.log(
-          'QuoteDetail: No resolvedVersionId available, setting empty tree data',
-        );
-        setTreeData([]);
-        return;
-      }
-
-      try {
-        setLoadingPositions(true);
-        const positions = await fetchQuotePositionsByVersion(resolvedVersionId);
-        const transformedData = transformPositionsToTreeData(positions);
-        setTreeData(transformedData);
-      } catch (error) {
-        console.error('Error loading quote positions:', error);
-        toast.error('Fehler beim Laden der Angebotspositionen');
-        setTreeData([]);
-      } finally {
         setLoadingPositions(false);
       }
     };
 
-    loadPositions();
-  }, [resolvedVersionId]);
+    fetchAllData();
+  }, [quoteId, variantId, versionId]);
 
   const handleCreateVariant = () => {
     const newVariantId = resolvedVariantId ? `${resolvedVariantId}-neu` : 'V1';

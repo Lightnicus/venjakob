@@ -165,4 +165,29 @@ export async function fetchVersionById(versionId: string): Promise<any | null> {
     throw new Error('Failed to fetch version');
   }
   return response.json();
+}
+
+// Fetch complete quote data (consolidated endpoint)
+export async function fetchCompleteQuoteData(
+  quoteId: string,
+  variantId?: string,
+  versionId?: string
+): Promise<{
+  quote: any;
+  variant: any;
+  version: any;
+  positions: QuotePositionWithDetails[];
+  offerPropsData: any;
+  resolvedVariantId: string | null;
+  resolvedVersionId: string | null;
+}> {
+  const searchParams = new URLSearchParams();
+  if (variantId) searchParams.append('variantId', variantId);
+  if (versionId) searchParams.append('versionId', versionId);
+  
+  const response = await fetch(`/api/quotes/${quoteId}/complete?${searchParams.toString()}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch complete quote data');
+  }
+  return response.json();
 } 
