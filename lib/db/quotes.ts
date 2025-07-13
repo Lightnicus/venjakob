@@ -357,7 +357,10 @@ export async function getQuotePositionsByVersion(versionId: string): Promise<Quo
       .select()
       .from(quotePositions)
       .where(eq(quotePositions.versionId, versionId))
-      .orderBy(asc(quotePositions.positionNumber));
+      .orderBy(
+        asc(quotePositions.quotePositionParentId), // nulls first for root level
+        asc(quotePositions.positionNumber)
+      );
 
     // Get article and block details for each position
     const positionsWithDetails = await Promise.all(
@@ -1080,4 +1083,56 @@ export async function copyQuote(originalQuoteId: string): Promise<Quote> {
     console.error('Error copying quote:', error);
     throw new Error('Failed to copy quote');
   }
+}
+
+// Update position order and parent relationships
+export async function updateQuotePositionsOrder(
+  versionId: string,
+  positionUpdates: Array<{
+    id: string;
+    positionNumber: number;
+    quotePositionParentId: string | null;
+  }>
+): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new Error('Benutzer nicht authentifiziert');
+  }
+
+  await db.transaction(async (tx) => {
+    // Step 1: Set all positions to temporary negative values to avoid unique constraint conflicts
+    // This clears the (version_id, position_number) unique constraint temporarily
+    for (let i = 0; i < positionUpdates.length; i++) {
+      const update = positionUpdates[i];
+      await tx
+        .update(quotePositions)
+        .set({
+          positionNumber: -(i + 1), // Use negative values as temporary placeholders
+          updatedAt: new Date().toISOString(),
+        })
+        .where(
+          and(
+            eq(quotePositions.id, update.id),
+            eq(quotePositions.versionId, versionId)
+          )
+        );
+    }
+
+    // Step 2: Update to final position numbers and parent relationships
+    for (const update of positionUpdates) {
+      await tx
+        .update(quotePositions)
+        .set({
+          positionNumber: update.positionNumber,
+          quotePositionParentId: update.quotePositionParentId,
+          updatedAt: new Date().toISOString(),
+        })
+        .where(
+          and(
+            eq(quotePositions.id, update.id),
+            eq(quotePositions.versionId, versionId)
+          )
+        );
+    }
+  });
 } 

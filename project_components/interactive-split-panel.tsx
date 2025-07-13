@@ -5,7 +5,7 @@ import { ArboristTree } from './arborist-tree';
 import { CustomNode, MyTreeNodeData } from './custom-node';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { NodeApi, TreeApi } from 'react-arborist';
+import { NodeApi, TreeApi, MoveHandler } from 'react-arborist';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Delta } from 'quill';
@@ -19,13 +19,20 @@ import articlesData from '@/data/articles.json';
 import type { Language } from '@/lib/db/schema';
 import { fetchBlocksWithContent, fetchLanguages } from '@/lib/api/blocks';
 import type { BlockWithContent } from '@/lib/db/blocks';
+import { toast } from 'sonner';
 
 interface InteractiveSplitPanelProps {
   initialTreeData?: MyTreeNodeData[];
+  isEditing?: boolean;
+  versionId?: string;
+  onTreeDataChange?: (newTreeData: MyTreeNodeData[]) => void;
 }
 
 const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({ 
-  initialTreeData = [] 
+  initialTreeData = [],
+  isEditing = false,
+  versionId,
+  onTreeDataChange
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
@@ -70,6 +77,175 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       content: block.blockContents?.[0] // Use first content or undefined
     }));
   }, [blocks]);
+
+  // Handle drag and drop reordering
+  const handleMove: MoveHandler<MyTreeNodeData> = async ({ dragIds, parentId, index }) => {
+    if (!versionId || !isEditing) return;
+    
+    try {
+      // Business rule validation before the move
+      for (const dragId of dragIds) {
+        const dragNode = findNodeById(treeData, dragId);
+        if (!dragNode) continue;
+        
+        // Check if dragging into an article (articles can't have children)
+        if (parentId) {
+          const parentNode = findNodeById(treeData, parentId);
+          if (parentNode?.type === 'article') {
+            throw new Error('Artikel können keine Kinder haben');
+          }
+        }
+        
+        // Check nesting depth (max 4 levels)
+        const newDepth = parentId ? getNodeDepth(treeData, parentId) + 1 : 1;
+        if (newDepth > 4) {
+          throw new Error('Maximale Verschachtelungstiefe von 4 Ebenen überschritten');
+        }
+      }
+      
+      // Apply the move operation to update treeData (controlled mode)
+      const newTreeData = JSON.parse(JSON.stringify(treeData)) as MyTreeNodeData[];
+      
+      // Helper function to remove nodes from their current locations
+      const removeNodesFromTree = (nodes: MyTreeNodeData[], idsToRemove: string[]): MyTreeNodeData[] => {
+        return nodes.filter(node => {
+          if (idsToRemove.includes(node.id)) {
+            return false;
+          }
+          if (node.children) {
+            node.children = removeNodesFromTree(node.children, idsToRemove);
+          }
+          return true;
+        });
+      };
+      
+      // Helper function to find nodes by IDs
+      const findNodesByIds = (nodes: MyTreeNodeData[], ids: string[]): MyTreeNodeData[] => {
+        const foundNodes: MyTreeNodeData[] = [];
+        const findInNodes = (nodeList: MyTreeNodeData[]) => {
+          nodeList.forEach(node => {
+            if (ids.includes(node.id)) {
+              foundNodes.push(JSON.parse(JSON.stringify(node)));
+            }
+            if (node.children) {
+              findInNodes(node.children);
+            }
+          });
+        };
+        findInNodes(nodes);
+        return foundNodes;
+      };
+      
+      // Helper function to find a node by ID and add children to it
+      const addChildrenToNode = (nodes: MyTreeNodeData[], targetId: string, childrenToAdd: MyTreeNodeData[], insertIndex: number) => {
+        nodes.forEach(node => {
+          if (node.id === targetId) {
+            if (!node.children) {
+              node.children = [];
+            }
+            node.children.splice(insertIndex, 0, ...childrenToAdd);
+          } else if (node.children) {
+            addChildrenToNode(node.children, targetId, childrenToAdd, insertIndex);
+          }
+        });
+      };
+      
+      // Find the nodes being moved
+      const draggedNodes = findNodesByIds(newTreeData, dragIds);
+      
+      // Remove dragged nodes from their current locations
+      const treeWithoutDraggedNodes = removeNodesFromTree(newTreeData, dragIds);
+      
+      // Add dragged nodes to their new location
+      if (parentId) {
+        // Moving to a parent node
+        addChildrenToNode(treeWithoutDraggedNodes, parentId, draggedNodes, index);
+      } else {
+        // Moving to root level
+        treeWithoutDraggedNodes.splice(index, 0, ...draggedNodes);
+      }
+      
+      // Update the tree data state immediately (controlled mode)
+      setTreeData(treeWithoutDraggedNodes);
+      onTreeDataChange?.(treeWithoutDraggedNodes);
+      
+      // Update positions in the database (background operation)
+      const positionUpdates: Array<{
+        id: string;
+        positionNumber: number;
+        quotePositionParentId: string | null;
+      }> = [];
+      
+      // Helper function to collect all nodes with their new positions
+      const collectPositions = (nodes: readonly MyTreeNodeData[], parentId: string | null = null, startIndex: number = 1) => {
+        nodes.forEach((node, index) => {
+          positionUpdates.push({
+            id: node.id,
+            positionNumber: startIndex + index,
+            quotePositionParentId: parentId,
+          });
+          
+          // Recursively collect child positions
+          if (node.children && node.children.length > 0) {
+            collectPositions(node.children, node.id, 1);
+          }
+        });
+      };
+      
+      // Collect all positions after the move
+      collectPositions(treeWithoutDraggedNodes);
+      
+      // Update positions in the database (async)
+      try {
+        const response = await fetch(`/api/quotes/versions/${versionId}/positions/reorder`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ positions: positionUpdates }),
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to update positions');
+        }
+      } catch (error) {
+        console.error('Error updating positions in database:', error);
+        toast.error('Fehler beim Aktualisieren der Positionen in der Datenbank');
+        // Note: We don't revert the UI change here as the user sees immediate feedback
+        // In a production app, you might want to implement retry logic or show a retry button
+      }
+      
+    } catch (error) {
+      console.error('Error during drag and drop:', error);
+      toast.error(error instanceof Error ? error.message : 'Fehler beim Verschieben');
+      // Prevent the move by throwing an error
+      throw error;
+    }
+  };
+  
+  // Helper function to find a node by ID in the tree
+  const findNodeById = (nodes: readonly MyTreeNodeData[], id: string): MyTreeNodeData | null => {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = findNodeById(node.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  };
+  
+  // Helper function to calculate node depth
+  const getNodeDepth = (nodes: readonly MyTreeNodeData[], targetId: string, currentDepth: number = 1): number => {
+    for (const node of nodes) {
+      if (node.id === targetId) return currentDepth;
+      if (node.children) {
+        const depth = getNodeDepth(node.children, targetId, currentDepth + 1);
+        if (depth > 0) return depth;
+      }
+    }
+    return 0;
+  };
 
   const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
@@ -174,15 +350,19 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
     <div className="w-full">
       <div className="flex items-center justify-between p-4 border-b bg-white dark:bg-gray-800 gap-2">
         <div className="flex gap-2">
-          <Button tabIndex={0} aria-label="Block hinzufügen" onClick={handleOpenAddBlock}>
-            Block hinzufügen
-          </Button>
-          <Button tabIndex={0} aria-label="Artikel hinzufügen" onClick={handleOpenAddArticle}>
-            Artikel hinzufügen
-          </Button>
-          <Button tabIndex={0} aria-label="Element löschen" onClick={() => {}}>
-            Element löschen
-          </Button>
+          {isEditing && (
+            <>
+              <Button tabIndex={0} aria-label="Block hinzufügen" onClick={handleOpenAddBlock}>
+                Block hinzufügen
+              </Button>
+              <Button tabIndex={0} aria-label="Artikel hinzufügen" onClick={handleOpenAddArticle}>
+                Artikel hinzufügen
+              </Button>
+              <Button tabIndex={0} aria-label="Element löschen" onClick={() => {}}>
+                Element löschen
+              </Button>
+            </>
+          )}
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right font-semibold text-lg text-gray-800 dark:text-gray-100 select-none" aria-label="Gesamtpreis nach Rabatt">
@@ -225,6 +405,9 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
               }
               selection={selectedNodeId}
               onSelect={handleNodeSelect}
+              onMove={handleMove}
+              disableDrag={!isEditing}
+              disableDrop={!isEditing}
             >
               {CustomNode}
             </ArboristTree>

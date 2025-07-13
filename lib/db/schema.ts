@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, uuid, boolean, integer, pgEnum, numeric, check, unique, jsonb, index } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, timestamp, uuid, boolean, integer, pgEnum, numeric, check, unique, jsonb, index, foreignKey } from 'drizzle-orm/pg-core';
 import { sql } from 'drizzle-orm';
 
 // Enums
@@ -246,6 +246,7 @@ export const quotePositions = pgTable('quote_positions', {
   versionId: uuid('version_id').notNull().references(() => quoteVersions.id, { onDelete: 'cascade' }),
   articleId: uuid('article_id').references(() => articles.id),
   blockId: uuid('block_id').references(() => blocks.id),
+  quotePositionParentId: uuid('quote_position_parent_id'),
   positionNumber: integer('position_number').notNull(),
   quantity: numeric('quantity').notNull().default('1'),
   unitPrice: numeric('unit_price'),
@@ -260,8 +261,14 @@ export const quotePositions = pgTable('quote_positions', {
   articleOrBlockCheck: check('article_or_block_check', 
     sql`(${table.articleId} IS NOT NULL AND ${table.blockId} IS NULL) OR (${table.articleId} IS NULL AND ${table.blockId} IS NOT NULL)`
   ),
-  // Ensure position number is unique within a version
-  versionPositionUnique: unique('version_position_unique').on(table.versionId, table.positionNumber),
+  // Ensure position number is unique within a version and parent level
+  versionPositionUnique: unique('version_position_unique').on(table.versionId, table.quotePositionParentId, table.positionNumber),
+  // Self-reference foreign key constraint
+  quotePositionParentFK: foreignKey({
+    columns: [table.quotePositionParentId],
+    foreignColumns: [table.id],
+    name: 'quote_position_parent_fk'
+  }).onDelete('cascade'),
 }));
 
 // Export types for TypeScript

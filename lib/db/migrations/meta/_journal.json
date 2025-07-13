@@ -176,6 +176,20 @@
       "when": 1752408874955,
       "tag": "0024_worthless_nomad",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1752433066052,
+      "tag": "0025_wakeful_thunderbolt_ross",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1752435751767,
+      "tag": "0026_wide_roughhouse",
+      "breakpoints": true
     }
   ]
 }

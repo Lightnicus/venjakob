@@ -648,8 +648,23 @@ The project provides comprehensive helper functions for database operations, org
 - `createVersionForVariant(variantId)` - Create new version with auto-incremented number and proper latest flag handling
 
 #### Position Management
-- `getQuotePositionsByVersion(versionId)` - Get positions for a version with article/block details
+- `getQuotePositionsByVersion(versionId)` - Get positions for a version with article/block details, ordered by parent and position number
 - `addQuotePosition(positionData)` - Add position to quote version
+- `updateQuotePositionsOrder(versionId, positionUpdates)` - Update position order and parent relationships for drag/drop functionality
+
+**Quote Position Tree Structure**: Quote positions now support hierarchical tree structures through the `quotePositionParentId` field. This nullable field allows positions to reference other positions within the same quote version, enabling:
+- Nested position structures (sub-positions under main positions)
+- Hierarchical organization of quote content
+- Parent-child relationships for complex quote structures
+- Proper cascade deletion when parent positions are removed
+
+**Drag & Drop Functionality**: The ArboristTree component in InteractiveSplitPanel supports drag and drop reordering with the following business rules:
+- Articles cannot have children (only blocks can have children)
+- Maximum nesting depth of 4 levels
+- Position numbers are unique within each parent level (constraint: `version_id`, `quote_position_parent_id`, `position_number`)
+- Optimistic UI updates with database synchronization
+- Two-step database update to avoid constraint violations during reordering
+- API endpoint: `PUT /api/quotes/versions/{versionId}/positions/reorder`
 
 **Quote Numbering**: Quote numbers are generated in the format `ANG-YYYY-XXXX` where YYYY is the current year and XXXX is a zero-padded number starting from the `QUOTE_NUMBER_START` environment variable (defaults to 1). The numbering continues incrementally from `QUOTE_NUMBER_START + existing_quote_count`.
 

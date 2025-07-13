@@ -1,0 +1,2 @@
+ALTER TABLE "quote_positions" ADD COLUMN "quote_position_parent_id" uuid;--> statement-breakpoint
+ALTER TABLE "quote_positions" ADD CONSTRAINT "quote_position_parent_fk" FOREIGN KEY ("quote_position_parent_id") REFERENCES "public"."quote_positions"("id") ON DELETE cascade ON UPDATE no action;

@@ -53,16 +53,42 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   const transformPositionsToTreeData = (
     positions: QuotePositionWithDetails[],
   ): MyTreeNodeData[] => {
-    const treeData = positions.map(
-      (position): MyTreeNodeData => ({
+    // Create a map of position ID to position node
+    const positionMap = new Map<string, MyTreeNodeData>();
+    
+    // First pass: create all nodes
+    positions.forEach(position => {
+      positionMap.set(position.id, {
         id: position.id,
         name: position.title || position.description || 'Unnamed Position',
-        type: position.articleId
-          ? ('article' as const)
-          : ('textblock' as const), // article for articles, textblock for blocks
-      }),
-    );
-    return treeData;
+        type: position.articleId ? ('article' as const) : ('textblock' as const),
+        children: []
+      });
+    });
+    
+    // Second pass: build the tree structure
+    const rootNodes: MyTreeNodeData[] = [];
+    
+    positions.forEach(position => {
+      const node = positionMap.get(position.id);
+      if (!node) return;
+      
+      if (position.quotePositionParentId) {
+        // This is a child node
+        const parentNode = positionMap.get(position.quotePositionParentId);
+        if (parentNode) {
+          if (!parentNode.children) {
+            parentNode.children = [];
+          }
+          parentNode.children.push(node);
+        }
+      } else {
+        // This is a root node
+        rootNodes.push(node);
+      }
+    });
+    
+    return rootNodes;
   };
 
   // Fetch all quote data in one consolidated call
@@ -272,7 +298,12 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
               <p className="text-gray-500">Lade Angebotspositionen...</p>
             </div>
           ) : (
-            <InteractiveSplitPanel initialTreeData={treeData} />
+            <InteractiveSplitPanel 
+              initialTreeData={treeData} 
+              isEditing={isEditing} 
+              versionId={resolvedVersionId}
+              onTreeDataChange={setTreeData}
+            />
           )}
         </TabsContent>
         <TabsContent
