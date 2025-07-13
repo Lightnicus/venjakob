@@ -19,11 +19,20 @@ export async function fetchQuotesList(): Promise<{
   return response.json();
 }
 
-// Fetch a single quote
+// Fetch a single quote (basic data only)
 export async function fetchQuote(quoteId: string): Promise<Quote | null> {
   const response = await fetch(`/api/quotes/${quoteId}`);
   if (!response.ok) {
     throw new Error('Failed to fetch quote');
+  }
+  return response.json();
+}
+
+// Fetch a single quote with all details (includes sales opportunity, client, contact person)
+export async function fetchQuoteWithDetails(quoteId: string): Promise<any | null> {
+  const response = await fetch(`/api/quotes/${quoteId}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch quote with details');
   }
   return response.json();
 }
@@ -136,6 +145,24 @@ export async function fetchLatestVersionForVariant(variantId: string): Promise<a
   const response = await fetch(`/api/quotes/variants/${variantId}/latest-version`);
   if (!response.ok) {
     throw new Error('Failed to fetch latest version');
+  }
+  return response.json();
+}
+
+// Fetch variant by ID
+export async function fetchVariantById(variantId: string): Promise<any | null> {
+  const response = await fetch(`/api/quotes/variants/${variantId}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch variant');
+  }
+  return response.json();
+}
+
+// Fetch version by ID
+export async function fetchVersionById(versionId: string): Promise<any | null> {
+  const response = await fetch(`/api/quotes/versions/${versionId}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch version');
   }
   return response.json();
 } 

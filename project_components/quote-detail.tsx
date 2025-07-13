@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import InteractiveSplitPanel from '@/project_components/interactive-split-panel';
 import OfferProperties from '@/project_components/offer-properties';
-import offerPropertiesData from '@/data/offer-properties.json';
 import PdfPreview from '@/project_components/pdf-preview';
 import OfferVersionsTable from '@/project_components/offer-versions-table';
 import { Button } from '@/components/ui/button';
@@ -20,7 +19,10 @@ import type { MyTreeNodeData } from '@/project_components/custom-node';
 import { 
   fetchQuotePositionsByVersion, 
   fetchLatestVariantForQuote, 
-  fetchLatestVersionForVariant 
+  fetchLatestVersionForVariant,
+  fetchQuoteWithDetails,
+  fetchVariantById,
+  fetchVersionById
 } from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 
@@ -47,6 +49,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   const [resolvedVariantId, setResolvedVariantId] = useState<string | undefined>(variantId);
   const [resolvedVersionId, setResolvedVersionId] = useState<string | undefined>(versionId);
   const [loadingIds, setLoadingIds] = useState(false);
+  const [quoteNumber, setQuoteNumber] = useState<string>('');
+  const [variantNumber, setVariantNumber] = useState<string>('');
+  const [versionNumber, setVersionNumber] = useState<string>('');
+  const [loadingDisplayData, setLoadingDisplayData] = useState(false);
+  const [offerPropsData, setOfferPropsData] = useState<any>(null);
   const { openNewTab } = useTabbedInterface();
 
   // Transform quote positions into tree data format
@@ -106,6 +113,73 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
 
     resolveIds();
   }, [quoteId, variantId, versionId]);
+
+  // Fetch display data when resolved IDs change
+  useEffect(() => {
+    const fetchDisplayData = async () => {
+      if (!quoteId || !resolvedVariantId || !resolvedVersionId) return;
+
+      try {
+        setLoadingDisplayData(true);
+        
+        // Fetch quote data with details, variant data, and version data in parallel
+        const [quoteData, variantData, versionData] = await Promise.all([
+          fetchQuoteWithDetails(quoteId),
+          fetchVariantById(resolvedVariantId),
+          fetchVersionById(resolvedVersionId)
+        ]);
+
+        if (quoteData) {
+          setQuoteNumber(quoteData.quoteNumber || '');
+        }
+        
+        if (variantData) {
+          setVariantNumber(variantData.variantNumber?.toString() || '');
+        }
+        
+        // Map database data to OfferProperties format when we have both quote and variant data
+        if (quoteData && variantData) {
+          const mappedOfferProps = {
+            kunde: {
+              id: quoteData.salesOpportunity?.client?.foreignId || '',
+              name: quoteData.salesOpportunity?.client?.name || '',
+              adresse: quoteData.salesOpportunity?.client?.address || '',
+              telefon: quoteData.salesOpportunity?.client?.phone || '',
+              casLink: quoteData.salesOpportunity?.client?.casLink || ''
+            },
+            empfaenger: {
+              anrede: quoteData.salesOpportunity?.contactPerson?.salutation || '',
+              name: quoteData.salesOpportunity?.contactPerson?.firstName || '',
+              nachname: quoteData.salesOpportunity?.contactPerson?.name || '',
+              telefon: quoteData.salesOpportunity?.contactPerson?.phone || '',
+              email: quoteData.salesOpportunity?.contactPerson?.email || ''
+            },
+            preis: {
+              showUnitPrices: false,
+              calcTotal: false,
+              total: 0,
+              discount: 0,
+              discountPercent: false,
+              discountValue: 0
+            },
+            bemerkung: variantData.variantDescriptor || ''
+          };
+          setOfferPropsData(mappedOfferProps);
+        }
+        
+        if (versionData) {
+          setVersionNumber(versionData.versionNumber || '');
+        }
+      } catch (error) {
+        console.error('Error fetching display data:', error);
+        toast.error('Fehler beim Laden der Anzeige-Daten');
+      } finally {
+        setLoadingDisplayData(false);
+      }
+    };
+
+    fetchDisplayData();
+  }, [quoteId, resolvedVariantId, resolvedVersionId]);
 
   // Load quote positions when resolvedVersionId changes
   useEffect(() => {
@@ -175,27 +249,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           tabIndex={0}
           aria-label="Angebots-Titel"
         >
-          {title}
+          {loadingIds || loadingDisplayData ? (
+            'Lade Angebotsdaten...'
+          ) : quoteNumber && variantNumber && versionNumber ? (
+            `Angebot ${quoteNumber}-${variantNumber} v${versionNumber}`
+          ) : (
+            title
+          )}
         </h2>
-        {quoteId && (
-          <p className="text-sm text-gray-500 mb-2">Angebot-ID: {quoteId}</p>
-        )}
-        {loadingIds ? (
-          <p className="text-sm text-gray-500 mb-2">Lade Varianten- und Versionsdaten...</p>
-        ) : (
-          <>
-            {resolvedVariantId && (
-              <p className="text-sm text-gray-500 mb-2">
-                Varianten-ID: {resolvedVariantId} {!variantId && '(automatisch ermittelt)'}
-              </p>
-            )}
-            {resolvedVersionId && (
-              <p className="text-sm text-gray-500 mb-2">
-                Versions-ID: {resolvedVersionId} {!versionId && '(automatisch ermittelt)'}
-              </p>
-            )}
-          </>
-        )}
         {language && (
           <p className="text-sm text-gray-500 mb-2">Sprache: {language}</p>
         )}
@@ -293,7 +354,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           </TabsTrigger>
         </TabsList>
         <TabsContent value="bloecke" className="flex-1 overflow-auto">
-          {loadingPositions || loadingIds ? (
+          {loadingPositions || loadingIds || loadingDisplayData ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-500">Lade Angebotspositionen...</p>
             </div>
@@ -305,7 +366,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           value="eigenschaften"
           className="flex-1 overflow-auto flex items-center justify-center"
         >
-          <OfferProperties {...offerPropertiesData} />
+          {offerPropsData ? (
+            <OfferProperties {...offerPropsData} />
+          ) : (
+            <div className="text-gray-500">Lade Angebotseigenschaften...</div>
+          )}
         </TabsContent>
         <TabsContent
           value="vorschau"

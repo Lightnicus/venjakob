@@ -25,6 +25,7 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { auditQueries } from './audit';
 import { copyArticle } from './articles';
 import { copyBlock } from './blocks';
+import { getSalesOpportunityWithDetails, type SalesOpportunityWithDetails } from './sales-opportunities';
 
 // Common error type for edit lock conflicts
 export class EditLockError extends Error {
@@ -40,7 +41,7 @@ export class EditLockError extends Error {
 }
 
 export type QuoteWithDetails = Quote & {
-  salesOpportunity: SalesOpportunity;
+  salesOpportunity: SalesOpportunityWithDetails;
   variants: QuoteVariantWithVersions[];
   variantsCount: number;
   lastChangedBy?: {
@@ -189,11 +190,8 @@ export async function getQuoteWithDetails(quoteId: string): Promise<QuoteWithDet
 
     if (!quote) return null;
 
-    // Get full sales opportunity
-    const [salesOpportunity] = await db
-      .select()
-      .from(salesOpportunities)
-      .where(eq(salesOpportunities.id, quote.salesOpportunityId));
+    // Get full sales opportunity with details
+    const salesOpportunity = await getSalesOpportunityWithDetails(quote.salesOpportunityId);
 
     // Get variants count
     const [variantsCountResult] = await db
@@ -255,7 +253,7 @@ export async function getQuoteVariantsByQuote(quoteId: string): Promise<QuoteVar
         // Variant fields
         id: quoteVariants.id,
         quoteId: quoteVariants.quoteId,
-        variantDescriptor: quoteVariants.variantDescriptor,
+        variantNumber: quoteVariants.variantNumber,
         languageId: quoteVariants.languageId,
         isDefault: quoteVariants.isDefault,
         blocked: quoteVariants.blocked,
@@ -272,7 +270,7 @@ export async function getQuoteVariantsByQuote(quoteId: string): Promise<QuoteVar
       .from(quoteVariants)
       .leftJoin(languages, eq(quoteVariants.languageId, languages.id))
       .where(eq(quoteVariants.quoteId, quoteId))
-      .orderBy(quoteVariants.isDefault ? desc(quoteVariants.isDefault) : asc(quoteVariants.variantDescriptor));
+      .orderBy(quoteVariants.isDefault ? desc(quoteVariants.isDefault) : asc(quoteVariants.variantNumber));
 
     // Get versions for each variant
     const variantsWithVersions = await Promise.all(
@@ -287,7 +285,8 @@ export async function getQuoteVariantsByQuote(quoteId: string): Promise<QuoteVar
         return {
           id: variant.id,
           quoteId: variant.quoteId,
-          variantDescriptor: variant.variantDescriptor,
+          variantDescriptor: variant.variantNumber?.toString() || '',
+          variantNumber: variant.variantNumber,
           languageId: variant.languageId,
           isDefault: variant.isDefault,
           blocked: variant.blocked,
@@ -724,50 +723,50 @@ export async function addAsPosition(
   }
 }
 
-// Get next variant descriptor for a quote (returns "1", "2", "3", etc.)
-export async function getNextVariantDescriptor(quoteId: string): Promise<string> {
+// Get next variant number for a quote (returns 1, 2, 3, etc.)
+export async function getNextVariantNumber(quoteId: string): Promise<number> {
   try {
     const [maxVariantResult] = await db
-      .select({ maxDescriptor: quoteVariants.variantDescriptor })
+      .select({ maxNumber: quoteVariants.variantNumber })
       .from(quoteVariants)
       .where(eq(quoteVariants.quoteId, quoteId))
-      .orderBy(desc(sql`CAST(${quoteVariants.variantDescriptor} AS INTEGER)`))
+      .orderBy(desc(quoteVariants.variantNumber))
       .limit(1);
 
-    const maxDescriptor = Number(maxVariantResult?.maxDescriptor || 0);
-    return String(maxDescriptor + 1);
+    const maxNumber = Number(maxVariantResult?.maxNumber || 0);
+    return maxNumber + 1;
   } catch (error) {
-    console.error('Error getting next variant descriptor:', error);
-    throw new Error('Failed to get next variant descriptor');
+    console.error('Error getting next variant number:', error);
+    throw new Error('Failed to get next variant number');
   }
 }
 
-// Get next version number for a variant (returns "1", "2", "3", etc.)
-export async function getNextVersionNumber(variantId: string): Promise<string> {
+// Get next version number for a variant (returns 1, 2, 3, etc.)
+export async function getNextVersionNumber(variantId: string): Promise<number> {
   try {
     const [maxVersionResult] = await db
       .select({ maxVersion: quoteVersions.versionNumber })
       .from(quoteVersions)
       .where(eq(quoteVersions.variantId, variantId))
-      .orderBy(desc(sql`CAST(${quoteVersions.versionNumber} AS INTEGER)`))
+      .orderBy(desc(quoteVersions.versionNumber))
       .limit(1);
 
     const maxVersion = Number(maxVersionResult?.maxVersion || 0);
-    return String(maxVersion + 1);
+    return maxVersion + 1;
   } catch (error) {
     console.error('Error getting next version number:', error);
     throw new Error('Failed to get next version number');
   }
 }
 
-// Get latest variant for a quote (highest variant descriptor)
+// Get latest variant for a quote (highest variant number)
 export async function getLatestVariantForQuote(quoteId: string): Promise<QuoteVariant | null> {
   try {
     const [latestVariant] = await db
       .select()
       .from(quoteVariants)
       .where(eq(quoteVariants.quoteId, quoteId))
-      .orderBy(desc(sql`CAST(${quoteVariants.variantDescriptor} AS INTEGER)`))
+      .orderBy(desc(quoteVariants.variantNumber))
       .limit(1);
 
     return latestVariant || null;
@@ -799,13 +798,45 @@ export async function getLatestVersionForVariant(variantId: string): Promise<Quo
       .select()
       .from(quoteVersions)
       .where(eq(quoteVersions.variantId, variantId))
-      .orderBy(desc(sql`CAST(${quoteVersions.versionNumber} AS INTEGER)`))
+      .orderBy(desc(quoteVersions.versionNumber))
       .limit(1);
 
     return highestVersion || null;
   } catch (error) {
     console.error('Error getting latest version:', error);
     throw new Error('Failed to get latest version');
+  }
+}
+
+// Get variant by ID
+export async function getQuoteVariantById(variantId: string): Promise<QuoteVariant | null> {
+  try {
+    const [variant] = await db
+      .select()
+      .from(quoteVariants)
+      .where(eq(quoteVariants.id, variantId))
+      .limit(1);
+
+    return variant || null;
+  } catch (error) {
+    console.error('Error getting variant by ID:', error);
+    throw new Error('Failed to get variant');
+  }
+}
+
+// Get version by ID
+export async function getQuoteVersionById(versionId: string): Promise<QuoteVersion | null> {
+  try {
+    const [version] = await db
+      .select()
+      .from(quoteVersions)
+      .where(eq(quoteVersions.id, versionId))
+      .limit(1);
+
+    return version || null;
+  } catch (error) {
+    console.error('Error getting version by ID:', error);
+    throw new Error('Failed to get version');
   }
 }
 
@@ -887,7 +918,7 @@ export async function createQuoteWithVariantAndVersion(quoteData: {
       const quoteCount = await tx.select({ count: count(quotes.id) }).from(quotes);
       const startNumber = Number(process.env.QUOTE_NUMBER_START || 1);
       const nextNumber = startNumber + (Number(quoteCount[0]?.count || 0));
-      const quoteNumber = `ANG-${new Date().getFullYear()}-${String(nextNumber).padStart(4, '0')}`;
+      const quoteNumber = `${String(nextNumber).padStart(4, '0')}`;
 
       const [newQuote] = await tx.insert(quotes).values({
         ...quoteData,
@@ -896,20 +927,21 @@ export async function createQuoteWithVariantAndVersion(quoteData: {
         modifiedBy: user.dbUser.id,
       }).returning();
 
-      // Create first variant with descriptor "1"
+      // Create first variant with number 1
       const [newVariant] = await tx.insert(quoteVariants).values({
         quoteId: newQuote.id,
-        variantDescriptor: "1",
+        variantDescriptor: "",
+        variantNumber: 1,
         languageId: quoteData.languageId,
         isDefault: true,
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,
       }).returning();
 
-      // Create first version with number "1"
+      // Create first version with number 1
       const [newVersion] = await tx.insert(quoteVersions).values({
         variantId: newVariant.id,
-        versionNumber: "1",
+        versionNumber: 1,
         isLatest: true,
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,
@@ -945,13 +977,14 @@ export async function createVariantForQuote(
     }
 
     return await db.transaction(async (tx) => {
-      // Get next variant descriptor
-      const nextDescriptor = await getNextVariantDescriptor(quoteId);
+      // Get next variant number
+      const nextNumber = await getNextVariantNumber(quoteId);
 
       // Create new variant
       const [newVariant] = await tx.insert(quoteVariants).values({
         quoteId,
-        variantDescriptor: nextDescriptor,
+        variantDescriptor: nextNumber.toString(),
+        variantNumber: nextNumber,
         languageId,
         isDefault: false,
         createdBy: user.dbUser.id,
@@ -961,7 +994,7 @@ export async function createVariantForQuote(
       // Create first version for this variant
       const [newVersion] = await tx.insert(quoteVersions).values({
         variantId: newVariant.id,
-        versionNumber: "1",
+        versionNumber: 1,
         isLatest: true,
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,

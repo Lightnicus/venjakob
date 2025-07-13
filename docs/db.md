@@ -638,13 +638,13 @@ The project provides comprehensive helper functions for database operations, org
 #### Variant Management
 - `getQuoteVariantsByQuote(quoteId)` - Get variants for a quote with versions
 - `createQuoteVariant(variantData)` - Create new quote variant
-- `getNextVariantDescriptor(quoteId)` - Get next variant descriptor number ("1", "2", "3", etc.)
-- `createVariantForQuote(quoteId, languageId)` - Create new variant with auto-incremented descriptor and first version
+- `getNextVariantNumber(quoteId)` - Get next variant number (1, 2, 3, etc.) - returns integer
+- `createVariantForQuote(quoteId, languageId)` - Create new variant with auto-incremented number and first version
 
 #### Version Management
 - `getQuoteVersionsByVariant(variantId)` - Get versions for a variant with positions
 - `createQuoteVersion(versionData)` - Create new version (handles latest version flag)
-- `getNextVersionNumber(variantId)` - Get next version number ("1", "2", "3", etc.)
+- `getNextVersionNumber(variantId)` - Get next version number (1, 2, 3, etc.) - returns integer
 - `createVersionForVariant(variantId)` - Create new version with auto-incremented number and proper latest flag handling
 
 #### Position Management
@@ -661,10 +661,15 @@ The project provides comprehensive helper functions for database operations, org
 
 #### Types
 - `QuoteWithDetails` - Complete quote with sales opportunity, variants, and counts
-- `QuoteVariantWithVersions` - Variant with language and versions
-- `QuoteVersionWithPositions` - Version with positions and counts
+- `QuoteVariantWithVersions` - Variant with language and versions (includes both variantDescriptor string and variantNumber integer)
+- `QuoteVersionWithPositions` - Version with positions and counts (versionNumber is integer)
 - `QuotePositionWithDetails` - Position with article or block details
 - `EditLockError` - Custom error for edit lock conflicts
+
+#### Schema Changes
+- **variantNumber**: Added integer field to `quoteVariants` table alongside existing `variantDescriptor` text field
+- **versionNumber**: Changed from text to integer type in `quoteVersions` table
+- Both number fields are used internally for sorting and calculations, while descriptor fields maintain backward compatibility
 
 ### Common Patterns
 

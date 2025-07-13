@@ -60,6 +60,7 @@ export async function getContactPersonWithDetails(
         // Contact person fields
         id: contactPersons.id,
         clientId: contactPersons.clientId,
+        salutation: contactPersons.salutation,
         name: contactPersons.name,
         firstName: contactPersons.firstName,
         email: contactPersons.email,
@@ -70,6 +71,9 @@ export async function getContactPersonWithDetails(
         // Client fields
         clientName: clients.name,
         clientForeignId: clients.foreignId,
+        clientAddress: clients.address,
+        clientPhone: clients.phone,
+        clientCasLink: clients.casLink,
         clientLanguageId: clients.languageId,
         clientCreatedAt: clients.createdAt,
         clientUpdatedAt: clients.updatedAt,
@@ -119,6 +123,7 @@ export async function getContactPersonWithDetails(
     return {
       id: contactPerson.id,
       clientId: contactPerson.clientId,
+      salutation: contactPerson.salutation,
       name: contactPerson.name,
       firstName: contactPerson.firstName,
       email: contactPerson.email,
@@ -130,6 +135,9 @@ export async function getContactPersonWithDetails(
         id: contactPerson.clientId,
         foreignId: contactPerson.clientForeignId || '',
         name: contactPerson.clientName || '',
+        address: contactPerson.clientAddress || null,
+        phone: contactPerson.clientPhone || null,
+        casLink: contactPerson.clientCasLink || null,
         languageId: contactPerson.clientLanguageId || '',
         createdAt: contactPerson.clientCreatedAt || '',
         updatedAt: contactPerson.clientUpdatedAt || '',
