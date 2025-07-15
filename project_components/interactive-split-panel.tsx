@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { ArboristTree } from './arborist-tree';
-import { CustomNode, MyTreeNodeData } from './custom-node';
+import { CustomNode, MyTreeNodeData, createCustomNodeWithDragState } from './custom-node';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { NodeApi, TreeApi, MoveHandler } from 'react-arborist';
@@ -409,7 +409,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
               disableDrag={!isEditing}
               disableDrop={!isEditing}
             >
-              {CustomNode}
+              {createCustomNodeWithDragState(isEditing)}
             </ArboristTree>
           </div>
           <div className="p-3 border-t bg-gray-50 dark:bg-gray-700">

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { ArboristTree, ArboristTreeProps } from '../project_components/arborist-tree';
-import { CustomNode, MyTreeNodeData } from '../project_components/custom-node';
+import { CustomNode, MyTreeNodeData, createCustomNodeWithDragState } from '../project_components/custom-node';
 import initialTreeData from '@/data/tree-data.json'; // Using Next.js alias for /data
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -125,7 +125,7 @@ const ArboristTreeDemo: React.FC = () => {
           onActivate={(node) => console.log('Knoten aktiviert:', node)}
           // For the custom node renderer:
         >
-          {CustomNode}
+          {createCustomNodeWithDragState(false)}
         </ArboristTree>
       </div>
       <p className="text-sm text-gray-600 dark:text-gray-400">

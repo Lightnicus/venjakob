@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { ArboristTree } from './arborist-tree';
-import { CustomNode, MyTreeNodeData } from './custom-node';
+import { CustomNode, MyTreeNodeData, createCustomNodeWithDragState } from './custom-node';
 import initialTreeData from '@/data/tree-data.json';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -107,7 +107,7 @@ const OffersTreeTab: React.FC<OffersTreeTabProps> = ({
           selection={selectedNodeId}
           onSelect={handleNodeSelect}
         >
-          {CustomNode}
+          {createCustomNodeWithDragState(false)}
         </ArboristTree>
       </div>
 

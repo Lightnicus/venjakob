@@ -1,6 +1,6 @@
 import React from 'react';
 import { NodeRendererProps, NodeApi } from 'react-arborist';
-import { ChevronRight, ChevronDown, FileText, FileStack, Folder } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileText, FileStack, Folder, GripVertical } from 'lucide-react';
 
 // Define a type for your tree data items if not already globally defined
 // This should match the structure in your tree-data.json
@@ -15,6 +15,7 @@ export interface MyTreeNodeData {
 interface MyCustomNodeApi extends NodeApi<MyTreeNodeData> {}
 interface CustomNodeRendererProps extends NodeRendererProps<MyTreeNodeData> {
   node: MyCustomNodeApi; // Override node with more specific type
+  isDragEnabled?: boolean; // Optional prop to indicate if dragging is enabled
 }
 
 export const CustomNode: React.FC<CustomNodeRendererProps> = ({
@@ -22,12 +23,14 @@ export const CustomNode: React.FC<CustomNodeRendererProps> = ({
   style,
   dragHandle,
   tree,
+  isDragEnabled = false,
 }) => {
   const isInternal = node.isInternal;
   const isLeaf = node.isLeaf;
+  const hasChildren = node.children && node.children.length > 0;
 
   const handleToggle = () => {
-    if (isInternal) {
+    if (hasChildren) {
       node.toggle();
     }
   };
@@ -50,7 +53,9 @@ export const CustomNode: React.FC<CustomNodeRendererProps> = ({
     <div
       ref={dragHandle}
       style={style}
-      className={`flex items-center py-1 px-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer ${
+      className={`flex items-center py-1 px-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 ${
+        isDragEnabled ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'
+      } ${
         node.isSelected ? 'bg-blue-100 dark:bg-blue-800' : ''
       } ${
         node.isEditing ? 'outline outline-blue-500' : ''
@@ -59,11 +64,20 @@ export const CustomNode: React.FC<CustomNodeRendererProps> = ({
       onKeyDown={handleKeyDown} // Accessibility for keyboard toggle
       tabIndex={0} // Make it focusable
       aria-label={node.data.name}
-      aria-expanded={isInternal ? node.isOpen : undefined}
+      aria-expanded={hasChildren ? node.isOpen : undefined}
       role="treeitem"
     >
+      {/* Drag handle grip - only show when drag is enabled */}
+      {isDragEnabled && (
+        <GripVertical 
+          size={14} 
+          className="text-gray-400 mr-1 flex-shrink-0 hover:text-gray-600 transition-colors" 
+          aria-label="Drag handle"
+        />
+      )}
+      
       <span className="mr-1">
-        {isInternal ? (
+        {hasChildren ? (
           node.isOpen ? (
             <ChevronDown size={16} className="text-gray-500" />
           ) : (
@@ -73,8 +87,8 @@ export const CustomNode: React.FC<CustomNodeRendererProps> = ({
           renderLeafIcon()
         )}
       </span>
-      {isInternal && <Folder size={16} className="mr-1 text-yellow-500" />}{' '}
-      {/* Folder icon for internal nodes */}
+      {hasChildren && <Folder size={16} className="mr-1 text-yellow-500" />}{' '}
+      {/* Folder icon for nodes with children */}
       <span className={node.isEditing ? 'opacity-50' : ''}>
         {node.data.name}
       </span>
@@ -84,4 +98,15 @@ export const CustomNode: React.FC<CustomNodeRendererProps> = ({
       )}
     </div>
   );
+};
+
+// Higher-order component to create a CustomNode with drag state
+export const createCustomNodeWithDragState = (isDragEnabled: boolean) => {
+  const CustomNodeWithDragState = (props: NodeRendererProps<MyTreeNodeData>) => (
+    <CustomNode {...props} isDragEnabled={isDragEnabled} />
+  );
+  
+  CustomNodeWithDragState.displayName = `CustomNodeWithDragState(${isDragEnabled})`;
+  
+  return CustomNodeWithDragState;
 }; 

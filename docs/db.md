@@ -662,6 +662,8 @@ The project provides comprehensive helper functions for database operations, org
 - Articles cannot have children (only blocks can have children)
 - Maximum nesting depth of 4 levels
 - Position numbers are unique within each parent level (constraint: `version_id`, `quote_position_parent_id`, `position_number`)
+- Visual grip indicator (GripVertical icon) shows when drag is enabled
+- Chevron (>) and folder icons only show when node actually has children
 - Optimistic UI updates with database synchronization
 - Two-step database update to avoid constraint violations during reordering
 - API endpoint: `PUT /api/quotes/versions/{versionId}/positions/reorder`
