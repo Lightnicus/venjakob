@@ -1,4 +1,4 @@
-import { FC, useState, useEffect } from 'react';
+import React, { FC, useState, useEffect } from 'react';
 import { Edit3, Save, Loader2, Trash2, PlusCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import PlateRichTextEditor from '@/project_components/plate-rich-text-editor';
+import PlateRichTextEditor, { htmlToPlateValue, plateValueToHtml } from '@/project_components/plate-rich-text-editor';
+import { type Value } from 'platejs';
 import ArticleProperties from '@/project_components/article-properties';
 import EditLockButton from '@/project_components/edit-lock-button';
 import { fetchArticleWithCalculations } from '@/lib/api/articles';
@@ -34,6 +35,35 @@ interface ArticleDetailProps {
   onSaveCalculations?: (articleId: string, calculations: any[]) => Promise<void>;
 }
 
+// Helper component to handle async HTML conversion for preview
+const PreviewContent: React.FC<{
+  title: string;
+  content: Value;
+  hideTitle: boolean;
+}> = ({ title, content, hideTitle }) => {
+  const [html, setHtml] = React.useState('');
+
+  useEffect(() => {
+    plateValueToHtml(content).then(setHtml);
+  }, [content]);
+
+  return (
+    <div className="p-4 border rounded-md bg-gray-50 min-h-[200px]">
+      {!hideTitle && (
+        <h3 className="text-xl font-semibold mb-2 break-words">
+          {title || 'Artikel'}
+        </h3>
+      )}
+      <div
+        className="prose max-w-none prose-sm sm:prose-base lg:prose-lg"
+        dangerouslySetInnerHTML={{
+          __html: html || '<em>(Kein Inhalt)</em>',
+        }}
+      />
+    </div>
+  );
+};
+
 const ArticleDetail: FC<ArticleDetailProps> = ({
   articleId,
   languages,
@@ -60,7 +90,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
   
   // Content editing state
   const [editedArticleContents, setEditedArticleContents] = useState<
-    Record<string, { title: string; content: string; languageId: string }>
+    Record<string, { title: string; content: Value; languageId: string }>
   >({});
 
   const [currentLanguages, setCurrentLanguages] = useState<Language[]>([]);
@@ -103,7 +133,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
       setEditedKalkulationData(initialKalkulation);
 
       // Initialize content state
-      const initialContent: Record<string, { title: string; content: string; languageId: string }> = {};
+      const initialContent: Record<string, { title: string; content: Value; languageId: string }> = {};
       const contentLanguages: Language[] = [];
       
       if (articleData.content) {
@@ -112,7 +142,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
           if (lang) {
             initialContent[lang.value] = {
               title: content.title,
-              content: content.content,
+              content: htmlToPlateValue(content.content),
               languageId: content.languageId,
             };
             if (!contentLanguages.find(cl => cl.id === lang.id)) {
@@ -159,12 +189,12 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
     }
   }, [articleId]);
 
-  const handleRichTextChange = (langValue: string, content: string) => {
+  const handleRichTextChange = (langValue: string, content: Value) => {
     if (!isEditing) return;
     setEditedArticleContents(prev => ({
       ...prev,
       [langValue]: {
-        ...(prev[langValue] || { title: '', content: '', languageId: '' }),
+        ...(prev[langValue] || { title: '', content: htmlToPlateValue(''), languageId: '' }),
         content,
       },
     }));
@@ -208,7 +238,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
       });
       setEditedKalkulationData(resetKalkulation);
 
-      const initial: Record<string, { title: string; content: string; languageId: string }> = {};
+      const initial: Record<string, { title: string; content: Value; languageId: string }> = {};
       const contentLanguages: Language[] = [];
       
       // Reset from existing article content
@@ -218,7 +248,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
           if (lang) {
             initial[lang.value] = {
               title: content.title,
-              content: content.content,
+              content: htmlToPlateValue(content.content),
               languageId: content.languageId,
             };
             if (!contentLanguages.find(cl => cl.id === lang.id)) {
@@ -294,13 +324,15 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
 
       // Save content if handler provided
       if (onSaveContent) {
-        const contentToSave = currentLanguages.map(lang => ({
-          articleId: article.id,
-          blockId: null,
-          title: editedArticleContents[lang.value]?.title || '',
-          content: editedArticleContents[lang.value]?.content || '',
-          languageId: lang.id,
-        }));
+        const contentToSave = await Promise.all(
+          currentLanguages.map(async lang => ({
+            articleId: article.id,
+            blockId: null,
+            title: editedArticleContents[lang.value]?.title || '',
+            content: await plateValueToHtml(editedArticleContents[lang.value]?.content || htmlToPlateValue('')),
+            languageId: lang.id,
+          }))
+        );
         await onSaveContent(article.id, contentToSave);
       }
 
@@ -352,7 +384,7 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
       setCurrentLanguages(newCurrentLanguages);
       setEditedArticleContents(prev => ({
         ...prev,
-        [langToAdd.value]: { title: '', content: '', languageId: langToAdd.id },
+        [langToAdd.value]: { title: '', content: htmlToPlateValue(''), languageId: langToAdd.id },
       }));
       if (!selectedPreviewLanguage && newCurrentLanguages.length === 1) {
         setSelectedPreviewLanguage(langToAdd.value);
@@ -492,8 +524,8 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
                       key={`${lang.value}-${article.id}`}
                       id={`content-${lang.value}`}
                       className="w-full text-sm"
-                      defaultValue={editedArticleContents[lang.value]?.content || ''}
-                      onTextChange={(content: string) =>
+                      value={editedArticleContents[lang.value]?.content || htmlToPlateValue('')}
+                      onValueChange={(content: Value) =>
                         handleRichTextChange(lang.value, content)
                       }
                       readOnly={!isEditing}
@@ -582,19 +614,11 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
               </div>
 
               {currentPreviewData ? (
-                <div className="p-4 border rounded-md bg-gray-50 min-h-[200px]">
-                  {!article.hideTitle && (
-                    <h3 className="text-xl font-semibold mb-2 break-words">
-                      {currentPreviewData.title || 'Artikel'}
-                    </h3>
-                  )}
-                  <div
-                    className="prose max-w-none prose-sm sm:prose-base lg:prose-lg"
-                    dangerouslySetInnerHTML={{
-                      __html: currentPreviewData.content || '<em>(Kein Inhalt)</em>',
-                    }}
-                  />
-                </div>
+                <PreviewContent 
+                  title={currentPreviewData.title}
+                  content={currentPreviewData.content}
+                  hideTitle={article.hideTitle}
+                />
               ) : (
                 <div className="text-gray-500 text-center py-8">
                   Für die ausgewählte Sprache sind keine Inhalte vorhanden oder

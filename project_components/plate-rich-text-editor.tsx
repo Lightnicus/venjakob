@@ -3,13 +3,11 @@
 import React, { useCallback, useMemo, useEffect } from 'react';
 import { type Value } from 'platejs';
 import { Plate, usePlateEditor } from 'platejs/react';
-import { createSlateEditor, serializeHtml } from 'platejs';
 
 import { EditorKit } from '@/components/editor/editor-kit';
-import { BaseEditorKit } from '@/components/editor/editor-base-kit';
-import { EditorStatic } from '@/components/ui/editor-static';
 import { Editor, EditorContainer } from '@/components/ui/editor';
 import { cn } from '@/lib/utils';
+import { htmlToPlateValue, plateValueToHtml } from '@/helper/plate-serialization';
 
 // Available toolbar tool categories
 export type ToolbarTools = {
@@ -28,8 +26,9 @@ export type ToolbarTools = {
 };
 
 export interface PlateRichTextEditorProps {
-  defaultValue?: string;
+  value?: Value;
   onTextChange?: (content: string, editor: any) => void;
+  onValueChange?: (value: Value) => void;
   placeholder?: string;
   readOnly?: boolean;
   className?: string;
@@ -44,76 +43,7 @@ export interface PlateEditorRef {
   setHtml: (html: string) => void;
 }
 
-// Helper function to create DOM element from HTML string
-const getEditorDOMFromHtmlString = (html: string): HTMLElement => {
-  const container = document.createElement('div');
-  container.innerHTML = html;
-  return container;
-};
 
-// Convert HTML string to Plate value using PlateJS deserialization
-const htmlToValue = (html: string): Value => {
-  if (!html || html.trim() === '') {
-    return [{ type: 'p', children: [{ text: '' }] }];
-  }
-  
-  try {
-    // Create a temporary editor for HTML deserialization using EditorKit
-    const tempEditor = createSlateEditor({ 
-      plugins: EditorKit.filter(plugin => plugin.key !== 'floating-toolbar'),
-      value: [] 
-    });
-    
-    // Parse HTML into DOM element
-    const editorNode = getEditorDOMFromHtmlString(html);
-    
-    // Use editor's HTML API to deserialize
-    const nodes = tempEditor.api.html.deserialize({ element: editorNode });
-    
-    // Ensure we have valid nodes
-    if (Array.isArray(nodes) && nodes.length > 0) {
-      return nodes as Value;
-    }
-    
-    return [{ type: 'p', children: [{ text: '' }] }];
-  } catch (error) {
-    console.warn('Failed to parse HTML:', error);
-    // Fallback to simple text extraction
-    try {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = html;
-      return [{ type: 'p', children: [{ text: tempDiv.textContent || '' }] }];
-    } catch {
-      return [{ type: 'p', children: [{ text: '' }] }];
-    }
-  }
-};
-
-// Convert Plate value to HTML string using official PlateJS serializeHtml
-const valueToHtml = async (value: Value): Promise<string> => {
-  try {
-    // Create a static editor for HTML serialization using BaseEditorKit
-    const editorStatic = createSlateEditor({
-      plugins: BaseEditorKit,
-      value,
-    });
-
-    // Use official PlateJS HTML serialization with static components
-    const html = await serializeHtml(editorStatic, {
-      editorComponent: EditorStatic,
-      props: { variant: 'select' },
-    });
-
-    return html;
-  } catch (error) {
-    console.warn('Failed to serialize to HTML:', error);
-    // Fallback to simple text extraction
-    return value.map(node => {
-      const text = node.children?.map((child: any) => child.text || '').join('') || '';
-      return text ? `<p>${text}</p>` : '<p><br></p>';
-    }).join('');
-  }
-};
 
 // Default enabled tools
 const DEFAULT_TOOLS: ToolbarTools = {
@@ -133,11 +63,18 @@ const DEFAULT_TOOLS: ToolbarTools = {
 
 // Read-only component - simple HTML display
 const PlateRichTextViewer = React.forwardRef<PlateEditorRef, PlateRichTextEditorProps>(
-  ({ defaultValue = '', className, id }, ref) => {
+  ({ value = [{ type: 'p', children: [{ text: '' }] }], className, id }, ref) => {
+    const [html, setHtml] = React.useState('');
+
+    // Convert value to HTML for display
+    useEffect(() => {
+      plateValueToHtml(value).then(setHtml);
+    }, [value]);
+
     // Expose methods via ref for compatibility
     React.useImperativeHandle(ref, () => ({
       getEditor: () => null,
-      getHtml: async () => defaultValue,
+      getHtml: async () => await plateValueToHtml(value),
       setHtml: () => {
         console.warn('Cannot set HTML in read-only mode');
       },
@@ -147,7 +84,7 @@ const PlateRichTextViewer = React.forwardRef<PlateEditorRef, PlateRichTextEditor
       <div 
         className={cn('min-h-[200px] bg-gray-100 border p-3 rounded-md prose prose-sm max-w-none', className)} 
         id={id}
-        dangerouslySetInnerHTML={{ __html: defaultValue || '' }}
+        dangerouslySetInnerHTML={{ __html: html }}
       />
     );
   }
@@ -158,16 +95,14 @@ PlateRichTextViewer.displayName = 'PlateRichTextViewer';
 // Edit component - full PlateJS editor
 const PlateRichTextEditorEdit = React.forwardRef<PlateEditorRef, PlateRichTextEditorProps>(
   ({
-    defaultValue = '',
+    value = [{ type: 'p', children: [{ text: '' }] }],
     onTextChange,
+    onValueChange,
     placeholder = 'Type your amazing content here...',
     className,
     id,
     variant = 'select',
   }, ref) => {
-    // Initialize value from defaultValue
-    const initialValue = useMemo(() => htmlToValue(defaultValue), [defaultValue]);
-
     // Create plugin list - filter out floating toolbar
     const plugins = useMemo(() => {
       return EditorKit.filter(plugin => plugin.key !== 'floating-toolbar');
@@ -176,22 +111,19 @@ const PlateRichTextEditorEdit = React.forwardRef<PlateEditorRef, PlateRichTextEd
     // Create editor
     const editor = usePlateEditor({
       plugins,
-      value: initialValue,
+      value,
     });
-
-    // Update editor content when defaultValue changes
-    useEffect(() => {
-      if (editor && defaultValue !== undefined) {
-        const newValue = htmlToValue(defaultValue);
-        // Update content directly without HTML comparison to avoid async complexity
-        editor.tf.setValue(newValue);
-      }
-    }, [defaultValue, editor]);
 
     // Handle editor changes
     const handleChange = useCallback(async ({ value: newValue }: { value: Value }) => {
+      // Call onValueChange first (preferred, no conversion needed)
+      if (onValueChange) {
+        onValueChange(newValue);
+      }
+      
+      // Keep onTextChange for backward compatibility
       if (onTextChange) {
-        const html = await valueToHtml(newValue);
+        const html = await plateValueToHtml(newValue);
         // Create a mock editor object that matches Quill's interface
         const mockEditor = {
           root: {
@@ -200,14 +132,14 @@ const PlateRichTextEditorEdit = React.forwardRef<PlateEditorRef, PlateRichTextEd
         };
         onTextChange(html, mockEditor);
       }
-    }, [onTextChange]);
+    }, [onTextChange, onValueChange]);
 
     // Expose methods via ref
     React.useImperativeHandle(ref, () => ({
       getEditor: () => editor,
-      getHtml: async () => await valueToHtml(editor.children),
+      getHtml: async () => await plateValueToHtml(editor.children),
       setHtml: (html: string) => {
-        const newValue = htmlToValue(html);
+        const newValue = htmlToPlateValue(html);
         editor.tf.setValue(newValue);
       },
     }));
@@ -244,5 +176,8 @@ const PlateRichTextEditor = React.forwardRef<PlateEditorRef, PlateRichTextEditor
 );
 
 PlateRichTextEditor.displayName = 'PlateRichTextEditor';
+
+// Export helper functions for parent components
+export { htmlToPlateValue, plateValueToHtml } from '@/helper/plate-serialization';
 
 export default PlateRichTextEditor; 

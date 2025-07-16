@@ -1,5 +1,6 @@
-import { FC, useState, useEffect, useRef } from 'react';
-import PlateRichTextEditor from './plate-rich-text-editor';
+import React, { FC, useState, useEffect, useRef } from 'react';
+import PlateRichTextEditor, { htmlToPlateValue, plateValueToHtml } from './plate-rich-text-editor';
+import { type Value } from 'platejs';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import BlockDetailProperties, {
   BlockDetailPropertiesRef,
@@ -12,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { Edit3, Save, PlusCircle, Trash2, Loader2 } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -45,6 +46,35 @@ type BlockDetailProps = {
   ) => Promise<void>;
 };
 
+// Helper component to handle async HTML conversion for preview
+const PreviewContent: React.FC<{
+  title: string;
+  content: Value;
+  hideTitle: boolean;
+}> = ({ title, content, hideTitle }) => {
+  const [html, setHtml] = React.useState('');
+
+  useEffect(() => {
+    plateValueToHtml(content).then(setHtml);
+  }, [content]);
+
+  return (
+    <div className="p-4 border rounded-md bg-gray-50 min-h-[200px]">
+      {!hideTitle && (
+        <h3 className="text-xl font-semibold mb-2 break-words">
+          {title || '(Kein Titel)'}
+        </h3>
+      )}
+      <div
+        className="prose max-w-none prose-sm sm:prose-base lg:prose-lg"
+        dangerouslySetInnerHTML={{
+          __html: html || '<em>(Kein Inhalt)</em>',
+        }}
+      />
+    </div>
+  );
+};
+
 const BlockDetail: FC<BlockDetailProps> = ({
   blockId,
   languages,
@@ -69,7 +99,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
       string,
       {
         title: string;
-        content: string;
+        content: Value;
         languageId: string;
       }
     >
@@ -115,14 +145,14 @@ const BlockDetail: FC<BlockDetailProps> = ({
       // Initialize content state
       const initial: Record<
         string,
-        { title: string; content: string; languageId: string }
+        { title: string; content: Value; languageId: string }
       > = {};
       blockData.blockContents.forEach((bc: BlockContent) => {
         const lang = languages.find(l => l.id === bc.languageId);
         if (lang) {
           initial[lang.value] = {
             title: bc.title,
-            content: bc.content,
+            content: htmlToPlateValue(bc.content),
             languageId: bc.languageId,
           };
         }
@@ -158,12 +188,12 @@ const BlockDetail: FC<BlockDetailProps> = ({
     }
   }, [blockId]);
 
-  const handleRichTextChange = (langValue: string, content: string) => {
+  const handleRichTextChange = (langValue: string, content: Value) => {
     if (!isEditing) return;
     setEditedBlockContents(prev => ({
       ...prev,
       [langValue]: {
-        ...(prev[langValue] || { title: '', content: '', languageId: '' }),
+        ...(prev[langValue] || { title: '', content: htmlToPlateValue(''), languageId: '' }),
         content,
       },
     }));
@@ -207,14 +237,14 @@ const BlockDetail: FC<BlockDetailProps> = ({
 
       const initial: Record<
         string,
-        { title: string; content: string; languageId: string }
+        { title: string; content: Value; languageId: string }
       > = {};
       block.blockContents.forEach(bc => {
         const lang = languages.find(l => l.id === bc.languageId);
         if (lang) {
           initial[lang.value] = {
             title: bc.title,
-            content: bc.content,
+            content: htmlToPlateValue(bc.content),
             languageId: bc.languageId,
           };
         }
@@ -246,13 +276,15 @@ const BlockDetail: FC<BlockDetailProps> = ({
     try {
       // Save content
       if (onSaveChanges) {
-        const blockContentsToSave = currentLanguages.map(lang => ({
-          blockId: block.id,
-          articleId: null,
-          title: editedBlockContents[lang.value]?.title || '',
-          content: editedBlockContents[lang.value]?.content || '',
-          languageId: lang.id,
-        }));
+        const blockContentsToSave = await Promise.all(
+          currentLanguages.map(async lang => ({
+            blockId: block.id,
+            articleId: null,
+            title: editedBlockContents[lang.value]?.title || '',
+            content: await plateValueToHtml(editedBlockContents[lang.value]?.content || htmlToPlateValue('')),
+            languageId: lang.id,
+          }))
+        );
         await onSaveChanges(block.id, blockContentsToSave);
       }
 
@@ -313,7 +345,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
       setCurrentLanguages(newCurrentLanguages);
       setEditedBlockContents(prev => ({
         ...prev,
-        [langToAdd.value]: { title: '', content: '', languageId: langToAdd.id },
+        [langToAdd.value]: { title: '', content: htmlToPlateValue(''), languageId: langToAdd.id },
       }));
       if (!selectedPreviewLanguage && newCurrentLanguages.length === 1) {
         setSelectedPreviewLanguage(langToAdd.value);
@@ -463,14 +495,14 @@ const BlockDetail: FC<BlockDetailProps> = ({
                       </label>
                       {(() => {
                         const contentValue =
-                          editedBlockContents[lang.value]?.content || '';
+                          editedBlockContents[lang.value]?.content || htmlToPlateValue('');
                         return (
                           <PlateRichTextEditor
                             key={`${lang.value}-${block.id}`}
                             id={`content-${lang.value}`}
                             className="w-full text-sm"
-                            defaultValue={contentValue}
-                            onTextChange={(content: string) =>
+                            value={contentValue}
+                            onValueChange={(content: Value) =>
                               handleRichTextChange(lang.value, content)
                             }
                             readOnly={!isEditing}
@@ -566,20 +598,12 @@ const BlockDetail: FC<BlockDetailProps> = ({
               </div>
 
               {currentPreviewData ? (
-                <div className="p-4 border rounded-md bg-gray-50 min-h-[200px]">
-                  {!block.hideTitle && (
-                    <h3 className="text-xl font-semibold mb-2 break-words">
-                      {currentPreviewData.title || '(Kein Titel)'}
-                    </h3>
-                  )}
-                  <div
-                    className="prose max-w-none prose-sm sm:prose-base lg:prose-lg"
-                    dangerouslySetInnerHTML={{
-                      __html:
-                        currentPreviewData.content || '<em>(Kein Inhalt)</em>',
-                    }}
-                  />
-                </div>
+                <PreviewContent 
+                  title={currentPreviewData.title}
+                  content={currentPreviewData.content}
+                  hideTitle={block.hideTitle}
+                />
+                
               ) : (
                 <div className="text-gray-500 text-center py-8">
                   Für die ausgewählte Sprache sind keine Inhalte vorhanden oder
