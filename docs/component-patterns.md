@@ -1,10 +1,236 @@
-# Component Patterns & Reusable Components
+# Component Patterns
 
-This document covers reusable component patterns and design principles used throughout the Venjakob application.
+This document outlines common component patterns and best practices used in the project.
 
-## Overview
+## Rich Text Editor (PlateJS) Integration
 
-The application follows DRY (Don't Repeat Yourself) principles by creating reusable components and patterns that eliminate code duplication while maintaining consistency across the UI.
+### Implementation Pattern
+Our `PlateRichTextEditor` component uses a **separate components architecture** to solve React DnD conflicts and ensure reliable toolbar rendering:
+
+```typescript
+// Separate read-only component - pure HTML display
+const PlateRichTextViewer = React.forwardRef<PlateEditorRef, PlateRichTextEditorProps>(
+  ({ defaultValue, className, id }, ref) => {
+    return (
+      <div 
+        className={cn('min-h-[200px] rounded-md prose prose-sm max-w-none', className)} 
+        id={id}
+        dangerouslySetInnerHTML={{ __html: defaultValue || '' }}
+      />
+    );
+  }
+);
+
+// Separate edit component - full PlateJS editor
+const PlateRichTextEditorEdit = React.forwardRef<PlateEditorRef, PlateRichTextEditorProps>(
+  ({ defaultValue, onTextChange, placeholder, className, id, variant }, ref) => {
+    const initialValue = useMemo(() => htmlToValue(defaultValue), [defaultValue]);
+    
+    const plugins = useMemo(() => {
+      return EditorKit.filter(plugin => plugin.key !== 'floating-toolbar');
+    }, []);
+
+    const editor = usePlateEditor({ plugins, value: initialValue });
+    
+    return (
+      <div className={cn('min-h-[200px] rounded-md border', className)} id={id}>
+        <Plate editor={editor} onChange={handleChange}>
+          <EditorContainer variant={variant}>
+            <Editor placeholder={placeholder} variant={variant} />
+          </EditorContainer>
+        </Plate>
+      </div>
+    );
+  }
+);
+
+// Main component - conditional rendering
+const PlateRichTextEditor = React.forwardRef<PlateEditorRef, PlateRichTextEditorProps>(
+  (props, ref) => {
+    if (props.readOnly) {
+      return <PlateRichTextViewer {...props} ref={ref} />;
+    }
+    return <PlateRichTextEditorEdit {...props} ref={ref} />;
+  }
+);
+```
+
+### Key Features
+- **Dual-Component Architecture**: Separate components for read-only display and full editing
+- **Performance Optimized**: Read-only mode renders pure HTML without editor overhead
+- **Consistent Toolbar**: Edit mode always provides complete toolbar functionality
+- **React DnD Compatible**: Drag-and-drop functionality isolated to edit mode only
+- **Fixed Toolbar**: Single toolbar above editor content (no floating toolbars)
+- **HTML Input/Output**: Seamless conversion between HTML and PlateJS value format
+- **Type Safety**: Full TypeScript interfaces for all component props
+
+### Component Architecture
+✅ **Independent Lifecycles**: Read and edit modes have separate component trees  
+✅ **Optimized Performance**: Read-only mode eliminates unnecessary JavaScript overhead  
+✅ **Reliable State**: Edit component maintains consistent plugin initialization  
+✅ **Clean Separation**: Clear boundaries between display and editing functionality  
+✅ **Backward Compatible**: Maintains same interface as previous rich text editor implementations
+
+### Architecture Design
+
+The component uses a **dual-component architecture** that separates read-only and editing functionality into distinct components:
+
+```typescript
+// Conditional rendering based on mode
+if (props.readOnly) {
+  return <PlateRichTextViewer {...props} ref={ref} />;    // Pure HTML display
+}
+return <PlateRichTextEditorEdit {...props} ref={ref} />;   // Full PlateJS editor
+```
+
+**Design Principles**:
+- **Independent Lifecycles**: Read and edit components never share state or React lifecycle
+- **Optimized Performance**: Read-only mode renders pure HTML without PlateJS overhead
+- **Consistent Initialization**: Edit component always starts with complete plugin configuration
+- **React DnD Compatibility**: Only edit mode uses drag-and-drop functionality, preventing backend conflicts
+
+### Toolbar Implementation
+
+The toolbar uses a fixed configuration of PlateJS toolbar components:
+
+```typescript
+// FixedToolbarButtons component structure
+export function FixedToolbarButtons() {
+  const readOnly = useEditorReadOnly();
+
+  return (
+    <div className="flex w-full">
+      {!readOnly && (
+        <>
+          {/* History Controls */}
+          <ToolbarGroup>
+            <UndoToolbarButton />
+            <RedoToolbarButton />
+          </ToolbarGroup>
+
+          {/* Text Format & Size */}
+          <ToolbarGroup>
+            <TurnIntoToolbarButton />     // Headings, paragraphs
+            <FontSizeToolbarButton />     // Font size selection
+          </ToolbarGroup>
+
+          {/* Text Styling */}
+          <ToolbarGroup>
+            <MarkToolbarButton nodeType={KEYS.bold} />
+            <MarkToolbarButton nodeType={KEYS.italic} />
+            <MarkToolbarButton nodeType={KEYS.underline} />
+            <MarkToolbarButton nodeType={KEYS.strikethrough} />
+          </ToolbarGroup>
+
+          {/* Layout & Lists */}
+          <ToolbarGroup>
+            <AlignToolbarButton />
+            <NumberedListToolbarButton />
+            <BulletedListToolbarButton />
+          </ToolbarGroup>
+
+          {/* Tables */}
+          <ToolbarGroup>
+            <TableToolbarButton />
+          </ToolbarGroup>
+        </>
+      )}
+      <div className="grow" />
+    </div>
+  );
+}
+```
+
+### Toolbar Configuration
+
+The toolbar provides essential formatting tools for business document editing:
+
+**Available Features**:
+- **History Controls** - Undo/Redo operations
+- **Text Formatting** - Headings, paragraphs, font sizes
+- **Text Styling** - Bold, italic, underline, strikethrough
+- **Layout** - Text alignment options
+- **Lists** - Numbered and bulleted lists
+- **Tables** - Table creation and editing
+
+**Intentionally Excluded Features**:
+The toolbar focuses on core business formatting needs and excludes features like AI integration, media uploads, collaboration tools, advanced formatting (code/math), colors, links, and import/export to maintain simplicity and performance.
+
+### Usage Examples
+
+#### Basic Usage
+```typescript
+<PlateRichTextEditor
+  defaultValue={description}
+  onTextChange={handleDescriptionChange}
+  placeholder="Geben Sie hier eine detaillierte Beschreibung ein..."
+  readOnly={!isEditing}
+  className="min-h-[200px]"
+/>
+```
+
+#### Read-only Display
+```typescript
+<PlateRichTextEditor
+  defaultValue={savedContent}
+  readOnly={true}
+  className="prose max-w-none"
+/>
+```
+
+#### In Form Context
+```typescript
+const [formDescriptionHtml, setFormDescriptionHtml] = useState(initialDescription);
+
+<PlateRichTextEditor
+  defaultValue={formDescriptionHtml}
+  onTextChange={(content) => setFormDescriptionHtml(content)}
+  placeholder="Enter description..."
+  readOnly={!isEditing}
+  variant="select"
+/>
+```
+
+#### Tab Integration
+```typescript
+// In split panel or tabbed interface
+<PlateRichTextEditor
+  id={`description-editor-${nodeId}`}
+  defaultValue={selectedNode?.description || ''}
+  onTextChange={(content) => handleDescriptionChange(selectedNode?.id, content)}
+  placeholder="Click to add description..."
+  readOnly={!isEditing}
+/>
+```
+
+### Component Interface
+
+The component provides a simple, consistent interface for rich text editing:
+
+```typescript
+interface PlateRichTextEditorProps {
+  defaultValue?: string;                    // HTML content to display/edit
+  onTextChange?: (content: string, editor: any) => void;  // Change handler
+  placeholder?: string;                     // Placeholder text for empty editor
+  readOnly?: boolean;                      // Toggle between view/edit modes
+  className?: string;                      // Additional CSS classes
+  id?: string;                            // HTML element ID
+  variant?: 'default' | 'select' | 'demo'; // Editor styling variant
+}
+
+// Ref interface for programmatic control
+interface PlateEditorRef {
+  getEditor: () => any | null;            // Access to PlateJS editor instance
+  getHtml: () => string;                  // Get current content as HTML
+  setHtml: (html: string) => void;        // Set content from HTML
+}
+```
+
+### Performance Characteristics
+- **Read-Only Mode**: Pure HTML rendering with minimal JavaScript overhead
+- **Edit Mode**: Full PlateJS editor with complete plugin ecosystem
+- **Conditional Loading**: PlateJS plugins only load when entering edit mode
+- **Memory Efficient**: No persistent editor state in read-only mode
 
 ## Management Components
 
@@ -467,6 +693,60 @@ openNewTab({
 - **Maintainability**: Clear parameter-based flow control
 - **User Experience**: Context-aware tab opening with proper data
 - **Type Safety**: Full TypeScript support for all parameters
+
+## Interactive Split Panel
+
+The `InteractiveSplitPanel` component provides a tree view with drag-and-drop functionality for quote positions. It features:
+
+- **Tree Structure**: Hierarchical display of quote positions using ArboristTree
+- **Drag & Drop**: Reordering functionality with business rule validation
+- **Node Selection**: Click to select and view node details in the right panel
+- **Right Panel**: Displays selected node details with editing capabilities
+- **Search**: Filter tree nodes by name
+- **Responsive Design**: Adapts to different screen sizes
+
+### Usage
+
+```typescript
+<InteractiveSplitPanel
+  initialTreeData={treeData}
+  isEditing={isEditing}
+  versionId={versionId}
+  onTreeDataChange={handleTreeDataChange}
+/>
+```
+
+### Right Panel Components
+
+**OfferPositionText**: Handles text block nodes with:
+- Title input field (populated from `quote_positions.title`)
+- Rich text description editor (populated from `quote_positions.description`)
+- Read-only mode when not editing
+- Preview tab for formatted output
+
+**OfferPositionArticle**: Handles article nodes with:
+- Title input field (populated from `quote_positions.title`)
+- Rich text description editor (populated from `quote_positions.description`)
+- Calculation tab for pricing
+- Preview tab for formatted output
+- All inputs disabled when not in edit mode
+
+### Data Flow
+
+The `transformPositionsToTreeData` function in `QuoteDetail` component:
+- Fetches quote positions from database with `description` and `title` fields
+- Transforms database records into tree structure with `MyTreeNodeData` interface
+- Passes description and title data to right panel components
+- Components use React state to manage editing of these fields
+
+### QuillRichTextEditor Component
+
+The enhanced Quill rich text editor prevents multiple instance issues through:
+- Proper cleanup of old instances before creating new ones
+- Separate handling of content updates without full re-initialization
+- User-only event triggering to prevent infinite loops
+- Comprehensive cleanup on component unmount
+- Force re-mounting via key prop when node changes
 
 ## Related Documentation
 

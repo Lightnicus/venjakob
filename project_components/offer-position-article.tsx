@@ -1,24 +1,33 @@
 import React, { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import KalkulationForm from "./kalkulation-form"
-import QuillRichTextEditor from "./quill-rich-text-editor" // adjust if needed
+import PlateRichTextEditor from "./plate-rich-text-editor"
 
 type OfferPositionArticleProps = {
   selectedNode?: any
   formDescriptionHtml?: string | undefined
   onDescriptionChange?: (desc: string | undefined) => void
+  isEditing: boolean
 }
 
-const OfferPositionArticle: React.FC<OfferPositionArticleProps> = ({ selectedNode, formDescriptionHtml, onDescriptionChange }) => {
-  const [title, setTitle] = useState("")
-  const [description, setDescription] = useState<string>("")
+const OfferPositionArticle: React.FC<OfferPositionArticleProps> = ({ selectedNode, formDescriptionHtml, onDescriptionChange, isEditing }) => {
+  const [title, setTitle] = useState(selectedNode?.data?.title || "")
+
+  // Update state when selectedNode changes
+  React.useEffect(() => {
+    if (selectedNode) {
+      setTitle(selectedNode.data.title || "")
+    }
+  }, [selectedNode])
 
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => setTitle(e.target.value)
   const handleDescriptionChange = (_: any, editor: any) => {
-    if (editor && editor.root) {
+    if (editor && editor.root && onDescriptionChange) {
       const html = editor.root.innerHTML
-      setDescription(html === "<p><br></p>" ? "" : html)
+      const cleanHtml = html === "<p><br></p>" ? "" : html
+      onDescriptionChange(cleanHtml)
     }
   }
 
@@ -42,17 +51,18 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = ({ selectedNod
                 onChange={handleTitleChange}
                 className="w-full"
                 aria-label="Überschrift"
+                disabled={!isEditing}
               />
             </div>
             <div className="space-y-2">
               <label htmlFor="editor-beschreibung" className="text-sm font-medium">Beschreibung</label>
-              <QuillRichTextEditor
+              <PlateRichTextEditor
                 id="editor-beschreibung"
-                defaultValue={description}
+                defaultValue={formDescriptionHtml || ''}
                 onTextChange={handleDescriptionChange}
                 placeholder="Geben Sie hier eine detaillierte Beschreibung ein..."
-                theme="snow"
-                className="min-h-[200px] border rounded-md"
+                className="min-h-[200px]"
+                readOnly={!isEditing}
               />
             </div>
           </form>
@@ -65,7 +75,7 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = ({ selectedNod
         <TabsContent value="vorschau" className="mt-6">
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">{title || "(Keine Überschrift)"}</h2>
-            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: description || "<em>(Keine Beschreibung)</em>" }} />
+            <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: formDescriptionHtml || "<em>(Keine Beschreibung)</em>" }} />
           </div>
         </TabsContent>
       </Tabs>

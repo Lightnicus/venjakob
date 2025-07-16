@@ -668,6 +668,12 @@ The project provides comprehensive helper functions for database operations, org
 - Two-step database update to avoid constraint violations during reordering
 - API endpoint: `PUT /api/quotes/versions/{versionId}/positions/reorder`
 
+**Right Panel Node Details**: When a node is selected in the tree, the right panel displays:
+- Input fields for title (from `quote_positions.title`) that are disabled when not in edit mode
+- Rich text editor populated with description (from `quote_positions.description`) with read-only mode when not editing
+- Tabbed interface with separate tabs for input, calculation (articles), and preview
+- Data is loaded from database via `transformPositionsToTreeData` function
+
 **Quote Numbering**: Quote numbers are generated in the format `ANG-YYYY-XXXX` where YYYY is the current year and XXXX is a zero-padded number starting from the `QUOTE_NUMBER_START` environment variable (defaults to 1). The numbering continues incrementally from `QUOTE_NUMBER_START + existing_quote_count`.
 
 #### Advanced Operations

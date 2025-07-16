@@ -267,8 +267,8 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       setSelectedNodeId(node.id);
       setSelectedNode(node);
       setSelectedNodeType(node.data.type);
-      setFormDescriptionHtml(undefined);
-
+      // Load the node's description content
+      setFormDescriptionHtml(node.data.description || '');
     } else {
       setSelectedNodeId(undefined);
       setSelectedNode(null);
@@ -277,13 +277,14 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
     }
   };
 
-  useEffect(() => {
-    if (selectedNode) {
-      setFormDescriptionHtml(undefined);
-    } else {
-      setFormDescriptionHtml(undefined);
-    }
-  }, [selectedNode]);
+  // useEffect(() => {
+  //   if (selectedNode) {
+  //     // Load the selected node's description content
+  //     setFormDescriptionHtml(selectedNode.data.description || '');
+  //   } else {
+  //     setFormDescriptionHtml(undefined);
+  //   }
+  // }, [selectedNode]);
 
   // Render form content
   const renderFormContent = () => {
@@ -295,6 +296,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
           selectedNode={selectedNode}
           formDescriptionHtml={htmlValue}
           onDescriptionChange={handleHtmlChange}
+          isEditing={isEditing}
         />
       );
     }
@@ -304,6 +306,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
           selectedNode={selectedNode}
           formDescriptionHtml={htmlValue}
           onDescriptionChange={handleHtmlChange}
+          isEditing={isEditing}
         />
       );
     }

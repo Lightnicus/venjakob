@@ -62,6 +62,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         id: position.id,
         name: position.title || position.description || 'Unnamed Position',
         type: position.articleId ? ('article' as const) : ('textblock' as const),
+        description: position.description || '',
+        title: position.title || '',
         children: []
       });
     });

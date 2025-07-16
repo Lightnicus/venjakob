@@ -8,6 +8,8 @@ export interface MyTreeNodeData {
   id: string;
   name: string;
   type?: 'textblock' | 'article';
+  description?: string;
+  title?: string;
   children?: MyTreeNodeData[];
 }
 
