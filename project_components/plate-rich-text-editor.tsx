@@ -108,7 +108,7 @@ const PlateRichTextViewer = React.forwardRef<PlateEditorRef, PlateRichTextEditor
 
     return (
       <div 
-        className={cn('min-h-[200px] rounded-md prose prose-sm max-w-none', className)} 
+        className={cn('min-h-[200px] bg-gray-100 border p-3 rounded-md prose prose-sm max-w-none', className)} 
         id={id}
         dangerouslySetInnerHTML={{ __html: defaultValue || '' }}
       />
@@ -180,7 +180,7 @@ const PlateRichTextEditorEdit = React.forwardRef<PlateEditorRef, PlateRichTextEd
     }));
 
     return (
-      <div className={cn('min-h-[200px] rounded-md border', className)} id={id}>
+      <div className={cn('min-h-[100px]', className)} id={id}>
         <Plate 
           editor={editor} 
           onChange={handleChange}

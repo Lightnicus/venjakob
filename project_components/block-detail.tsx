@@ -1,5 +1,5 @@
 import { FC, useState, useEffect, useRef } from 'react';
-import QuillRichTextEditor from './quill-rich-text-editor';
+import PlateRichTextEditor from './plate-rich-text-editor';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import BlockDetailProperties, {
   BlockDetailPropertiesRef,
@@ -465,19 +465,15 @@ const BlockDetail: FC<BlockDetailProps> = ({
                         const contentValue =
                           editedBlockContents[lang.value]?.content || '';
                         return (
-                          <QuillRichTextEditor
+                          <PlateRichTextEditor
                             key={`${lang.value}-${block.id}`}
                             id={`content-${lang.value}`}
-                            className="w-full border rounded text-sm bg-white read-only:bg-gray-100"
+                            className="w-full text-sm"
                             defaultValue={contentValue}
-                            onTextChange={content =>
-                              handleRichTextChange(
-                                lang.value,
-                                content as unknown as string,
-                              )
+                            onTextChange={(content: string) =>
+                              handleRichTextChange(lang.value, content)
                             }
                             readOnly={!isEditing}
-                            aria-label={`Inhalt ${lang.label}`}
                           />
                         );
                       })()}

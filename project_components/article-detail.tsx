@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import QuillRichTextEditor from '@/project_components/quill-rich-text-editor';
+import PlateRichTextEditor from '@/project_components/plate-rich-text-editor';
 import ArticleProperties from '@/project_components/article-properties';
 import EditLockButton from '@/project_components/edit-lock-button';
 import { fetchArticleWithCalculations } from '@/lib/api/articles';
@@ -488,16 +488,15 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
                     >
                       Inhalt
                     </label>
-                    <QuillRichTextEditor
+                    <PlateRichTextEditor
                       key={`${lang.value}-${article.id}`}
                       id={`content-${lang.value}`}
-                      className="w-full border rounded text-sm bg-white read-only:bg-gray-100"
+                      className="w-full text-sm"
                       defaultValue={editedArticleContents[lang.value]?.content || ''}
-                      onTextChange={content =>
-                        handleRichTextChange(lang.value, content as unknown as string)
+                      onTextChange={(content: string) =>
+                        handleRichTextChange(lang.value, content)
                       }
                       readOnly={!isEditing}
-                      aria-label={`Inhalt ${lang.label}`}
                     />
                   </div>
                 </div>
