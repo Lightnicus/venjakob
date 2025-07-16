@@ -61,13 +61,46 @@ const PlateRichTextEditor = React.forwardRef<PlateEditorRef, PlateRichTextEditor
 - **Consistent Toolbar**: Edit mode always provides complete toolbar functionality
 - **React DnD Compatible**: Drag-and-drop functionality isolated to edit mode only
 - **Fixed Toolbar**: Single toolbar above editor content (no floating toolbars)
-- **HTML Input/Output**: Seamless conversion between HTML and PlateJS value format
+- **Official PlateJS Serialization**: Uses `serializeHtml` with `BaseEditorKit` and static components for proper HTML conversion
 - **Type Safety**: Full TypeScript interfaces for all component props
 
 ### Component Architecture
 ✅ **Independent Lifecycles**: Read and edit modes have separate component trees  
 ✅ **Optimized Performance**: Read-only mode eliminates unnecessary JavaScript overhead  
-✅ **Reliable State**: Edit component maintains consistent plugin initialization  
+✅ **Reliable State**: Edit component maintains consistent plugin initialization
+
+### HTML Serialization Implementation
+
+The component uses the official PlateJS serialization approach for proper HTML conversion:
+
+**HTML to PlateJS Value (Deserialization):**
+```typescript
+// Uses editor's built-in HTML deserializer
+const tempEditor = createSlateEditor({ 
+  plugins: EditorKit.filter(plugin => plugin.key !== 'floating-toolbar'),
+  value: [] 
+});
+const nodes = tempEditor.api.html.deserialize({ element: htmlElement });
+```
+
+**PlateJS Value to HTML (Serialization):**
+```typescript
+// Uses official serializeHtml with static components
+const editorStatic = createSlateEditor({
+  plugins: BaseEditorKit,  // Static components for server-side rendering
+  value,
+});
+const html = await serializeHtml(editorStatic, {
+  editorComponent: EditorStatic,
+  props: { variant: 'select' },
+});
+```
+
+**Key Benefits:**
+- Preserves all rich text formatting (bold, italic, underline, headings, lists, etc.)
+- Compatible with server-side rendering
+- Uses static components for optimal performance
+- Handles complex nested structures correctly  
 ✅ **Clean Separation**: Clear boundaries between display and editing functionality  
 ✅ **Backward Compatible**: Maintains same interface as previous rich text editor implementations
 
