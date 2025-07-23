@@ -1,14 +1,11 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ArboristTree } from './arborist-tree';
-import { CustomNode, MyTreeNodeData, createCustomNodeWithDragState } from './custom-node';
+import { MyTreeNodeData, createCustomNodeWithDragState } from './custom-node';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { NodeApi, TreeApi, MoveHandler } from 'react-arborist';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Delta } from 'quill';
 import OfferPositionText from './offer-position-text';
 import { Calculator } from 'lucide-react';
 import OfferPositionArticle from './offer-position-article';
@@ -78,8 +75,48 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
     }));
   }, [blocks]);
 
+  // Memoized helper functions to prevent recreation on every render
+  const findNodeById = useCallback((nodes: readonly MyTreeNodeData[], id: string): MyTreeNodeData | null => {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = findNodeById(node.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  }, []);
+
+  const getNodeDepth = useCallback((nodes: readonly MyTreeNodeData[], targetId: string, currentDepth: number = 1): number => {
+    for (const node of nodes) {
+      if (node.id === targetId) return currentDepth;
+      if (node.children) {
+        const depth = getNodeDepth(node.children, targetId, currentDepth + 1);
+        if (depth > 0) return depth;
+      }
+    }
+    return 0;
+  }, []);
+
+  // Optimized deep clone function
+  const deepClone = useCallback((obj: any): any => {
+    if (obj === null || typeof obj !== 'object') return obj;
+    if (obj instanceof Date) return new Date(obj.getTime());
+    if (obj instanceof Array) return obj.map(item => deepClone(item));
+    if (typeof obj === 'object') {
+      const clonedObj: any = {};
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          clonedObj[key] = deepClone(obj[key]);
+        }
+      }
+      return clonedObj;
+    }
+    return obj;
+  }, []);
+
   // Handle drag and drop reordering
-  const handleMove: MoveHandler<MyTreeNodeData> = async ({ dragIds, parentId, index }) => {
+  const handleMove: MoveHandler<MyTreeNodeData> = useCallback(async ({ dragIds, parentId, index }) => {
     if (!versionId || !isEditing) return;
     
     try {
@@ -104,7 +141,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       }
       
       // Apply the move operation to update treeData (controlled mode)
-      const newTreeData = JSON.parse(JSON.stringify(treeData)) as MyTreeNodeData[];
+      const newTreeData = deepClone(treeData) as MyTreeNodeData[];
       
       // Helper function to remove nodes from their current locations
       const removeNodesFromTree = (nodes: MyTreeNodeData[], idsToRemove: string[]): MyTreeNodeData[] => {
@@ -125,7 +162,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
         const findInNodes = (nodeList: MyTreeNodeData[]) => {
           nodeList.forEach(node => {
             if (ids.includes(node.id)) {
-              foundNodes.push(JSON.parse(JSON.stringify(node)));
+              foundNodes.push(deepClone(node));
             }
             if (node.children) {
               findInNodes(node.children);
@@ -221,37 +258,13 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       // Prevent the move by throwing an error
       throw error;
     }
-  };
-  
-  // Helper function to find a node by ID in the tree
-  const findNodeById = (nodes: readonly MyTreeNodeData[], id: string): MyTreeNodeData | null => {
-    for (const node of nodes) {
-      if (node.id === id) return node;
-      if (node.children) {
-        const found = findNodeById(node.children, id);
-        if (found) return found;
-      }
-    }
-    return null;
-  };
-  
-  // Helper function to calculate node depth
-  const getNodeDepth = (nodes: readonly MyTreeNodeData[], targetId: string, currentDepth: number = 1): number => {
-    for (const node of nodes) {
-      if (node.id === targetId) return currentDepth;
-      if (node.children) {
-        const depth = getNodeDepth(node.children, targetId, currentDepth + 1);
-        if (depth > 0) return depth;
-      }
-    }
-    return 0;
-  };
+  }, [versionId, isEditing, treeData, findNodeById, getNodeDepth, deepClone, onTreeDataChange]);
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSearchChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(event.target.value);
-  };
+  }, []);
 
-  const handleClearSelection = () => {
+  const handleClearSelection = useCallback(() => {
     setSelectedNodeId(undefined);
     setSelectedNode(null);
     setSelectedNodeType(undefined);
@@ -259,9 +272,9 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
     if (treeRef.current) {
       treeRef.current.deselectAll();
     }
-  };
+  }, []);
 
-  const handleNodeSelect = (nodes: NodeApi<MyTreeNodeData>[]) => {
+  const handleNodeSelect = useCallback((nodes: NodeApi<MyTreeNodeData>[]) => {
     if (nodes.length > 0) {
       const node = nodes[0];
       setSelectedNodeId(node.id);
@@ -275,24 +288,17 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       setSelectedNodeType(undefined);
       setFormDescriptionHtml(undefined);
     }
-  };
+  }, []);
 
-  // useEffect(() => {
-  //   if (selectedNode) {
-  //     // Load the selected node's description content
-  //     setFormDescriptionHtml(selectedNode.data.description || '');
-  //   } else {
-  //     setFormDescriptionHtml(undefined);
-  //   }
-  // }, [selectedNode]);
-
-  // Render form content
-  const renderFormContent = () => {
+  // Memoized form content renderer to prevent unnecessary re-renders
+  const renderFormContent = useCallback(() => {
     const htmlValue = formDescriptionHtml;
     const handleHtmlChange = (html: string | undefined) => setFormDescriptionHtml(html);
+    
     if (selectedNodeType === 'article') {
       return (
         <OfferPositionArticle
+          key={`article-${selectedNodeId}`} // Add key to force re-mount when node changes
           selectedNode={selectedNode}
           formDescriptionHtml={htmlValue}
           onDescriptionChange={handleHtmlChange}
@@ -303,6 +309,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
     if (selectedNodeType === 'textblock') {
       return (
         <OfferPositionText
+          key={`textblock-${selectedNodeId}`} // Add key to force re-mount when node changes
           selectedNode={selectedNode}
           formDescriptionHtml={htmlValue}
           onDescriptionChange={handleHtmlChange}
@@ -311,10 +318,10 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       );
     }
     return null;
-  };
+  }, [selectedNodeType, selectedNodeId, selectedNode, formDescriptionHtml, isEditing]);
 
-  // Right panel content based on selected node
-  const renderRightPanel = () => {
+  // Memoized right panel content
+  const renderRightPanel = useCallback(() => {
     if (!selectedNode) {
       return (
         <div className="h-full flex flex-col items-center justify-center text-center">
@@ -331,23 +338,26 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       );
     }
     return renderFormContent();
-  };
+  }, [selectedNode, renderFormContent]);
 
   // AddBlockDialog handlers
-  const handleOpenAddBlock = () => setShowAddBlockDialog(true);
-  const handleCloseAddBlock = () => setShowAddBlockDialog(false);
-  const handleAddBlock = (block: DialogBlockWithContent) => {
+  const handleOpenAddBlock = useCallback(() => setShowAddBlockDialog(true), []);
+  const handleCloseAddBlock = useCallback(() => setShowAddBlockDialog(false), []);
+  const handleAddBlock = useCallback((block: DialogBlockWithContent) => {
     setShowAddBlockDialog(false);
     // handle block addition logic here
-  };
+  }, []);
 
   // AddArticleDialog handlers
-  const handleOpenAddArticle = () => setShowAddArticleDialog(true);
-  const handleCloseAddArticle = () => setShowAddArticleDialog(false);
-  const handleAddArticle = (article: Article) => {
+  const handleOpenAddArticle = useCallback(() => setShowAddArticleDialog(true), []);
+  const handleCloseAddArticle = useCallback(() => setShowAddArticleDialog(false), []);
+  const handleAddArticle = useCallback((article: Article) => {
     setShowAddArticleDialog(false);
     // handle article addition logic here
-  };
+  }, []);
+
+  // Memoized custom node renderer
+  const customNodeRenderer = useMemo(() => createCustomNodeWithDragState(isEditing), [isEditing]);
 
   return (
     <div className="w-full">
@@ -412,7 +422,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
               disableDrag={!isEditing}
               disableDrop={!isEditing}
             >
-              {createCustomNodeWithDragState(isEditing)}
+              {customNodeRenderer}
             </ArboristTree>
           </div>
           <div className="p-3 border-t bg-gray-50 dark:bg-gray-700">

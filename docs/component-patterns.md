@@ -58,6 +58,8 @@ const PlateRichTextEditor = React.forwardRef<PlateEditorRef, PlateRichTextEditor
 ### Key Features
 - **Dual-Component Architecture**: Separate components for read-only display and full editing
 - **Performance Optimized**: Read-only mode renders pure HTML without editor overhead
+- **Memory Leak Prevention**: Proper cleanup of editor instances and async operations
+- **Memoization**: Heavy components are memoized to prevent unnecessary re-renders
 - **Consistent Toolbar**: Edit mode always provides complete toolbar functionality
 - **React DnD Compatible**: Drag-and-drop functionality isolated to edit mode only
 - **Fixed Toolbar**: Single toolbar above editor content (no floating toolbars)
@@ -737,6 +739,8 @@ The `InteractiveSplitPanel` component provides a tree view with drag-and-drop fu
 - **Right Panel**: Displays selected node details with editing capabilities
 - **Search**: Filter tree nodes by name
 - **Responsive Design**: Adapts to different screen sizes
+- **Performance Optimized**: Memoized components and callbacks prevent UI freezing
+- **Memory Management**: Proper cleanup of rich text editors and async operations
 
 ### Usage
 
@@ -772,14 +776,41 @@ The `transformPositionsToTreeData` function in `QuoteDetail` component:
 - Passes description and title data to right panel components
 - Components use React state to manage editing of these fields
 
-### QuillRichTextEditor Component
+### Performance Optimizations
 
-The enhanced Quill rich text editor prevents multiple instance issues through:
+The InteractiveSplitPanel and related components implement several performance optimizations to prevent UI freezing:
+
+#### Component Memoization
+- **React.memo**: All form components (OfferPositionText, OfferPositionArticle, KalkulationForm) are wrapped with React.memo
+- **useCallback**: Event handlers are memoized to prevent unnecessary re-renders
+- **useMemo**: Heavy computations and JSX elements are memoized
+
+#### Memory Management
+- **Editor Cleanup**: PlateRichTextEditor properly destroys editor instances on unmount
+- **Async Operation Cleanup**: All async operations check component mount state before updating
+- **Deep Clone Optimization**: Replaced JSON.parse(JSON.stringify()) with optimized deep clone function
+
+#### Tree Performance
+- **Memoized Node Renderer**: Custom node renderer is memoized to prevent recreation
+- **Optimized Search**: Search functionality uses memoized callbacks
+- **Efficient State Updates**: Tree data updates are optimized with proper cloning
+
+#### Key-Based Re-mounting
+- **Force Re-mount**: Form components use key props to force re-mount when switching nodes
+- **Clean State**: Prevents stale state issues between different node types
+- **Editor Reset**: Ensures fresh editor instances for each node
+
+### PlateRichTextEditor Component
+
+The enhanced PlateJS rich text editor prevents multiple instance issues through:
 - Proper cleanup of old instances before creating new ones
 - Separate handling of content updates without full re-initialization
 - User-only event triggering to prevent infinite loops
 - Comprehensive cleanup on component unmount
 - Force re-mounting via key prop when node changes
+- Memory leak prevention with proper async operation cleanup
+- **HTML5 Backend Conflict Prevention**: Drag-and-drop functionality is disabled in rich text editors to prevent conflicts with tree drag-and-drop
+- **Context-Aware Functionality**: Tree provides drag-and-drop for reordering, rich text editor focuses on content editing
 
 ## Related Documentation
 

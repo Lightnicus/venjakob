@@ -1,5 +1,6 @@
 import React, { FC, useState, useEffect, useRef } from 'react';
-import PlateRichTextEditor, { htmlToPlateValue, plateValueToHtml } from './plate-rich-text-editor';
+import PlateRichTextEditor, { plateValueToHtml } from './plate-rich-text-editor';
+import { parseJsonContent } from '@/helper/plate-json-parser';
 import { type Value } from 'platejs';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import BlockDetailProperties, {
@@ -49,13 +50,13 @@ type BlockDetailProps = {
 // Helper component to handle async HTML conversion for preview
 const PreviewContent: React.FC<{
   title: string;
-  content: Value;
+  content: string;
   hideTitle: boolean;
 }> = ({ title, content, hideTitle }) => {
   const [html, setHtml] = React.useState('');
 
   useEffect(() => {
-    plateValueToHtml(content).then(setHtml);
+    plateValueToHtml(parseJsonContent(content)).then(setHtml);
   }, [content]);
 
   return (
@@ -99,7 +100,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
       string,
       {
         title: string;
-        content: Value;
+        content: string;
         languageId: string;
       }
     >
@@ -145,14 +146,14 @@ const BlockDetail: FC<BlockDetailProps> = ({
       // Initialize content state
       const initial: Record<
         string,
-        { title: string; content: Value; languageId: string }
+        { title: string; content: string; languageId: string }
       > = {};
       blockData.blockContents.forEach((bc: BlockContent) => {
         const lang = languages.find(l => l.id === bc.languageId);
         if (lang) {
           initial[lang.value] = {
             title: bc.title,
-            content: htmlToPlateValue(bc.content),
+            content: bc.content,
             languageId: bc.languageId,
           };
         }
@@ -193,8 +194,8 @@ const BlockDetail: FC<BlockDetailProps> = ({
     setEditedBlockContents(prev => ({
       ...prev,
       [langValue]: {
-        ...(prev[langValue] || { title: '', content: htmlToPlateValue(''), languageId: '' }),
-        content,
+        ...(prev[langValue] || { title: '', content: '', languageId: '' }),
+        content: JSON.stringify(content),
       },
     }));
   };
@@ -237,14 +238,14 @@ const BlockDetail: FC<BlockDetailProps> = ({
 
       const initial: Record<
         string,
-        { title: string; content: Value; languageId: string }
+        { title: string; content: string; languageId: string }
       > = {};
       block.blockContents.forEach(bc => {
         const lang = languages.find(l => l.id === bc.languageId);
         if (lang) {
           initial[lang.value] = {
             title: bc.title,
-            content: htmlToPlateValue(bc.content),
+            content: bc.content,
             languageId: bc.languageId,
           };
         }
@@ -281,7 +282,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
             blockId: block.id,
             articleId: null,
             title: editedBlockContents[lang.value]?.title || '',
-            content: await plateValueToHtml(editedBlockContents[lang.value]?.content || htmlToPlateValue('')),
+            content: editedBlockContents[lang.value]?.content || '',
             languageId: lang.id,
           }))
         );
@@ -345,7 +346,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
       setCurrentLanguages(newCurrentLanguages);
       setEditedBlockContents(prev => ({
         ...prev,
-        [langToAdd.value]: { title: '', content: htmlToPlateValue(''), languageId: langToAdd.id },
+        [langToAdd.value]: { title: '', content: '', languageId: langToAdd.id },
       }));
       if (!selectedPreviewLanguage && newCurrentLanguages.length === 1) {
         setSelectedPreviewLanguage(langToAdd.value);
@@ -495,7 +496,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
                       </label>
                       {(() => {
                         const contentValue =
-                          editedBlockContents[lang.value]?.content || htmlToPlateValue('');
+                          editedBlockContents[lang.value]?.content || '';
                         return (
                           <PlateRichTextEditor
                             key={`${lang.value}-${block.id}`}

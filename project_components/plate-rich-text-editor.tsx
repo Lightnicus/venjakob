@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useMemo, useEffect, useRef } from 'react';
 import { type Value } from 'platejs';
 import { Plate, usePlateEditor } from 'platejs/react';
 
@@ -8,6 +8,7 @@ import { EditorKit } from '@/components/editor/editor-kit';
 import { Editor, EditorContainer } from '@/components/ui/editor';
 import { cn } from '@/lib/utils';
 import { htmlToPlateValue, plateValueToHtml } from '@/helper/plate-serialization';
+import { parseJsonContent } from '@/helper/plate-json-parser';
 
 // Available toolbar tool categories
 export type ToolbarTools = {
@@ -26,7 +27,7 @@ export type ToolbarTools = {
 };
 
 export interface PlateRichTextEditorProps {
-  value?: Value;
+  value?: Value | string; // Accept either Plate Value or JSON string
   onTextChange?: (content: string, editor: any) => void;
   onValueChange?: (value: Value) => void;
   placeholder?: string;
@@ -43,7 +44,18 @@ export interface PlateEditorRef {
   setHtml: (html: string) => void;
 }
 
-
+// Helper function to parse value (JSON string or Plate Value)
+const parseValue = (value: Value | string | undefined): Value => {
+  if (!value) {
+    return [{ type: 'p', children: [{ text: '' }] }];
+  }
+  
+  if (typeof value === 'string') {
+    return parseJsonContent(value);
+  }
+  
+  return value;
+};
 
 // Default enabled tools
 const DEFAULT_TOOLS: ToolbarTools = {
@@ -63,22 +75,43 @@ const DEFAULT_TOOLS: ToolbarTools = {
 
 // Read-only component - simple HTML display
 const PlateRichTextViewer = React.forwardRef<PlateEditorRef, PlateRichTextEditorProps>(
-  ({ value = [{ type: 'p', children: [{ text: '' }] }], className, id }, ref) => {
+  ({ value, className, id }, ref) => {
     const [html, setHtml] = React.useState('');
+    const parsedValue = useMemo(() => parseValue(value), [value]);
 
     // Convert value to HTML for display
     useEffect(() => {
-      plateValueToHtml(value).then(setHtml);
-    }, [value]);
+      let isMounted = true;
+      
+      const convertToHtml = async () => {
+        try {
+          const htmlResult = await plateValueToHtml(parsedValue);
+          if (isMounted) {
+            setHtml(htmlResult);
+          }
+        } catch (error) {
+          console.error('Error converting to HTML:', error);
+          if (isMounted) {
+            setHtml('<p>Error loading content</p>');
+          }
+        }
+      };
+      
+      convertToHtml();
+      
+      return () => {
+        isMounted = false;
+      };
+    }, [parsedValue]);
 
     // Expose methods via ref for compatibility
     React.useImperativeHandle(ref, () => ({
       getEditor: () => null,
-      getHtml: async () => await plateValueToHtml(value),
+      getHtml: async () => await plateValueToHtml(parsedValue),
       setHtml: () => {
         console.warn('Cannot set HTML in read-only mode');
       },
-    }));
+    }), [parsedValue]);
 
     return (
       <div 
@@ -95,7 +128,7 @@ PlateRichTextViewer.displayName = 'PlateRichTextViewer';
 // Edit component - full PlateJS editor
 const PlateRichTextEditorEdit = React.forwardRef<PlateEditorRef, PlateRichTextEditorProps>(
   ({
-    value = [{ type: 'p', children: [{ text: '' }] }],
+    value,
     onTextChange,
     onValueChange,
     placeholder = 'Type your amazing content here...',
@@ -103,19 +136,38 @@ const PlateRichTextEditorEdit = React.forwardRef<PlateEditorRef, PlateRichTextEd
     id,
     variant = 'select',
   }, ref) => {
-    // Create plugin list - filter out floating toolbar
+    const parsedValue = useMemo(() => parseValue(value), [value]);
+    const editorRef = useRef<any>(null);
+    const isMountedRef = useRef(true);
+    
+    // Create plugin list - filter out floating toolbar and dnd to prevent conflicts
     const plugins = useMemo(() => {
-      return EditorKit.filter(plugin => plugin.key !== 'floating-toolbar');
+      return EditorKit.filter(plugin => 
+        plugin.key !== 'floating-toolbar' && 
+        plugin.key !== 'dnd' // Disable drag-and-drop to prevent HTML5 backend conflicts
+      );
     }, []);
 
     // Create editor
     const editor = usePlateEditor({
       plugins,
-      value,
+      value: parsedValue,
     });
 
-    // Handle editor changes
+    // Store editor reference
+    useEffect(() => {
+      editorRef.current = editor;
+      isMountedRef.current = true;
+      
+      return () => {
+        isMountedRef.current = false;
+      };
+    }, [editor]);
+
+    // Handle editor changes with debouncing
     const handleChange = useCallback(async ({ value: newValue }: { value: Value }) => {
+      if (!isMountedRef.current) return;
+      
       // Call onValueChange first (preferred, no conversion needed)
       if (onValueChange) {
         onValueChange(newValue);
@@ -123,26 +175,52 @@ const PlateRichTextEditorEdit = React.forwardRef<PlateEditorRef, PlateRichTextEd
       
       // Keep onTextChange for backward compatibility
       if (onTextChange) {
-        const html = await plateValueToHtml(newValue);
-        // Create a mock editor object that matches Quill's interface
-        const mockEditor = {
-          root: {
-            innerHTML: html
-          }
-        };
-        onTextChange(html, mockEditor);
+        try {
+          const html = await plateValueToHtml(newValue);
+          // Create a mock editor object that matches Quill's interface
+          const mockEditor = {
+            root: {
+              innerHTML: html
+            }
+          };
+          onTextChange(html, mockEditor);
+        } catch (error) {
+          console.error('Error converting to HTML:', error);
+        }
       }
     }, [onTextChange, onValueChange]);
 
     // Expose methods via ref
     React.useImperativeHandle(ref, () => ({
-      getEditor: () => editor,
-      getHtml: async () => await plateValueToHtml(editor.children),
-      setHtml: (html: string) => {
-        const newValue = htmlToPlateValue(html);
-        editor.tf.setValue(newValue);
+      getEditor: () => editorRef.current,
+      getHtml: async () => {
+        if (editorRef.current) {
+          return await plateValueToHtml(editorRef.current.children);
+        }
+        return '';
       },
-    }));
+      setHtml: (html: string) => {
+        if (editorRef.current) {
+          const newValue = htmlToPlateValue(html);
+          editorRef.current.tf.setValue(newValue);
+        }
+      },
+    }), []);
+
+    // Cleanup on unmount
+    useEffect(() => {
+      return () => {
+        isMountedRef.current = false;
+        if (editorRef.current) {
+          // Clean up editor resources
+          try {
+            editorRef.current.destroy?.();
+          } catch (error) {
+            console.warn('Error destroying editor:', error);
+          }
+        }
+      };
+    }, []);
 
     return (
       <div className={cn('min-h-[100px]', className)} id={id}>
