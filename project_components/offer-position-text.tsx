@@ -35,6 +35,7 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = React.memo(({
   const [title, setTitle] = useState(selectedNode?.data?.title || "");
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [originalTitle, setOriginalTitle] = useState(selectedNode?.data?.title || "");
+  const [currentTab, setCurrentTab] = useState<string>("eingabe");
 
   // Update state when selectedNode changes
   React.useEffect(() => {
@@ -68,28 +69,38 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = React.memo(({
     return selectedNode?.data?.description || "";
   }, [positionId, hasPositionChanges, getPositionChanges, selectedNode]);
 
-  // Convert PlateJS value to HTML for preview
+  // Function to update preview HTML with current data
+  const updatePreviewHtml = useCallback(async () => {
+    const currentDescription = getCurrentDescription();
+    
+    if (!currentDescription) {
+      setPreviewHtml("<em>(Keine Beschreibung)</em>");
+      return;
+    }
+
+    try {
+      // Parse the JSON string back to PlateJS value
+      const plateValue = parseJsonContent(currentDescription);
+      // Convert to HTML
+      const html = await plateValueToHtml(plateValue);
+      setPreviewHtml(html);
+    } catch (error) {
+      console.error('Error converting to HTML for preview:', error);
+      setPreviewHtml("<em>(Fehler beim Laden der Beschreibung)</em>");
+    }
+  }, [getCurrentDescription]);
+
+  // Convert PlateJS value to HTML for preview when selectedNode changes
   useEffect(() => {
-    const convertToHtml = async () => {
-      if (!selectedNode?.data?.description) {
-        setPreviewHtml("<em>(Keine Beschreibung)</em>");
-        return;
-      }
+    updatePreviewHtml();
+  }, [selectedNode?.data?.description, updatePreviewHtml]);
 
-      try {
-        // Parse the JSON string back to PlateJS value
-        const plateValue = parseJsonContent(selectedNode.data.description);
-        // Convert to HTML
-        const html = await plateValueToHtml(plateValue);
-        setPreviewHtml(html);
-      } catch (error) {
-        console.error('Error converting to HTML for preview:', error);
-        setPreviewHtml("<em>(Fehler beim Laden der Beschreibung)</em>");
-      }
-    };
-
-    convertToHtml();
-  }, [selectedNode?.data?.description]);
+  // Update preview when switching to preview tab
+  useEffect(() => {
+    if (currentTab === "vorschau") {
+      updatePreviewHtml();
+    }
+  }, [currentTab, updatePreviewHtml]);
 
   const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const newTitle = e.target.value;
@@ -158,15 +169,15 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = React.memo(({
   // Memoize the preview content
   const previewContent = useMemo(() => (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">{title || "(Keine Überschrift)"}</h2>
+      <h2 className="text-xl font-semibold">{getCurrentTitle() || "(Keine Überschrift)"}</h2>
       <div className="prose max-w-none" dangerouslySetInnerHTML={{ __html: previewHtml }} />
     </div>
-  ), [title, previewHtml]);
+  ), [getCurrentTitle, previewHtml]);
 
   return (
     <div className="p-6 h-full">
       {isEditing ? (
-        <Tabs defaultValue="eingabe" className="w-full">
+        <Tabs value={currentTab} onValueChange={setCurrentTab} className="w-full">
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="eingabe">Eingabe</TabsTrigger>
             <TabsTrigger value="vorschau">Vorschau</TabsTrigger>
