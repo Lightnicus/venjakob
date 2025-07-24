@@ -1,156 +1,85 @@
-# Venjakob Documentation
+# Venjakob Project Documentation
 
-Welcome to the Venjakob application documentation. This directory contains comprehensive guides and technical documentation for the project.
+## Overview
+This is a Next.js 15 application for managing quotes, articles, blocks, and sales opportunities.
 
-## 📋 Documentation Index
+## Key Features
 
-### Core System Documentation
+### Quote Management
+- **Quote Creation**: Create quotes with variants and versions
+- **Position Management**: Add and manage quote positions (articles and text blocks)
+- **Save Functionality**: Manual save with visual indicators for unsaved changes
+- **Drag & Drop**: Reorder positions with immediate database updates
+- **Rich Text Editing**: Edit position descriptions with PlateJS editor
 
-#### [Database & Schema (`db.md`)](./db.md)
-Complete database schema documentation including:
-- Entity relationships and constraints
-- Database seeding procedures
-- Migration management
-- Query patterns and examples
+### Save System
+The quote detail component implements a comprehensive save system with complete UI flow management. For detailed documentation, see [Quotes Save System & UI Flow](quotes-save-system-ui-flow.md).
 
-#### [Authentication System (`auth.md`)](./auth.md)
-Authentication and authorization documentation covering:
-- Supabase integration
-- User management
-- Permission systems
-- Security best practices
+**Key Features:**
+1. **Manual Save**: Changes are only saved when the "Speichern" button is clicked
+2. **Batch Save**: All modified positions are saved in a single API call
+3. **Visual Indicators**: 
+   - Orange ring around save button when there are unsaved changes
+   - Orange dots next to field labels for modified positions
+   - Save button shows "Speichern*" when changes are pending
+4. **Error Handling**: Failed saves keep changes and allow retry
+5. **Change Tracking**: Only modified positions are included in save operations
+6. **Fresh Data Access**: Direct tree data access prevents stale reference issues
 
-### Advanced Features
+### API Endpoints
 
-#### [Dialog Manager System (`dialog-manager-docs.md`)](./dialog-manager-docs.md)
-Comprehensive guide to the dialog management system including:
-- Basic dialog management patterns
-- Smart back button functionality
-- Data-driven routing capabilities
-- Migration guides and best practices
+#### Quote Positions
+- `GET /api/quotes/versions/[versionId]/positions` - Get positions for a version
+- `PUT /api/quotes/versions/[versionId]/positions/[positionId]` - Update single position
+- `PUT /api/quotes/versions/[versionId]/positions/batch` - Update multiple positions
+- `PUT /api/quotes/versions/[versionId]/positions/reorder` - Reorder positions
 
-#### [Smart Data-Driven Dialog Flows (`smart-dialog-flows.md`)](./smart-dialog-flows.md)
-Advanced patterns for intelligent dialog workflows featuring:
-- Smart entry point implementation
-- Context-aware dialog routing
-- Data availability-based flow control
-- Performance optimization strategies
+### Database Functions
+- `updateQuotePosition()` - Update individual position
+- `updateQuotePositions()` - Batch update multiple positions
+- `updateQuotePositionsOrder()` - Update position order and hierarchy
 
-#### [Edit Lock System (`edit-lock-system.md`)](./edit-lock-system.md)
-Multi-user edit conflict prevention system:
-- Record locking mechanisms
-- Concurrency control
-- Lock lifecycle management
-- User interface integration
+### Components
 
-#### Quote Creation System
-Extended quote creation workflows with support for:
-- Multi-parameter creation flows (quote → variant → version)
-- Language-driven creation with proper dialog integration
-- Environment-configurable quote numbering
-- Automatic tab opening with complete context
+#### Core Components
+- **`QuoteDetail`**: Main quote management interface with save functionality
+- **`InteractiveSplitPanel`**: Tree view with position editing and fresh data access
+- **`OfferPositionText`**: Text position editor with change tracking
+- **`OfferPositionArticle`**: Article position editor with change tracking
 
-### Development Tools & Hooks
+#### Save Lifecycle
+1. **User makes changes** → `addChange()` stores in change tracking
+2. **Visual indicators appear** → Orange dots and ring around save button
+3. **User clicks save** → `handleSaveChanges()` in `QuoteDetail`
+4. **API call** → `saveQuotePositions()` sends batch update
+5. **Tree data updates** → `setTreeData()` with saved values
+6. **UI refreshes** → Components re-render with fresh data
+7. **Changes cleared** → `clearAllChanges()` resets tracking
 
-#### [useEditLock Hook (`use-edit-lock.md`)](./use-edit-lock.md)
-Detailed documentation for the edit lock hook:
-- Hook API reference
-- Implementation patterns
-- Error handling strategies
-- Real-world usage examples
+#### RTE Data Flow
+1. **Component renders** → `renderFormContent()` calls `findNodeById(treeData, selectedNodeId)`
+2. **Fresh data retrieved** → Gets latest node data from `treeData`
+3. **Updated node created** → `updatedSelectedNode` with fresh data
+4. **Position components receive** → Current values from `getCurrentDescription()`
+5. **RTE displays** → Saved content immediately without revert
 
-#### [Component Patterns (`component-patterns.md`)](./component-patterns.md)
-Reusable component patterns and design principles:
-- ManagementWrapper component for permission-aware pages
-- DRY principles and code reduction strategies
-- Component composition patterns
-- Migration guides for existing components
+## Development
 
-#### [Reload System (`reload-system-documentation.md`)](./reload-system-documentation.md)
-Application state management and reload strategies:
-- Data refresh patterns
-- Cache invalidation
-- Component lifecycle management
-- Performance considerations
+### Prerequisites
+- Node.js 18+
+- pnpm
+- PostgreSQL database
 
-#### [Database Seeds (`seeds.md`)](./seeds.md)
-Database initialization and test data:
-- Seed script organization
-- Development vs. production data
-- Seeding best practices
-- Data consistency strategies
+### Setup
+1. Install dependencies: `pnpm install`
+2. Set up environment variables
+3. Run database migrations: `pnpm db:migrate`
+4. Start development server: `pnpm dev`
 
-## 🚀 Quick Start Guides
-
-### For New Developers
-1. Start with [`auth.md`](./auth.md) to understand the authentication system
-2. Review [`db.md`](./db.md) for database schema and relationships
-3. Learn component patterns from [`component-patterns.md`](./component-patterns.md)
-4. Understand dialog patterns from [`dialog-manager-docs.md`](./dialog-manager-docs.md)
-
-### For Advanced Features
-1. Implement smart dialogs using [`smart-dialog-flows.md`](./smart-dialog-flows.md)
-2. Add edit protection with [`edit-lock-system.md`](./edit-lock-system.md)
-3. Optimize with [`reload-system-documentation.md`](./reload-system-documentation.md)
-
-### For Database Work
-1. Understand schema from [`db.md`](./db.md)
-2. Set up test data with [`seeds.md`](./seeds.md)
-3. Implement data hooks following patterns in other documentation
-
-## 📚 Documentation Standards
-
-### File Organization
-- **System Documentation**: Core application features and architecture
-- **Feature Documentation**: Specific functionality and implementation guides
-- **Hook Documentation**: Reusable React hooks and utilities
-- **Process Documentation**: Development workflows and procedures
-
-### Code Examples
-All documentation includes:
-- TypeScript code examples
-- Real-world usage patterns
-- Best practice recommendations
-- Common pitfalls and solutions
-
-### Update Guidelines
-When adding new features:
-1. Update relevant existing documentation
-2. Create new documentation for complex features
-3. Include migration guides for breaking changes
-4. Add examples and test scenarios
-
-## 🔧 Development Workflow
-
-### Before Starting Development
-- [ ] Read authentication and database documentation
-- [ ] Understand the dialog system if working on UI features
-- [ ] Review edit lock system for data manipulation features
-
-### When Adding New Features
-- [ ] Document new patterns and best practices
-- [ ] Update relevant documentation files (especially [`component-patterns.md`](./component-patterns.md) for reusable components)
-- [ ] Include code examples and migration guides
-- [ ] Test documentation examples for accuracy
-
-### Before Deployment
-- [ ] Verify all documentation is up to date
-- [ ] Ensure migration guides are complete
-- [ ] Check that new patterns are documented
-
-## 📖 Additional Resources
-
-### External Dependencies
-- **Supabase**: Authentication and database backend
-- **Next.js 15**: Application framework
-- **Tailwind CSS**: Styling framework
-- **ShadCN**: Component library
-
-### Related Files
-- `userdoc.md`: User-facing documentation
-- `config/`: Application configuration
-- `lib/`: Core utilities and API clients
-
----
-
-For questions about this documentation or suggestions for improvements, please refer to the project maintainers or create an issue in the project repository. 
+### Key Technologies
+- Next.js 15
+- TypeScript
+- TailwindCSS
+- Drizzle ORM
+- PlateJS (Rich Text Editor)
+- React Arborist (Tree Component) 

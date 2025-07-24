@@ -1136,3 +1136,67 @@ export async function updateQuotePositionsOrder(
     }
   });
 } 
+
+// Update a single quote position
+export async function updateQuotePosition(
+  positionId: string,
+  positionData: Partial<Omit<QuotePosition, 'id' | 'versionId' | 'createdAt' | 'updatedAt'>>
+): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db
+      .update(quotePositions)
+      .set({
+        ...positionData,
+        updatedAt: sql`NOW()`,
+      })
+      .where(eq(quotePositions.id, positionId));
+
+    // TODO: Add audit trail when audit operations are implemented for quote positions
+  } catch (error) {
+    console.error('Error updating quote position:', error);
+    throw new Error('Failed to update quote position');
+  }
+}
+
+// Update multiple quote positions in a batch
+export async function updateQuotePositions(
+  positionUpdates: Array<{
+    id: string;
+    title?: string;
+    description?: string;
+    quantity?: string;
+    unitPrice?: string;
+    totalPrice?: string;
+    articleCost?: string;
+  }>
+): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db.transaction(async (tx) => {
+      for (const update of positionUpdates) {
+        const { id, ...updateData } = update;
+        await tx
+          .update(quotePositions)
+          .set({
+            ...updateData,
+            updatedAt: sql`NOW()`,
+          })
+          .where(eq(quotePositions.id, id));
+      }
+    });
+
+    // TODO: Add audit trail when audit operations are implemented for quote positions
+  } catch (error) {
+    console.error('Error updating quote positions:', error);
+    throw new Error('Failed to update quote positions');
+  }
+} 

@@ -191,3 +191,53 @@ export async function fetchCompleteQuoteData(
   }
   return response.json();
 } 
+
+// Save a single quote position
+export async function saveQuotePosition(
+  versionId: string,
+  positionId: string,
+  positionData: {
+    title?: string;
+    description?: string;
+    quantity?: string;
+    unitPrice?: string;
+    totalPrice?: string;
+    articleCost?: string;
+  }
+): Promise<void> {
+  const response = await fetch(`/api/quotes/versions/${versionId}/positions/${positionId}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(positionData),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to save quote position');
+  }
+}
+
+// Save multiple quote positions in batch
+export async function saveQuotePositions(
+  versionId: string,
+  positions: Array<{
+    id: string;
+    title?: string;
+    description?: string;
+    quantity?: string;
+    unitPrice?: string;
+    totalPrice?: string;
+    articleCost?: string;
+  }>
+): Promise<void> {
+  const response = await fetch(`/api/quotes/versions/${versionId}/positions/batch`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ positions }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to save quote positions');
+  }
+} 

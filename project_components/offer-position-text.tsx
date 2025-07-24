@@ -11,41 +11,74 @@ import { MyTreeNodeData } from './custom-node';
 import { type Value } from 'platejs';
 import { plateValueToHtml } from '@/helper/plate-serialization';
 import { parseJsonContent } from '@/helper/plate-json-parser';
+import { Circle } from 'lucide-react';
 
 interface OfferPositionTextProps {
   selectedNode: NodeApi<MyTreeNodeData> | null;
-  formDescriptionHtml: string | undefined;
-  onDescriptionChange: (html: string | undefined) => void;
   isEditing: boolean;
+  positionId?: string;
+  hasPositionChanges?: (positionId: string) => boolean;
+  addChange?: (positionId: string, field: string, oldValue: any, newValue: any) => void;
+  removeChange?: (positionId: string, field?: string) => void;
+  getPositionChanges?: (positionId: string) => { [field: string]: { oldValue: any; newValue: any } };
 }
 
 const OfferPositionText: React.FC<OfferPositionTextProps> = React.memo(({ 
   selectedNode, 
-  formDescriptionHtml, 
-  onDescriptionChange, 
-  isEditing 
+  isEditing,
+  positionId,
+  hasPositionChanges,
+  addChange,
+  removeChange,
+  getPositionChanges
 }) => {
   const [title, setTitle] = useState(selectedNode?.data?.title || "");
   const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [originalTitle, setOriginalTitle] = useState(selectedNode?.data?.title || "");
 
   // Update state when selectedNode changes
   React.useEffect(() => {
     if (selectedNode) {
-      setTitle(selectedNode.data.title || "");
+      const newTitle = selectedNode.data.title || "";
+      setTitle(newTitle);
+      setOriginalTitle(newTitle);
     }
   }, [selectedNode]);
+
+  // Get current value considering unsaved changes
+  const getCurrentTitle = useCallback(() => {
+    if (positionId && hasPositionChanges && hasPositionChanges(positionId)) {
+      // Check if we have unsaved changes for this position
+      const positionChanges = getPositionChanges?.(positionId);
+      if (positionChanges?.title) {
+        return positionChanges.title.newValue;
+      }
+    }
+    return title;
+  }, [positionId, hasPositionChanges, getPositionChanges, title]);
+
+  const getCurrentDescription = useCallback(() => {
+    if (positionId && hasPositionChanges && hasPositionChanges(positionId)) {
+      // Check if we have unsaved changes for this position
+      const positionChanges = getPositionChanges?.(positionId);
+      if (positionChanges?.description) {
+        return positionChanges.description.newValue;
+      }
+    }
+    return selectedNode?.data?.description || "";
+  }, [positionId, hasPositionChanges, getPositionChanges, selectedNode]);
 
   // Convert PlateJS value to HTML for preview
   useEffect(() => {
     const convertToHtml = async () => {
-      if (!formDescriptionHtml) {
+      if (!selectedNode?.data?.description) {
         setPreviewHtml("<em>(Keine Beschreibung)</em>");
         return;
       }
 
       try {
         // Parse the JSON string back to PlateJS value
-        const plateValue = parseJsonContent(formDescriptionHtml);
+        const plateValue = parseJsonContent(selectedNode.data.description);
         // Convert to HTML
         const html = await plateValueToHtml(plateValue);
         setPreviewHtml(html);
@@ -56,28 +89,53 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = React.memo(({
     };
 
     convertToHtml();
-  }, [formDescriptionHtml]);
+  }, [selectedNode?.data?.description]);
 
   const handleTitleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
-  }, []);
+    const newTitle = e.target.value;
+    setTitle(newTitle);
+    
+    // Track changes if positionId and change tracking functions are available
+    if (positionId && addChange && removeChange) {
+      if (newTitle !== originalTitle) {
+        addChange(positionId, 'title', originalTitle, newTitle);
+      } else {
+        removeChange(positionId, 'title');
+      }
+    }
+  }, [positionId, addChange, removeChange, originalTitle]);
 
   const handleDescriptionChange = useCallback((content: Value) => {
-    if (onDescriptionChange) {
-      onDescriptionChange(JSON.stringify(content));
+    if (selectedNode && positionId && addChange && removeChange) {
+      const newDescription = JSON.stringify(content);
+      const oldDescription = selectedNode.data.description || '';
+      
+      if (newDescription !== oldDescription) {
+        addChange(positionId, 'description', oldDescription, newDescription);
+      } else {
+        removeChange(positionId, 'description');
+      }
     }
-  }, [onDescriptionChange]);
+  }, [positionId, addChange, removeChange, selectedNode]);
+
+  // Check if this position has unsaved changes
+  const hasChanges = positionId && hasPositionChanges ? hasPositionChanges(positionId) : false;
 
   // Memoize the form content to prevent unnecessary re-renders
   const formContent = useMemo(() => (
     <form className="space-y-6">
       <div className="space-y-2">
-        <label htmlFor="input-ueberschrift" className="text-sm font-medium">Überschrift</label>
+        <label htmlFor="input-ueberschrift" className="text-sm font-medium flex items-center gap-2">
+          Überschrift
+          {hasChanges && (
+            <Circle className="w-3 h-3 text-orange-500 fill-current" />
+          )}
+        </label>
         <Input
           id="input-ueberschrift"
           type="text"
           placeholder="Überschrift eingeben"
-          value={title}
+          value={getCurrentTitle()}
           onChange={handleTitleChange}
           className="w-full"
           aria-label="Überschrift"
@@ -85,10 +143,15 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = React.memo(({
         />
       </div>
       <div className="space-y-2">
-        <label htmlFor="editor-beschreibung" className="text-sm font-medium">Beschreibung</label>
+        <label htmlFor="editor-beschreibung" className="text-sm font-medium flex items-center gap-2">
+          Beschreibung
+          {hasChanges && (
+            <Circle className="w-3 h-3 text-orange-500 fill-current" />
+          )}
+        </label>
         <PlateRichTextEditor
           id="editor-beschreibung"
-          value={formDescriptionHtml || ''}
+          value={getCurrentDescription() || ''}
           onValueChange={handleDescriptionChange}
           placeholder="Geben Sie hier eine detaillierte Beschreibung ein..."
           className="min-h-[200px]"
@@ -96,7 +159,7 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = React.memo(({
         />
       </div>
     </form>
-  ), [title, handleTitleChange, formDescriptionHtml, handleDescriptionChange, isEditing]);
+  ), [getCurrentTitle, handleTitleChange, getCurrentDescription, handleDescriptionChange, isEditing, hasChanges]);
 
   // Memoize the preview content
   const previewContent = useMemo(() => (

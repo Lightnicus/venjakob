@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import InteractiveSplitPanel from '@/project_components/interactive-split-panel';
 import OfferProperties from '@/project_components/offer-properties';
@@ -16,8 +16,9 @@ import { useTabbedInterface } from '@/project_components/tabbed-interface-provid
 import { toast } from 'sonner';
 import { Edit3, Save } from 'lucide-react';
 import type { MyTreeNodeData } from '@/project_components/custom-node';
-import { fetchCompleteQuoteData } from '@/lib/api/quotes';
+import { fetchCompleteQuoteData, saveQuotePositions } from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
+import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 
 type QuoteDetailProps = {
   title: string;
@@ -47,7 +48,19 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   const [versionNumber, setVersionNumber] = useState<string>('');
   const [loadingDisplayData, setLoadingDisplayData] = useState(false);
   const [offerPropsData, setOfferPropsData] = useState<any>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const { openNewTab } = useTabbedInterface();
+
+  // Move change tracking to this level
+  const {
+    hasUnsavedChanges,
+    getChangesForSave,
+    clearAllChanges,
+    hasPositionChanges,
+    addChange,
+    removeChange,
+    getPositionChanges,
+  } = useUnsavedChanges();
 
   // Transform quote positions into tree data format
   const transformPositionsToTreeData = (
@@ -172,14 +185,71 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     toast('Angebot wurde veröffentlicht.');
   };
 
-  const handleEditClick = () => {
+  const handleEditClick = async () => {
     if (isEditing) {
       // Save logic here
-      toast('Änderungen wurden gespeichert.');
+      if (hasUnsavedChanges) {
+        await handleSaveChanges();
+      } else {
+        toast('Keine Änderungen zum Speichern vorhanden.');
+      }
     } else {
       toast('Bearbeitungsmodus aktiviert.');
     }
     setIsEditing(!isEditing);
+  };
+
+  const handleSaveChanges = async () => {
+    if (!resolvedVersionId) {
+      toast.error('Keine Version für das Speichern verfügbar.');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // Get changes from the interactive split panel
+      const changesToSave = getChangesForSave();
+      
+      if (changesToSave.length === 0) {
+        toast('Keine Änderungen zum Speichern vorhanden.');
+        return;
+      }
+
+      await saveQuotePositions(resolvedVersionId, changesToSave);
+      toast.success('Änderungen wurden erfolgreich gespeichert.');
+      
+      // Update tree data with saved values
+      setTreeData(prevData => {
+        const updateNode = (nodes: MyTreeNodeData[]): MyTreeNodeData[] => {
+          return nodes.map(node => {
+            const change = changesToSave.find(c => c.id === node.id);
+            if (change) {
+              return {
+                ...node,
+                title: change.title || node.title,
+                description: change.description || node.description,
+              };
+            }
+            if (node.children) {
+              return {
+                ...node,
+                children: updateNode(node.children),
+              };
+            }
+            return node;
+          });
+        };
+        return updateNode([...prevData]);
+      });
+      
+      clearAllChanges();
+      
+    } catch (error) {
+      console.error('Error saving changes:', error);
+      toast.error('Fehler beim Speichern der Änderungen. Bitte versuchen Sie es erneut.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -205,14 +275,16 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           <Button
             variant={isEditing ? 'default' : 'outline'}
             size="sm"
-            className={`flex items-center gap-1 ${isEditing ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''}`}
+            className={`flex items-center gap-1 ${isEditing ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''} ${hasUnsavedChanges && isEditing ? 'ring-2 ring-orange-500' : ''}`}
             tabIndex={0}
             aria-label={isEditing ? 'Speichern' : 'Bearbeiten'}
             onClick={handleEditClick}
+            disabled={isSaving}
           >
             {isEditing ? (
               <>
-                <Save size={14} className="inline-block" /> Speichern
+                <Save size={14} className="inline-block" /> 
+                {isSaving ? 'Speichere...' : hasUnsavedChanges ? 'Speichern*' : 'Speichern'}
               </>
             ) : (
               <>
@@ -305,6 +377,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
               isEditing={isEditing} 
               versionId={resolvedVersionId}
               onTreeDataChange={setTreeData}
+              hasUnsavedChanges={hasUnsavedChanges}
+              addChange={addChange}
+              removeChange={removeChange}
+              hasPositionChanges={hasPositionChanges}
+              getPositionChanges={getPositionChanges}
             />
           )}
         </TabsContent>

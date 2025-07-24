@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback, useImperativeHandle } from 'react';
 import { ArboristTree } from './arborist-tree';
 import { MyTreeNodeData, createCustomNodeWithDragState } from './custom-node';
 import { Input } from '@/components/ui/input';
@@ -18,24 +18,34 @@ import { fetchBlocksWithContent, fetchLanguages } from '@/lib/api/blocks';
 import type { BlockWithContent } from '@/lib/db/blocks';
 import { toast } from 'sonner';
 
+
 interface InteractiveSplitPanelProps {
   initialTreeData?: MyTreeNodeData[];
   isEditing?: boolean;
   versionId?: string;
   onTreeDataChange?: (newTreeData: MyTreeNodeData[]) => void;
+  hasUnsavedChanges?: boolean;
+  addChange?: (positionId: string, field: string, oldValue: any, newValue: any) => void;
+  removeChange?: (positionId: string, field?: string) => void;
+  hasPositionChanges?: (positionId: string) => boolean;
+  getPositionChanges?: (positionId: string) => { [field: string]: { oldValue: any; newValue: any } };
 }
 
 const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({ 
   initialTreeData = [],
   isEditing = false,
   versionId,
-  onTreeDataChange
+  onTreeDataChange,
+  hasUnsavedChanges = false,
+  addChange,
+  removeChange,
+  hasPositionChanges,
+  getPositionChanges
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
   const [treeData, setTreeData] = useState<readonly MyTreeNodeData[]>(initialTreeData);
   const [selectedNode, setSelectedNode] = useState<NodeApi<MyTreeNodeData> | null>(null);
-  const [formDescriptionHtml, setFormDescriptionHtml] = useState<string | undefined>(undefined);
   const [selectedNodeType, setSelectedNodeType] = useState<string | undefined>(undefined);
   const [showAddBlockDialog, setShowAddBlockDialog] = useState(false);
   const [blocks, setBlocks] = useState<BlockWithContent[]>([]);
@@ -43,11 +53,27 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   const [showAddArticleDialog, setShowAddArticleDialog] = useState(false);
   
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
+  
+
 
   // Update tree data when initialTreeData prop changes
   useEffect(() => {
     setTreeData(initialTreeData);
   }, [initialTreeData]);
+
+  // Memoized helper functions to prevent recreation on every render
+  const findNodeById = useCallback((nodes: readonly MyTreeNodeData[], id: string): MyTreeNodeData | null => {
+    for (const node of nodes) {
+      if (node.id === id) return node;
+      if (node.children) {
+        const found = findNodeById(node.children, id);
+        if (found) return found;
+      }
+    }
+    return null;
+  }, []);
+
+
 
   // Load blocks and languages on component mount
   useEffect(() => {
@@ -74,18 +100,6 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       content: block.blockContents?.[0] // Use first content or undefined
     }));
   }, [blocks]);
-
-  // Memoized helper functions to prevent recreation on every render
-  const findNodeById = useCallback((nodes: readonly MyTreeNodeData[], id: string): MyTreeNodeData | null => {
-    for (const node of nodes) {
-      if (node.id === id) return node;
-      if (node.children) {
-        const found = findNodeById(node.children, id);
-        if (found) return found;
-      }
-    }
-    return null;
-  }, []);
 
   const getNodeDepth = useCallback((nodes: readonly MyTreeNodeData[], targetId: string, currentDepth: number = 1): number => {
     for (const node of nodes) {
@@ -268,7 +282,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
     setSelectedNodeId(undefined);
     setSelectedNode(null);
     setSelectedNodeType(undefined);
-    setFormDescriptionHtml(undefined);
+    // setFormDescriptionHtml(undefined); // This line is removed
     if (treeRef.current) {
       treeRef.current.deselectAll();
     }
@@ -281,28 +295,37 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       setSelectedNode(node);
       setSelectedNodeType(node.data.type);
       // Load the node's description content
-      setFormDescriptionHtml(node.data.description || '');
+      // setFormDescriptionHtml(node.data.description || ''); // This line is removed
     } else {
       setSelectedNodeId(undefined);
       setSelectedNode(null);
       setSelectedNodeType(undefined);
-      setFormDescriptionHtml(undefined);
+      // setFormDescriptionHtml(undefined); // This line is removed
     }
   }, []);
 
   // Memoized form content renderer to prevent unnecessary re-renders
   const renderFormContent = useCallback(() => {
-    const htmlValue = formDescriptionHtml;
-    const handleHtmlChange = (html: string | undefined) => setFormDescriptionHtml(html);
+    // Get current node data from treeData instead of using selectedNode
+    const currentNodeData = selectedNodeId ? findNodeById(treeData, selectedNodeId) : null;
+    
+    // Create updated selectedNode with fresh data
+    const updatedSelectedNode = currentNodeData && selectedNode ? {
+      ...selectedNode,
+      data: currentNodeData
+    } as NodeApi<MyTreeNodeData> : selectedNode;
     
     if (selectedNodeType === 'article') {
       return (
         <OfferPositionArticle
           key={`article-${selectedNodeId}`} // Add key to force re-mount when node changes
-          selectedNode={selectedNode}
-          formDescriptionHtml={htmlValue}
-          onDescriptionChange={handleHtmlChange}
+          selectedNode={updatedSelectedNode}
           isEditing={isEditing}
+          positionId={selectedNodeId}
+          hasPositionChanges={hasPositionChanges}
+          addChange={addChange}
+          removeChange={removeChange}
+          getPositionChanges={getPositionChanges}
         />
       );
     }
@@ -310,15 +333,18 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       return (
         <OfferPositionText
           key={`textblock-${selectedNodeId}`} // Add key to force re-mount when node changes
-          selectedNode={selectedNode}
-          formDescriptionHtml={htmlValue}
-          onDescriptionChange={handleHtmlChange}
+          selectedNode={updatedSelectedNode}
           isEditing={isEditing}
+          positionId={selectedNodeId}
+          hasPositionChanges={hasPositionChanges}
+          addChange={addChange}
+          removeChange={removeChange}
+          getPositionChanges={getPositionChanges}
         />
       );
     }
     return null;
-  }, [selectedNodeType, selectedNodeId, selectedNode, formDescriptionHtml, isEditing]);
+  }, [selectedNodeType, selectedNodeId, selectedNode, treeData, findNodeById, isEditing, hasPositionChanges, addChange, removeChange, getPositionChanges]);
 
   // Memoized right panel content
   const renderRightPanel = useCallback(() => {
