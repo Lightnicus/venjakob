@@ -121,11 +121,8 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
   const formContent = useMemo(() => (
     <form className="space-y-6">
       <div className="space-y-2">
-        <label htmlFor="input-ueberschrift" className="text-sm font-medium flex items-center gap-2">
+        <label htmlFor="input-ueberschrift" className="text-sm font-medium">
           Überschrift
-          {hasChanges && (
-            <Circle className="w-3 h-3 text-orange-500 fill-current" />
-          )}
         </label>
         <Input
           id="input-ueberschrift"
@@ -139,11 +136,8 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
         />
       </div>
       <div className="space-y-2">
-        <label htmlFor="editor-beschreibung" className="text-sm font-medium flex items-center gap-2">
+        <label htmlFor="editor-beschreibung" className="text-sm font-medium">
           Beschreibung
-          {hasChanges && (
-            <Circle className="w-3 h-3 text-orange-500 fill-current" />
-          )}
         </label>
         <PlateRichTextEditor
           id="editor-beschreibung"
@@ -155,7 +149,7 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
         />
       </div>
     </form>
-  ), [getCurrentTitle, handleTitleChange, getCurrentDescription, handleDescriptionChange, isEditing, hasChanges])
+  ), [getCurrentTitle, handleTitleChange, getCurrentDescription, handleDescriptionChange, isEditing])
 
   // Memoize the kalkulation content
   const kalkulationContent = useMemo(() => (
@@ -174,22 +168,28 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
 
   return (
     <div className="p-6 h-full">
-      <Tabs defaultValue="eingabe" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="eingabe">Eingabe</TabsTrigger>
-          <TabsTrigger value="kalkulation">Kalkulation</TabsTrigger>
-          <TabsTrigger value="vorschau">Vorschau</TabsTrigger>
-        </TabsList>
-        <TabsContent value="eingabe" className="mt-6">
-          {formContent}
-        </TabsContent>
-        <TabsContent value="kalkulation" className="mt-6">
-          {kalkulationContent}
-        </TabsContent>
-        <TabsContent value="vorschau" className="mt-6">
+      {isEditing ? (
+        <Tabs defaultValue="eingabe" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="eingabe">Eingabe</TabsTrigger>
+            <TabsTrigger value="kalkulation">Kalkulation</TabsTrigger>
+            <TabsTrigger value="vorschau">Vorschau</TabsTrigger>
+          </TabsList>
+          <TabsContent value="eingabe" className="mt-6">
+            {formContent}
+          </TabsContent>
+          <TabsContent value="kalkulation" className="mt-6">
+            {kalkulationContent}
+          </TabsContent>
+          <TabsContent value="vorschau" className="mt-6">
+            {previewContent}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <div className="mt-6">
           {previewContent}
-        </TabsContent>
-      </Tabs>
+        </div>
+      )}
     </div>
   )
 })

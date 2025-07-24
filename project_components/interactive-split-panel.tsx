@@ -383,7 +383,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   }, []);
 
   // Memoized custom node renderer
-  const customNodeRenderer = useMemo(() => createCustomNodeWithDragState(isEditing), [isEditing]);
+  const customNodeRenderer = useMemo(() => createCustomNodeWithDragState(isEditing, hasPositionChanges), [isEditing, hasPositionChanges]);
 
   return (
     <div className="w-full">

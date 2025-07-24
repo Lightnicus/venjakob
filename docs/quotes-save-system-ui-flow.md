@@ -185,6 +185,13 @@ const renderFormContent = useCallback(() => {
 5. **Clear changes** → `clearAllChanges()` resets tracking
 6. **UI updates** → Components re-render with saved data
 
+#### Cancel Flow
+1. **User clicks cancel** → `handleCancelClick` called
+2. **Clear changes** → `clearAllChanges()` resets all unsaved changes
+3. **Switch to view mode** → `setIsEditing(false)` exits editing mode
+4. **UI updates** → Components re-render with original saved data
+5. **Toast notification** → User informed that changes were discarded
+
 #### Tree Data Update After Save
 ```typescript
 // Inside handleSaveChanges after successful API call
@@ -418,10 +425,13 @@ export const useUnsavedChanges = () => {
 
 ## Visual Indicators
 
-### Save Button States
-- **Default**: "Speichern" (no changes)
-- **Has changes**: "Speichern*" with orange ring
-- **Saving**: "Speichere..." (disabled)
+### Button States in Editing Mode
+- **Save Button**:
+  - **Default**: "Speichern" (no changes)
+  - **Has changes**: "Speichern*" with orange ring
+  - **Saving**: "Speichere..." (disabled)
+- **Cancel Button**: "Verwerfen" (always available in editing mode)
+- **Edit Button**: "Bearbeiten" (only visible in view mode)
 
 ### Field Indicators
 - **Orange dots**: Next to field labels when position has unsaved changes

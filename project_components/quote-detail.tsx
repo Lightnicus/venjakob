@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/select';
 import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
 import { toast } from 'sonner';
-import { Edit3, Save } from 'lucide-react';
+import { Edit3, Save, RotateCcw } from 'lucide-react';
 import type { MyTreeNodeData } from '@/project_components/custom-node';
 import { fetchCompleteQuoteData, saveQuotePositions } from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
@@ -199,6 +199,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     setIsEditing(!isEditing);
   };
 
+  const handleCancelClick = () => {
+    // Clear all unsaved changes
+    clearAllChanges();
+    // Switch back to view mode
+    setIsEditing(false);
+    toast('Änderungen verworfen. Bearbeitungsmodus beendet.');
+  };
+
   const handleSaveChanges = async () => {
     if (!resolvedVersionId) {
       toast.error('Keine Version für das Speichern verfügbar.');
@@ -272,26 +280,44 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           <p className="text-sm text-gray-500 mb-2">Sprache: {language}</p>
         )}
         <div className="flex flex-wrap gap-2 items-center mb-2">
-          <Button
-            variant={isEditing ? 'default' : 'outline'}
-            size="sm"
-            className={`flex items-center gap-1 ${isEditing ? 'bg-blue-600 hover:bg-blue-700 text-white' : ''} ${hasUnsavedChanges && isEditing ? 'ring-2 ring-orange-500' : ''}`}
-            tabIndex={0}
-            aria-label={isEditing ? 'Speichern' : 'Bearbeiten'}
-            onClick={handleEditClick}
-            disabled={isSaving}
-          >
-            {isEditing ? (
-              <>
+          {isEditing ? (
+            <>
+              <Button
+                variant="default"
+                size="sm"
+                className={`flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white ${hasUnsavedChanges ? 'ring-2 ring-orange-500' : ''}`}
+                tabIndex={0}
+                aria-label="Speichern"
+                onClick={handleEditClick}
+                disabled={isSaving}
+              >
                 <Save size={14} className="inline-block" /> 
                 {isSaving ? 'Speichere...' : hasUnsavedChanges ? 'Speichern*' : 'Speichern'}
-              </>
-            ) : (
-              <>
-                <Edit3 size={14} className="inline-block" /> Bearbeiten
-              </>
-            )}
-          </Button>
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="flex items-center gap-1"
+                tabIndex={0}
+                aria-label="Änderungen verwerfen"
+                onClick={handleCancelClick}
+                disabled={isSaving}
+              >
+                <RotateCcw size={14} className="inline-block" /> Verwerfen
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
+              tabIndex={0}
+              aria-label="Bearbeiten"
+              onClick={handleEditClick}
+            >
+              <Edit3 size={14} className="inline-block" /> Bearbeiten
+            </Button>
+          )}
           <Button
             variant="outline"
             size="sm"

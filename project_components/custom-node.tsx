@@ -1,6 +1,6 @@
 import React from 'react';
 import { NodeRendererProps, NodeApi } from 'react-arborist';
-import { ChevronRight, ChevronDown, FileText, FileStack, Folder, GripVertical } from 'lucide-react';
+import { ChevronRight, ChevronDown, FileText, FileStack, Folder, GripVertical, Circle } from 'lucide-react';
 
 // Define a type for your tree data items if not already globally defined
 // This should match the structure in your tree-data.json
@@ -18,6 +18,7 @@ interface MyCustomNodeApi extends NodeApi<MyTreeNodeData> {}
 interface CustomNodeRendererProps extends NodeRendererProps<MyTreeNodeData> {
   node: MyCustomNodeApi; // Override node with more specific type
   isDragEnabled?: boolean; // Optional prop to indicate if dragging is enabled
+  hasPositionChanges?: (positionId: string) => boolean; // Function to check if position has changes
 }
 
 export const CustomNode: React.FC<CustomNodeRendererProps> = ({
@@ -26,6 +27,7 @@ export const CustomNode: React.FC<CustomNodeRendererProps> = ({
   dragHandle,
   tree,
   isDragEnabled = false,
+  hasPositionChanges,
 }) => {
   const isInternal = node.isInternal;
   const isLeaf = node.isLeaf;
@@ -94,6 +96,10 @@ export const CustomNode: React.FC<CustomNodeRendererProps> = ({
       <span className={node.isEditing ? 'opacity-50' : ''}>
         {node.data.name}
       </span>
+      {/* Change indicator - show orange dot if position has unsaved changes */}
+      {hasPositionChanges && hasPositionChanges(node.id) && (
+        <Circle className="w-3 h-3 text-orange-500 fill-current ml-2" />
+      )}
       {/* Basic edit state indication (actual input is handled by react-arborist) */}
       {node.isEditing && (
         <span className="ml-2 text-xs text-blue-600">(Bearbeitung...)</span>
@@ -103,9 +109,9 @@ export const CustomNode: React.FC<CustomNodeRendererProps> = ({
 };
 
 // Higher-order component to create a CustomNode with drag state
-export const createCustomNodeWithDragState = (isDragEnabled: boolean) => {
+export const createCustomNodeWithDragState = (isDragEnabled: boolean, hasPositionChanges?: (positionId: string) => boolean) => {
   const CustomNodeWithDragState = (props: NodeRendererProps<MyTreeNodeData>) => (
-    <CustomNode {...props} isDragEnabled={isDragEnabled} />
+    <CustomNode {...props} isDragEnabled={isDragEnabled} hasPositionChanges={hasPositionChanges} />
   );
   
   CustomNodeWithDragState.displayName = `CustomNodeWithDragState(${isDragEnabled})`;
