@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { FilterableTable } from './filterable-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -11,6 +11,8 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import type { Block, BlockContent } from '@/lib/db/schema';
+import { parseJsonContent } from '@/helper/plate-json-parser';
+import { plateValueToHtml } from '@/helper/plate-serialization';
 
 export type BlockWithContent = Block & {
   content?: BlockContent;
@@ -28,6 +30,7 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
   const [selectedId, setSelectedId] = useState<string | null>(
     blocks[0]?.id ?? null,
   );
+  const [previewHtml, setPreviewHtml] = useState<string>("");
 
   const filteredBlocks = useMemo(
     () =>
@@ -43,6 +46,30 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
     () => blocks.find(b => b.id === selectedId) || null,
     [selectedId, blocks],
   );
+
+  // Function to update preview HTML with current block content
+  const updatePreviewHtml = useCallback(async () => {
+    if (!selectedBlock?.content?.content) {
+      setPreviewHtml("<em>(Kein Inhalt verfügbar)</em>");
+      return;
+    }
+
+    try {
+      // Parse the JSON string back to PlateJS value
+      const plateValue = parseJsonContent(selectedBlock.content.content);
+      // Convert to HTML
+      const html = await plateValueToHtml(plateValue);
+      setPreviewHtml(html);
+    } catch (error) {
+      console.error('Error converting block content to HTML for preview:', error);
+      setPreviewHtml("<em>(Fehler beim Laden der Vorschau)</em>");
+    }
+  }, [selectedBlock]);
+
+  // Update preview when selected block changes
+  useEffect(() => {
+    updatePreviewHtml();
+  }, [selectedBlock, updatePreviewHtml]);
 
   const columns = useMemo<ColumnDef<BlockWithContent>[]>(
     () => [
@@ -144,11 +171,14 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
                   {selectedBlock.content?.title && !selectedBlock.hideTitle && (
                     <h3 className="font-bold text-lg">{selectedBlock.content.title}</h3>
                   )}
-                  <pre className="whitespace-pre-wrap text-sm font-sans">
-                    {selectedBlock.content?.content || 'Kein Inhalt verfügbar'}
-                  </pre>
+                  <div 
+                    className="prose max-w-none"
+                    dangerouslySetInnerHTML={{ __html: previewHtml }}
+                  />
                 </div>
-              ) : null}
+              ) : (
+                <div className="text-gray-500 italic">Kein Block ausgewählt</div>
+              )}
             </div>
           </div>
         </div>
