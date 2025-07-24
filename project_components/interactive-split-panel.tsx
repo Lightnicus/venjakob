@@ -11,8 +11,8 @@ import { Calculator } from 'lucide-react';
 import OfferPositionArticle from './offer-position-article';
 import AddBlockDialog from './add-block-dialog';
 import type { BlockWithContent as DialogBlockWithContent } from './add-block-dialog';
-import AddArticleDialog, { Article } from './add-article-dialog';
-import articlesData from '@/data/articles.json';
+import AddArticleDialog from './add-article-dialog';
+import type { Article } from './add-article-dialog';
 import type { Language } from '@/lib/db/schema';
 import { fetchBlocksWithContent, fetchLanguages } from '@/lib/api/blocks';
 import type { BlockWithContent } from '@/lib/db/blocks';
@@ -30,6 +30,7 @@ interface InteractiveSplitPanelProps {
   hasPositionChanges?: (positionId: string) => boolean;
   getPositionChanges?: (positionId: string) => { [field: string]: { oldValue: any; newValue: any } };
   onRefreshRequested?: () => void;
+  languageId?: string;
 }
 
 const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({ 
@@ -42,7 +43,8 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   removeChange,
   hasPositionChanges,
   getPositionChanges,
-  onRefreshRequested
+  onRefreshRequested,
+  languageId
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
@@ -404,7 +406,9 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   const handleCloseAddArticle = useCallback(() => setShowAddArticleDialog(false), []);
   const handleAddArticle = useCallback((article: Article) => {
     setShowAddArticleDialog(false);
-    // handle article addition logic here
+    // TODO: Implement article addition logic similar to block addition
+    console.log('Adding article:', article);
+    toast.info('Artikel-Hinzufügen-Funktion wird implementiert');
   }, []);
 
   // Memoized custom node renderer
@@ -508,7 +512,10 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
         open={showAddArticleDialog}
         onClose={handleCloseAddArticle}
         onAdd={handleAddArticle}
-        articles={articlesData as Article[]}
+        languageId={languageId}
+        versionId={versionId}
+        selectedNodeId={selectedNodeId}
+        onPositionCreated={handlePositionCreated}
       />
     </div>
   );

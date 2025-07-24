@@ -137,4 +137,21 @@ export async function fetchArticleList(): Promise<{
     throw new Error('Failed to fetch article list');
   }
   return response.json();
+}
+
+// Fetch articles by language
+export async function fetchArticlesByLanguage(languageId: string): Promise<{
+  id: string;
+  number: string;
+  title: string;
+  price: string | null;
+  hideTitle: boolean;
+  updatedAt: string;
+  content: string | null;
+}[]> {
+  const response = await fetch(`/api/articles/by-language/${languageId}`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch articles by language');
+  }
+  return response.json();
 } 

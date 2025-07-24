@@ -856,6 +856,146 @@ export async function addQuotePositionWithHierarchy(
   }
 }
 
+// Add position with hierarchical logic for articles
+export async function addQuotePositionWithHierarchyForArticle(
+  versionId: string,
+  articleId: string,
+  selectedNodeId?: string | null
+): Promise<QuotePosition> {
+  try {
+    // Validate parameters
+    if (!articleId) {
+      throw new Error('Article ID must be provided');
+    }
+
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    // Get all positions for this version to understand the current structure
+    const allPositions = await db
+      .select()
+      .from(quotePositions)
+      .where(eq(quotePositions.versionId, versionId))
+      .orderBy(asc(quotePositions.positionNumber));
+
+    console.log('Available positions:', allPositions.map(p => ({ id: p.id, title: p.title, parentId: p.quotePositionParentId })));
+    console.log('Selected node ID:', selectedNodeId);
+
+    // Get the selected node to determine positioning logic
+    let targetParentId: string | null = null;
+    let insertAfterId: string | null = null;
+    let positionNumber: number;
+
+    if (selectedNodeId && selectedNodeId !== 'undefined') {
+      const selectedPosition = allPositions.find(p => p.id === selectedNodeId);
+      
+      if (!selectedPosition) {
+        // Selected node not found, treat as no selection
+        targetParentId = null;
+        insertAfterId = null;
+      } else {
+        // Check if selected position has children
+        const hasChildren = allPositions.some(p => p.quotePositionParentId === selectedNodeId);
+        
+        if (hasChildren) {
+          // Add as last child of selected node
+          targetParentId = selectedNodeId;
+          insertAfterId = null;
+        } else {
+          // Add after selected node at same level
+          targetParentId = selectedPosition.quotePositionParentId;
+          insertAfterId = selectedNodeId;
+        }
+      }
+    } else {
+      // No selection, add at top level
+      targetParentId = null;
+      insertAfterId = null;
+    }
+
+    // Calculate position number based on target parent and insert position
+    const positionsAtLevel = allPositions.filter(p => p.quotePositionParentId === targetParentId);
+    
+    if (insertAfterId) {
+      // Insert after specific position
+      const insertAfterPosition = positionsAtLevel.find(p => p.id === insertAfterId);
+      if (!insertAfterPosition) {
+        throw new Error('Insert after position not found');
+      }
+      
+      // Shift position numbers for positions after the insert point
+      const positionsToShift = positionsAtLevel.filter(p => p.positionNumber > insertAfterPosition.positionNumber);
+      for (const position of positionsToShift) {
+        await db
+          .update(quotePositions)
+          .set({ positionNumber: position.positionNumber + 1 })
+          .where(eq(quotePositions.id, position.id));
+      }
+      
+      positionNumber = insertAfterPosition.positionNumber + 1;
+    } else {
+      // Insert at end of level
+      const maxPositionAtLevel = positionsAtLevel.length > 0 
+        ? Math.max(...positionsAtLevel.map(p => p.positionNumber))
+        : 0;
+      positionNumber = maxPositionAtLevel + 1;
+    }
+
+    console.log('Positioning logic:', {
+      selectedNodeId,
+      targetParentId,
+      insertAfterId,
+      positionNumber,
+      positionsAtLevel: positionsAtLevel.length,
+      selectedPositionFound: selectedNodeId ? allPositions.find(p => p.id === selectedNodeId) : null
+    });
+
+    // Get article content to copy title and description
+    const [articleContentData] = await db
+      .select()
+      .from(blockContent)
+      .where(eq(blockContent.articleId, articleId))
+      .limit(1);
+
+    // Get article details for pricing
+    const [articleData] = await db
+      .select()
+      .from(articles)
+      .where(eq(articles.id, articleId));
+
+    if (!articleData) {
+      throw new Error('Article not found');
+    }
+
+    // Create position data
+    const positionData = {
+      versionId,
+      articleId: articleId,
+      blockId: null,
+      quotePositionParentId: targetParentId,
+      positionNumber,
+      quantity: '1',
+      unitPrice: articleData.price,
+      totalPrice: articleData.price,
+      articleCost: null,
+      description: articleContentData?.content || null,
+      title: articleContentData?.title || null,
+    };
+
+    const [newPosition] = await db
+      .insert(quotePositions)
+      .values(positionData)
+      .returning();
+
+    return newPosition;
+  } catch (error) {
+    console.error('Error adding quote position with hierarchy for article:', error);
+    throw new Error('Failed to add quote position');
+  }
+}
+
 // Get next variant number for a quote (returns 1, 2, 3, etc.)
 export async function getNextVariantNumber(quoteId: string): Promise<number> {
   try {

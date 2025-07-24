@@ -242,7 +242,7 @@ export async function saveQuotePositions(
   }
 } 
 
-// Create a new quote position
+// Create a new quote position (for blocks)
 export async function createQuotePosition(
   versionId: string,
   blockId: string,
@@ -255,6 +255,28 @@ export async function createQuotePosition(
     },
     body: JSON.stringify({
       blockId,
+      selectedNodeId,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create quote position');
+  }
+  return response.json();
+}
+
+// Create a new quote position (for articles)
+export async function createQuotePositionForArticle(
+  versionId: string,
+  articleId: string,
+  selectedNodeId?: string | null
+): Promise<any> {
+  const response = await fetch(`/api/quotes/versions/${versionId}/positions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      articleId,
       selectedNodeId,
     }),
   });

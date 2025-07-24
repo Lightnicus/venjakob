@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getQuotePositionsByVersion, addQuotePositionWithHierarchy } from '@/lib/db/quotes';
+import { getQuotePositionsByVersion, addQuotePositionWithHierarchy, addQuotePositionWithHierarchyForArticle } from '@/lib/db/quotes';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ versionId: string }> }) {
   try {
@@ -19,18 +19,34 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   try {
     const { versionId } = await params;
     const body = await request.json();
-    const { blockId, selectedNodeId } = body;
+    const { blockId, articleId, selectedNodeId } = body;
 
-    console.log('API received:', { versionId, blockId, selectedNodeId });
+    console.log('API received:', { versionId, blockId, articleId, selectedNodeId });
 
-    if (!blockId) {
+    // Validate that either blockId or articleId is provided, but not both
+    if (!blockId && !articleId) {
       return NextResponse.json(
-        { error: 'Block ID is required' },
+        { error: 'Either blockId or articleId is required' },
         { status: 400 }
       );
     }
 
-    const newPosition = await addQuotePositionWithHierarchy(versionId, blockId, selectedNodeId);
+    if (blockId && articleId) {
+      return NextResponse.json(
+        { error: 'Cannot provide both blockId and articleId' },
+        { status: 400 }
+      );
+    }
+
+    let newPosition;
+    
+    if (blockId) {
+      // Add block position
+      newPosition = await addQuotePositionWithHierarchy(versionId, blockId, selectedNodeId);
+    } else if (articleId) {
+      // Add article position
+      newPosition = await addQuotePositionWithHierarchyForArticle(versionId, articleId, selectedNodeId);
+    }
     
     console.log('API created position:', newPosition);
     

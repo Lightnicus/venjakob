@@ -709,3 +709,65 @@ export async function getArticleContentChangeHistory(articleId: string, limit = 
     throw new Error('Failed to fetch article content change history');
   }
 } 
+
+// Get articles filtered by language for AddArticleDialog
+export async function getArticlesByLanguage(languageId: string): Promise<{
+  id: string;
+  number: string;
+  title: string;
+  price: string | null;
+  hideTitle: boolean;
+  updatedAt: string;
+  content: string | null;
+}[]> {
+  try {
+    // Get all articles
+    const allArticles = await db.select().from(articles).orderBy(articles.number);
+    
+    // Get articles with content for the specified language
+    const articlesWithContent = await Promise.all(
+      allArticles.map(async (article) => {
+        // Get content for this article in the specified language
+        const [contentResult] = await db
+          .select({ content: blockContent.content })
+          .from(blockContent)
+          .where(
+            and(
+              eq(blockContent.articleId, article.id),
+              eq(blockContent.languageId, languageId),
+              isNull(blockContent.blockId) // Only article content, not block content
+            )
+          )
+          .limit(1);
+        
+        // Get title for this article in the specified language
+        const [titleResult] = await db
+          .select({ title: blockContent.title })
+          .from(blockContent)
+          .where(
+            and(
+              eq(blockContent.articleId, article.id),
+              eq(blockContent.languageId, languageId),
+              isNull(blockContent.blockId) // Only article content, not block content
+            )
+          )
+          .limit(1);
+        
+        return {
+          id: article.id,
+          number: article.number,
+          title: titleResult?.title || '',
+          price: article.price,
+          hideTitle: article.hideTitle,
+          updatedAt: article.updatedAt,
+          content: contentResult?.content || null,
+        };
+      })
+    );
+    
+    return articlesWithContent;
+  } catch (error) {
+    console.error('Error fetching articles by language:', error);
+    throw new Error('Failed to fetch articles by language');
+  }
+} 

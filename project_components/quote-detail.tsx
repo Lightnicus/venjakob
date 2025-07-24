@@ -49,6 +49,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   const [loadingDisplayData, setLoadingDisplayData] = useState(false);
   const [offerPropsData, setOfferPropsData] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [variantLanguageId, setVariantLanguageId] = useState<string | undefined>(undefined);
   const { openNewTab } = useTabbedInterface();
 
   // Move change tracking to this level
@@ -129,6 +130,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       
       if (completeData.variant) {
         setVariantNumber(completeData.variant.variantNumber?.toString() || '');
+        setVariantLanguageId(completeData.variant.languageId);
       }
       
       if (completeData.version) {
@@ -414,6 +416,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
                   fetchAllData();
                 }
               }}
+              languageId={variantLanguageId}
             />
           )}
         </TabsContent>
