@@ -241,3 +241,25 @@ export async function saveQuotePositions(
     throw new Error('Failed to save quote positions');
   }
 } 
+
+// Create a new quote position
+export async function createQuotePosition(
+  versionId: string,
+  blockId: string,
+  selectedNodeId?: string | null
+): Promise<any> {
+  const response = await fetch(`/api/quotes/versions/${versionId}/positions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      blockId,
+      selectedNodeId,
+    }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to create quote position');
+  }
+  return response.json();
+} 

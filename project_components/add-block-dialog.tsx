@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button';
 import type { Block, BlockContent } from '@/lib/db/schema';
 import { parseJsonContent } from '@/helper/plate-json-parser';
 import { plateValueToHtml } from '@/helper/plate-serialization';
+import { createQuotePosition } from '@/lib/api/quotes';
+import { toast } from 'sonner';
 
 export type BlockWithContent = Block & {
   content?: BlockContent;
@@ -23,14 +25,26 @@ type Props = {
   onClose: () => void;
   onAdd: (block: BlockWithContent) => void;
   blocks: BlockWithContent[];
+  versionId?: string;
+  selectedNodeId?: string | null;
+  onPositionCreated?: (newPositionId: string) => void;
 };
 
-const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
+const AddBlockDialog: React.FC<Props> = ({ 
+  open, 
+  onClose, 
+  onAdd, 
+  blocks, 
+  versionId, 
+  selectedNodeId,
+  onPositionCreated 
+}) => {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(
     blocks[0]?.id ?? null,
   );
   const [previewHtml, setPreviewHtml] = useState<string>("");
+  const [isAdding, setIsAdding] = useState(false);
 
   const filteredBlocks = useMemo(
     () =>
@@ -122,6 +136,39 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
     [selectedId],
   );
 
+  const handleAddBlock = useCallback(async () => {
+    if (!selectedBlock || !versionId) {
+      toast.error('Block oder Version nicht verfügbar');
+      return;
+    }
+
+    setIsAdding(true);
+    try {
+      console.log('Adding block with:', {
+        versionId,
+        blockId: selectedBlock.id,
+        selectedNodeId
+      });
+
+      // Pass the selectedNodeId directly to the API
+      // The server-side logic will handle the validation and positioning
+      const newPosition = await createQuotePosition(versionId, selectedBlock.id, selectedNodeId);
+      
+      toast.success('Block erfolgreich hinzugefügt');
+      onClose();
+      
+      // Call the callback to notify parent component
+      if (onPositionCreated) {
+        onPositionCreated(newPosition.id);
+      }
+    } catch (error) {
+      console.error('Error adding block:', error);
+      toast.error('Fehler beim Hinzufügen des Blocks');
+    } finally {
+      setIsAdding(false);
+    }
+  }, [selectedBlock, versionId, selectedNodeId, onClose, onPositionCreated]);
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl lg:w-[80vw] lg:max-w-none max-h-[80vh] overflow-hidden flex flex-col">
@@ -154,11 +201,11 @@ const AddBlockDialog: React.FC<Props> = ({ open, onClose, onAdd, blocks }) => {
           {/* Add Button */}
           <div className="flex justify-end">
             <Button
-              onClick={() => selectedBlock && onAdd(selectedBlock)}
-              disabled={!selectedBlock}
+              onClick={handleAddBlock}
+              disabled={!selectedBlock || isAdding}
               aria-label="Block hinzufügen"
             >
-              + Hinzufügen
+              {isAdding ? 'Hinzufügen...' : '+ Hinzufügen'}
             </Button>
           </div>
           

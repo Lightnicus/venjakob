@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import InteractiveSplitPanel from '@/project_components/interactive-split-panel';
 import OfferProperties from '@/project_components/offer-properties';
@@ -107,61 +107,61 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   };
 
   // Fetch all quote data in one consolidated call
-  useEffect(() => {
-    const fetchAllData = async () => {
-      if (!quoteId) return;
+  const fetchAllData = useCallback(async () => {
+    if (!quoteId) return;
 
-      try {
-        setLoadingIds(true);
-        setLoadingDisplayData(true);
-        setLoadingPositions(true);
-        
-        // Fetch all data in one consolidated API call
-        const completeData = await fetchCompleteQuoteData(quoteId, variantId, versionId);
-        
-        // Update resolved IDs
-        setResolvedVariantId(completeData.resolvedVariantId || undefined);
-        setResolvedVersionId(completeData.resolvedVersionId || undefined);
-        
-        // Update display data
-        if (completeData.quote) {
-          setQuoteNumber(completeData.quote.quoteNumber || '');
-        }
-        
-        if (completeData.variant) {
-          setVariantNumber(completeData.variant.variantNumber?.toString() || '');
-        }
-        
-        if (completeData.version) {
-          setVersionNumber(completeData.version.versionNumber || '');
-        }
-        
-        // Set offer properties data
-        if (completeData.offerPropsData) {
-          setOfferPropsData(completeData.offerPropsData);
-        }
-        
-        // Update positions tree data
-        if (completeData.positions) {
-          const transformedData = transformPositionsToTreeData(completeData.positions);
-          setTreeData(transformedData);
-        } else {
-          setTreeData([]);
-        }
-        
-      } catch (error) {
-        console.error('Error fetching complete quote data:', error);
-        toast.error('Fehler beim Laden der Angebotsdaten');
-        setTreeData([]);
-      } finally {
-        setLoadingIds(false);
-        setLoadingDisplayData(false);
-        setLoadingPositions(false);
+    try {
+      setLoadingIds(true);
+      setLoadingDisplayData(true);
+      setLoadingPositions(true);
+      
+      // Fetch all data in one consolidated API call
+      const completeData = await fetchCompleteQuoteData(quoteId, variantId, versionId);
+      
+      // Update resolved IDs
+      setResolvedVariantId(completeData.resolvedVariantId || undefined);
+      setResolvedVersionId(completeData.resolvedVersionId || undefined);
+      
+      // Update display data
+      if (completeData.quote) {
+        setQuoteNumber(completeData.quote.quoteNumber || '');
       }
-    };
-
-    fetchAllData();
+      
+      if (completeData.variant) {
+        setVariantNumber(completeData.variant.variantNumber?.toString() || '');
+      }
+      
+      if (completeData.version) {
+        setVersionNumber(completeData.version.versionNumber || '');
+      }
+      
+      // Set offer properties data
+      if (completeData.offerPropsData) {
+        setOfferPropsData(completeData.offerPropsData);
+      }
+      
+      // Update positions tree data
+      if (completeData.positions) {
+        const transformedData = transformPositionsToTreeData(completeData.positions);
+        setTreeData(transformedData);
+      } else {
+        setTreeData([]);
+      }
+      
+    } catch (error) {
+      console.error('Error fetching complete quote data:', error);
+      toast.error('Fehler beim Laden der Angebotsdaten');
+      setTreeData([]);
+    } finally {
+      setLoadingIds(false);
+      setLoadingDisplayData(false);
+      setLoadingPositions(false);
+    }
   }, [quoteId, variantId, versionId]);
+
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
 
   const handleCreateVariant = () => {
     const newVariantId = resolvedVariantId ? `${resolvedVariantId}-neu` : 'V1';
@@ -408,6 +408,12 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
               removeChange={removeChange}
               hasPositionChanges={hasPositionChanges}
               getPositionChanges={getPositionChanges}
+              onRefreshRequested={() => {
+                // Trigger a re-fetch of the data
+                if (quoteId) {
+                  fetchAllData();
+                }
+              }}
             />
           )}
         </TabsContent>

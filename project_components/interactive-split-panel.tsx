@@ -29,6 +29,7 @@ interface InteractiveSplitPanelProps {
   removeChange?: (positionId: string, field?: string) => void;
   hasPositionChanges?: (positionId: string) => boolean;
   getPositionChanges?: (positionId: string) => { [field: string]: { oldValue: any; newValue: any } };
+  onRefreshRequested?: () => void;
 }
 
 const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({ 
@@ -40,7 +41,8 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   addChange,
   removeChange,
   hasPositionChanges,
-  getPositionChanges
+  getPositionChanges,
+  onRefreshRequested
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
@@ -75,23 +77,24 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
 
 
 
+  // Load blocks and languages function
+  const loadData = useCallback(async () => {
+    try {
+      const [blocksData, languagesData] = await Promise.all([
+        fetchBlocksWithContent(),
+        fetchLanguages()
+      ]);
+      setBlocks(blocksData);
+      setLanguages(languagesData);
+    } catch (error) {
+      console.error('Error loading blocks and languages:', error);
+    }
+  }, []);
+
   // Load blocks and languages on component mount
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [blocksData, languagesData] = await Promise.all([
-          fetchBlocksWithContent(),
-          fetchLanguages()
-        ]);
-        setBlocks(blocksData);
-        setLanguages(languagesData);
-      } catch (error) {
-        console.error('Error loading blocks and languages:', error);
-      }
-    };
-    
     loadData();
-  }, []);
+  }, [loadData]);
 
   // Convert database blocks to dialog format
   const dialogBlocks = useMemo(() => {
@@ -367,12 +370,34 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   }, [selectedNode, renderFormContent]);
 
   // AddBlockDialog handlers
-  const handleOpenAddBlock = useCallback(() => setShowAddBlockDialog(true), []);
+  const handleOpenAddBlock = useCallback(() => {
+    console.log('Opening AddBlockDialog with selectedNodeId:', selectedNodeId);
+    setShowAddBlockDialog(true);
+  }, [selectedNodeId]);
   const handleCloseAddBlock = useCallback(() => setShowAddBlockDialog(false), []);
   const handleAddBlock = useCallback((block: DialogBlockWithContent) => {
     setShowAddBlockDialog(false);
     // handle block addition logic here
   }, []);
+
+  // Handle position creation from AddBlockDialog
+  const handlePositionCreated = useCallback(async (newPositionId: string) => {
+    try {
+      // Request parent to refresh data
+      if (onRefreshRequested) {
+        onRefreshRequested();
+      }
+      
+      // Select the newly created position
+      setSelectedNodeId(newPositionId);
+      
+      // Show success message
+      toast.success('Block erfolgreich hinzugefügt und ausgewählt');
+    } catch (error) {
+      console.error('Error handling position creation:', error);
+      toast.error('Fehler beim Aktualisieren der Daten');
+    }
+  }, [onRefreshRequested]);
 
   // AddArticleDialog handlers
   const handleOpenAddArticle = useCallback(() => setShowAddArticleDialog(true), []);
@@ -475,6 +500,9 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
         onClose={handleCloseAddBlock}
         onAdd={handleAddBlock}
         blocks={dialogBlocks}
+        versionId={versionId}
+        selectedNodeId={selectedNodeId}
+        onPositionCreated={handlePositionCreated}
       />
       <AddArticleDialog
         open={showAddArticleDialog}
