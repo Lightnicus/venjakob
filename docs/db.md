@@ -215,6 +215,34 @@ const hoursSinceUpdate = (Date.now() - lastUpdate.getTime()) / (1000 * 60 * 60);
 const userFriendlyDate = new Date(article.updatedAt).toLocaleDateString('de-DE');
 ```
 
+#### Working with Soft Deletes
+
+```typescript
+// ✅ Correct - filter out soft deleted records in normal queries
+const activeArticles = await db
+  .select()
+  .from(articles)
+  .where(eq(articles.deleted, false));
+
+// ✅ Correct - include soft deleted records when needed
+const allArticles = await db
+  .select()
+  .from(articles)
+  .where(eq(articles.deleted, true));
+
+// ✅ Correct - soft delete a record
+await db.update(articles).set({
+  deleted: true,
+  updatedAt: sql`NOW()`
+}).where(eq(articles.id, articleId));
+
+// ✅ Correct - restore a soft deleted record
+await db.update(articles).set({
+  deleted: false,
+  updatedAt: sql`NOW()`
+}).where(eq(articles.id, articleId));
+```
+
 #### Benefits
 
 - **Type Consistency**: TypeScript types match runtime behavior after JSON serialization
@@ -245,6 +273,7 @@ export const newTable = pgTable('new_table', {
   // Standard timestamp fields (always include these)
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow(),
+  deleted: boolean('deleted').notNull().default(false),
   
   // Optional: Lock management fields
   blocked: timestamp('blocked', { mode: 'string' }),
@@ -304,13 +333,21 @@ Every table should have:
 - `id`: Primary key (UUID recommended)
 - `createdAt`: Creation timestamp
 - `updatedAt`: Last modification timestamp
+- `deleted`: Soft delete flag (boolean, defaults to false)
 
-### 4. Lock Fields for Edit Protection
+### 4. Soft Delete Support
+All major tables include soft delete functionality:
+- `deleted`: Boolean flag (defaults to false)
+- When `deleted = true`, the record is considered "soft deleted"
+- Soft deleted records should be filtered out in normal queries
+- Use `WHERE deleted = false` in queries to exclude soft deleted records
+
+### 5. Lock Fields for Edit Protection
 For tables that need edit protection:
 - `blocked`: Timestamp when locked (null when not locked)
 - `blockedBy`: User ID who has the lock
 
-### 5. Proper Error Handling
+### 6. Proper Error Handling
 ```typescript
 // ✅ Correct error handling
 try {

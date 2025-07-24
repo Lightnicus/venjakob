@@ -63,6 +63,7 @@ export const clients = pgTable('clients', {
   languageId: uuid('language_id')
     .notNull()
     .references(() => languages.id),
+  deleted: boolean('deleted').notNull().default(false),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
@@ -78,6 +79,7 @@ export const blocks = pgTable('blocks', {
   pageBreakAbove: boolean('page_break_above').notNull(),
   blocked: timestamp('blocked', { mode: 'string' }),
   blockedBy: uuid('blocked_by').references(() => users.id),
+  deleted: boolean('deleted').notNull().default(false),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
@@ -90,6 +92,7 @@ export const articles = pgTable('articles', {
   hideTitle: boolean('hide_title').notNull().default(false),
   blocked: timestamp('blocked', { mode: 'string' }),
   blockedBy: uuid('blocked_by').references(() => users.id),
+  deleted: boolean('deleted').notNull().default(false),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
@@ -110,6 +113,7 @@ export const blockContent = pgTable(
     languageId: uuid('language_id')
       .notNull()
       .references(() => languages.id),
+    deleted: boolean('deleted').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'string' })
       .defaultNow()
       .notNull(),
@@ -136,6 +140,7 @@ export const articleCalculationItem = pgTable('article_calculation_item', {
     onDelete: 'cascade',
   }),
   order: integer('order'),
+  deleted: boolean('deleted').notNull().default(false),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
@@ -253,6 +258,7 @@ export const contactPersons = pgTable('contact_persons', {
   email: text('email'),
   phone: text('phone'),
   position: text('position'),
+  deleted: boolean('deleted').notNull().default(false),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
 });
@@ -275,6 +281,7 @@ export const salesOpportunities = pgTable('sales_opportunities', {
   quoteVolume: numeric('quote_volume'),
   blocked: timestamp('blocked', { mode: 'string' }),
   blockedBy: uuid('blocked_by').references(() => users.id),
+  deleted: boolean('deleted').notNull().default(false),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   createdBy: uuid('created_by')
@@ -294,6 +301,7 @@ export const quotes = pgTable('quotes', {
   validUntil: timestamp('valid_until', { mode: 'string' }),
   blocked: timestamp('blocked', { mode: 'string' }),
   blockedBy: uuid('blocked_by').references(() => users.id),
+  deleted: boolean('deleted').notNull().default(false),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   createdBy: uuid('created_by')
@@ -316,6 +324,7 @@ export const quoteVariants = pgTable('quote_variants', {
   isDefault: boolean('is_default').notNull().default(false),
   blocked: timestamp('blocked', { mode: 'string' }),
   blockedBy: uuid('blocked_by').references(() => users.id),
+  deleted: boolean('deleted').notNull().default(false),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
   createdBy: uuid('created_by')
@@ -341,6 +350,7 @@ export const quoteVersions = pgTable(
     isLatest: boolean('is_latest').notNull().default(false),
     blocked: timestamp('blocked', { mode: 'string' }),
     blockedBy: uuid('blocked_by').references(() => users.id),
+    deleted: boolean('deleted').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'string' })
       .defaultNow()
       .notNull(),
@@ -379,6 +389,7 @@ export const quotePositions = pgTable(
     articleCost: numeric('article_cost'),
     description: text('description'),
     title: text('title'),
+    deleted: boolean('deleted').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'string' })
       .defaultNow()
       .notNull(),
@@ -392,7 +403,7 @@ export const quotePositions = pgTable(
       'article_or_block_check',
       sql`(${table.articleId} IS NOT NULL AND ${table.blockId} IS NULL) OR (${table.articleId} IS NULL AND ${table.blockId} IS NOT NULL)`,
     ),
-    // Ensure position number is unique within a version and parent level
+    // Ensure position number is unique within a variant and parent level
     versionPositionUnique: unique('version_position_unique').on(
       table.versionId,
       table.quotePositionParentId,
