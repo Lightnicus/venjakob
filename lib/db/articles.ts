@@ -75,7 +75,7 @@ export type ArticleWithCalculations = Article & {
 // Fetch all articles
 export async function getArticles(): Promise<Article[]> {
   try {
-    return await db.select().from(articles).orderBy(articles.number);
+    return await db.select().from(articles).where(eq(articles.deleted, false)).orderBy(articles.number);
   } catch (error) {
     console.error('Error fetching articles:', error);
     throw new Error('Failed to fetch articles');
@@ -86,21 +86,21 @@ export async function getArticles(): Promise<Article[]> {
 export async function getArticleWithCalculations(articleId: string): Promise<ArticleWithCalculations | null> {
   try {
     // Fetch the article
-    const [article] = await db.select().from(articles).where(eq(articles.id, articleId));
+    const [article] = await db.select().from(articles).where(and(eq(articles.id, articleId), eq(articles.deleted, false)));
     if (!article) return null;
     
     // Fetch calculation items for this article, ordered by the order column
     const calculationItems = await db
       .select()
       .from(articleCalculationItem)
-      .where(eq(articleCalculationItem.articleId, articleId))
+      .where(and(eq(articleCalculationItem.articleId, articleId), eq(articleCalculationItem.deleted, false)))
       .orderBy(asc(articleCalculationItem.order));
     
     // Fetch article content (block_content where articleId is set)
     const articleContent = await db
       .select()
       .from(blockContent)
-      .where(eq(blockContent.articleId, articleId));
+      .where(and(eq(blockContent.articleId, articleId), eq(blockContent.deleted, false)));
 
     // Find the most recent change (article itself or its content)
     let lastChangedBy = null;
@@ -169,7 +169,7 @@ export async function getArticleWithCalculations(articleId: string): Promise<Art
 // Fetch all articles with their calculation counts
 export async function getArticlesWithCalculationCounts(): Promise<(Article & { calculationCount: number })[]> {
   try {
-    const allArticles = await db.select().from(articles).orderBy(articles.number);
+    const allArticles = await db.select().from(articles).where(eq(articles.deleted, false)).orderBy(articles.number);
     
     // Get calculation counts for each article
     const articlesWithCounts = await Promise.all(
@@ -177,7 +177,7 @@ export async function getArticlesWithCalculationCounts(): Promise<(Article & { c
         const [countResult] = await db
           .select({ count: count(articleCalculationItem.id) })
           .from(articleCalculationItem)
-          .where(eq(articleCalculationItem.articleId, article.id));
+          .where(and(eq(articleCalculationItem.articleId, article.id), eq(articleCalculationItem.deleted, false)));
         
         return {
           ...article,
@@ -341,7 +341,7 @@ export async function deleteArticle(articleId: string): Promise<void> {
 export async function getCalculationItems(): Promise<ArticleCalculationItem[]> {
   try {
     return await db.select().from(articleCalculationItem)
-      .where(isNull(articleCalculationItem.articleId))
+      .where(and(isNull(articleCalculationItem.articleId), eq(articleCalculationItem.deleted, false)))
       .orderBy(articleCalculationItem.name);
   } catch (error) {
     console.error('Error fetching calculation items:', error);
@@ -352,7 +352,10 @@ export async function getCalculationItems(): Promise<ArticleCalculationItem[]> {
 // Create a global calculation item (not tied to any article)
 export async function createCalculationItem(itemData: Omit<InsertArticleCalculationItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<ArticleCalculationItem> {
   try {
-    const [newItem] = await db.insert(articleCalculationItem).values(itemData).returning();
+    const [newItem] = await db.insert(articleCalculationItem).values({
+      ...itemData,
+      deleted: false,
+    }).returning();
     return newItem;
   } catch (error) {
     console.error('Error creating calculation item:', error);
@@ -392,7 +395,9 @@ export async function saveCalculationItem(
 // Delete a calculation item
 export async function deleteCalculationItem(itemId: string): Promise<void> {
   try {
-    await db.delete(articleCalculationItem).where(eq(articleCalculationItem.id, itemId));
+    await db.update(articleCalculationItem)
+      .set({ deleted: true, updatedAt: sql`NOW()` })
+      .where(eq(articleCalculationItem.id, itemId));
   } catch (error) {
     console.error('Error deleting calculation item:', error);
     throw new Error('Failed to delete calculation item');
@@ -588,7 +593,7 @@ export async function getArticleList(): Promise<{
   languages: string;
 }[]> {
   try {
-    const allArticles = await db.select().from(articles).orderBy(articles.number);
+    const allArticles = await db.select().from(articles).where(eq(articles.deleted, false)).orderBy(articles.number);
     
     // Find the default language
     const [defaultLanguage] = await db
@@ -722,7 +727,7 @@ export async function getArticlesByLanguage(languageId: string): Promise<{
 }[]> {
   try {
     // Get all articles
-    const allArticles = await db.select().from(articles).orderBy(articles.number);
+    const allArticles = await db.select().from(articles).where(eq(articles.deleted, false)).orderBy(articles.number);
     
     // Get articles with content for the specified language
     const articlesWithContent = await Promise.all(
@@ -769,5 +774,45 @@ export async function getArticlesByLanguage(languageId: string): Promise<{
   } catch (error) {
     console.error('Error fetching articles by language:', error);
     throw new Error('Failed to fetch articles by language');
+  }
+} 
+
+// Soft delete an article
+export async function softDeleteArticle(articleId: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db
+      .update(articles)
+      .set({ deleted: true, updatedAt: sql`NOW()` })
+      .where(eq(articles.id, articleId));
+
+    // TODO: Add audit trail when audit operations are implemented for articles
+  } catch (error) {
+    console.error('Error soft deleting article:', error);
+    throw new Error('Failed to soft delete article');
+  }
+}
+
+// Restore a soft deleted article
+export async function restoreArticle(articleId: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db
+      .update(articles)
+      .set({ deleted: false, updatedAt: sql`NOW()` })
+      .where(eq(articles.id, articleId));
+
+    // TODO: Add audit trail when audit operations are implemented for articles
+  } catch (error) {
+    console.error('Error restoring article:', error);
+    throw new Error('Failed to restore article');
   }
 } 

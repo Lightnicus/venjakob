@@ -29,6 +29,7 @@ export async function getContactPersons(): Promise<ContactPerson[]> {
     return await db
       .select()
       .from(contactPersons)
+      .where(eq(contactPersons.deleted, false))
       .orderBy(contactPersons.name);
   } catch (error) {
     console.error('Error fetching contact persons:', error);
@@ -42,7 +43,7 @@ export async function getContactPersonsByClient(clientId: string): Promise<Conta
     return await db
       .select()
       .from(contactPersons)
-      .where(eq(contactPersons.clientId, clientId))
+      .where(and(eq(contactPersons.clientId, clientId), eq(contactPersons.deleted, false)))
       .orderBy(contactPersons.name);
   } catch (error) {
     console.error('Error fetching contact persons by client:', error);
@@ -66,6 +67,7 @@ export async function getContactPersonWithDetails(
         email: contactPersons.email,
         phone: contactPersons.phone,
         position: contactPersons.position,
+        deleted: contactPersons.deleted,
         createdAt: contactPersons.createdAt,
         updatedAt: contactPersons.updatedAt,
         // Client fields
@@ -80,7 +82,7 @@ export async function getContactPersonWithDetails(
       })
       .from(contactPersons)
       .leftJoin(clients, eq(contactPersons.clientId, clients.id))
-      .where(eq(contactPersons.id, contactPersonId));
+      .where(and(eq(contactPersons.id, contactPersonId), eq(contactPersons.deleted, false)));
 
     if (!contactPerson) return null;
 
@@ -129,6 +131,7 @@ export async function getContactPersonWithDetails(
       email: contactPerson.email,
       phone: contactPerson.phone,
       position: contactPerson.position,
+      deleted: contactPerson.deleted,
       createdAt: contactPerson.createdAt,
       updatedAt: contactPerson.updatedAt,
       client: {
@@ -139,6 +142,7 @@ export async function getContactPersonWithDetails(
         phone: contactPerson.clientPhone || null,
         casLink: contactPerson.clientCasLink || null,
         languageId: contactPerson.clientLanguageId || '',
+        deleted: false,
         createdAt: contactPerson.clientCreatedAt || '',
         updatedAt: contactPerson.clientUpdatedAt || '',
       },
@@ -163,7 +167,10 @@ export async function createContactPerson(
 
     const [newContactPerson] = await db
       .insert(contactPersons)
-      .values(contactPersonData)
+      .values({
+        ...contactPersonData,
+        deleted: false,
+      })
       .returning();
 
     // TODO: Add audit trail when audit operations are implemented for contact persons
@@ -259,6 +266,7 @@ export async function getContactPersonsList(): Promise<{
       })
       .from(contactPersons)
       .leftJoin(clients, eq(contactPersons.clientId, clients.id))
+      .where(eq(contactPersons.deleted, false))
       .orderBy(contactPersons.name);
 
     // Get sales opportunities counts for each contact person
@@ -268,7 +276,7 @@ export async function getContactPersonsList(): Promise<{
         const [salesOpportunitiesCountResult] = await db
           .select({ count: count(salesOpportunities.id) })
           .from(salesOpportunities)
-          .where(eq(salesOpportunities.contactPersonId, contactPerson.id));
+          .where(and(eq(salesOpportunities.contactPersonId, contactPerson.id), eq(salesOpportunities.deleted, false)));
 
         return {
           id: contactPerson.id,
@@ -299,5 +307,45 @@ export async function getContactPersonChangeHistory(contactPersonId: string, lim
   } catch (error) {
     console.error('Error fetching contact person change history:', error);
     throw new Error('Failed to fetch contact person change history');
+  }
+}
+
+// Soft delete a contact person
+export async function softDeleteContactPerson(contactPersonId: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db
+      .update(contactPersons)
+      .set({ deleted: true, updatedAt: sql`NOW()` })
+      .where(eq(contactPersons.id, contactPersonId));
+
+    // TODO: Add audit trail when audit operations are implemented for contact persons
+  } catch (error) {
+    console.error('Error soft deleting contact person:', error);
+    throw new Error('Failed to soft delete contact person');
+  }
+}
+
+// Restore a soft deleted contact person
+export async function restoreContactPerson(contactPersonId: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db
+      .update(contactPersons)
+      .set({ deleted: false, updatedAt: sql`NOW()` })
+      .where(eq(contactPersons.id, contactPersonId));
+
+    // TODO: Add audit trail when audit operations are implemented for contact persons
+  } catch (error) {
+    console.error('Error restoring contact person:', error);
+    throw new Error('Failed to restore contact person');
   }
 } 

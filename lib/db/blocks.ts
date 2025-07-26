@@ -85,10 +85,11 @@ export async function getBlocksWithContent(): Promise<BlockWithContent[]> {
     const allBlocks = await db
       .select()
       .from(blocks)
+      .where(eq(blocks.deleted, false))
       .orderBy(blocks.position, blocks.name);
 
     // Fetch all block content
-    const allBlockContent = await db.select().from(blockContent);
+    const allBlockContent = await db.select().from(blockContent).where(eq(blockContent.deleted, false));
 
     // Join the data
     const blocksWithContent: BlockWithContent[] = allBlocks.map(block => ({
@@ -113,13 +114,13 @@ export async function getBlockWithContent(
     const [block] = await db
       .select()
       .from(blocks)
-      .where(eq(blocks.id, blockId));
+      .where(and(eq(blocks.id, blockId), eq(blocks.deleted, false)));
     if (!block) return null;
 
     const content = await db
       .select()
       .from(blockContent)
-      .where(eq(blockContent.blockId, blockId));
+      .where(and(eq(blockContent.blockId, blockId), eq(blockContent.deleted, false)));
 
     // Find the most recent change (block itself or its content)
     let lastChangedBy = null;
@@ -438,6 +439,7 @@ export async function getBlockList(): Promise<
     const allBlocks = await db
       .select()
       .from(blocks)
+      .where(eq(blocks.deleted, false))
       .orderBy(blocks.position, blocks.name);
 
     // Fetch all block content with language info
@@ -554,5 +556,45 @@ export async function getBlockContentChangeHistory(blockId: string, limit = 50) 
   } catch (error) {
     console.error('Error fetching block content change history:', error);
     throw new Error('Failed to fetch block content change history');
+  }
+}
+
+// Soft delete a block
+export async function softDeleteBlock(blockId: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db
+      .update(blocks)
+      .set({ deleted: true, updatedAt: sql`NOW()` })
+      .where(eq(blocks.id, blockId));
+
+    // TODO: Add audit trail when audit operations are implemented for blocks
+  } catch (error) {
+    console.error('Error soft deleting block:', error);
+    throw new Error('Failed to soft delete block');
+  }
+}
+
+// Restore a soft deleted block
+export async function restoreBlock(blockId: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db
+      .update(blocks)
+      .set({ deleted: false, updatedAt: sql`NOW()` })
+      .where(eq(blocks.id, blockId));
+
+    // TODO: Add audit trail when audit operations are implemented for blocks
+  } catch (error) {
+    console.error('Error restoring block:', error);
+    throw new Error('Failed to restore block');
   }
 }

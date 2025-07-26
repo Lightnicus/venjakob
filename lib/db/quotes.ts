@@ -106,6 +106,7 @@ export async function getQuotes(): Promise<Quote[]> {
     return await db
       .select()
       .from(quotes)
+      .where(eq(quotes.deleted, false))
       .orderBy(desc(quotes.createdAt));
   } catch (error) {
     console.error('Error fetching quotes:', error);
@@ -126,7 +127,7 @@ export async function createNewQuote(quoteData: {
     }
 
     // Generate a unique quote number using env variable as starting point
-    const quoteCount = await db.select({ count: count(quotes.id) }).from(quotes);
+    const quoteCount = await db.select({ count: count(quotes.id) }).from(quotes).where(eq(quotes.deleted, false));
     const startNumber = Number(process.env.QUOTE_NUMBER_START || 1);
     const nextNumber = startNumber + (Number(quoteCount[0]?.count || 0));
     const quoteNumber = `ANG-${new Date().getFullYear()}-${String(nextNumber).padStart(4, '0')}`;
@@ -134,6 +135,7 @@ export async function createNewQuote(quoteData: {
     const newQuoteData = {
       ...quoteData,
       quoteNumber,
+      deleted: false,
       createdBy: user.dbUser.id,
       modifiedBy: user.dbUser.id,
     };
@@ -155,7 +157,7 @@ export async function getQuotesBySalesOpportunity(salesOpportunityId: string): P
     return await db
       .select()
       .from(quotes)
-      .where(eq(quotes.salesOpportunityId, salesOpportunityId))
+      .where(and(eq(quotes.salesOpportunityId, salesOpportunityId), eq(quotes.deleted, false)))
       .orderBy(desc(quotes.createdAt));
   } catch (error) {
     console.error('Error fetching quotes by sales opportunity:', error);
@@ -176,6 +178,7 @@ export async function getQuoteWithDetails(quoteId: string): Promise<QuoteWithDet
         validUntil: quotes.validUntil,
         blocked: quotes.blocked,
         blockedBy: quotes.blockedBy,
+        deleted: quotes.deleted,
         createdAt: quotes.createdAt,
         updatedAt: quotes.updatedAt,
         createdBy: quotes.createdBy,
@@ -186,7 +189,7 @@ export async function getQuoteWithDetails(quoteId: string): Promise<QuoteWithDet
       })
       .from(quotes)
       .leftJoin(salesOpportunities, eq(quotes.salesOpportunityId, salesOpportunities.id))
-      .where(eq(quotes.id, quoteId));
+      .where(and(eq(quotes.id, quoteId), eq(quotes.deleted, false)));
 
     if (!quote) return null;
 
@@ -234,6 +237,7 @@ export async function getQuoteWithDetails(quoteId: string): Promise<QuoteWithDet
 
     return {
       ...quote,
+      deleted: quote.deleted,
       salesOpportunity: salesOpportunity!,
       variants,
       variantsCount: Number(variantsCountResult?.count || 0),
@@ -258,6 +262,7 @@ export async function getQuoteVariantsByQuote(quoteId: string): Promise<QuoteVar
         isDefault: quoteVariants.isDefault,
         blocked: quoteVariants.blocked,
         blockedBy: quoteVariants.blockedBy,
+        deleted: quoteVariants.deleted,
         createdAt: quoteVariants.createdAt,
         updatedAt: quoteVariants.updatedAt,
         createdBy: quoteVariants.createdBy,
@@ -269,7 +274,7 @@ export async function getQuoteVariantsByQuote(quoteId: string): Promise<QuoteVar
       })
       .from(quoteVariants)
       .leftJoin(languages, eq(quoteVariants.languageId, languages.id))
-      .where(eq(quoteVariants.quoteId, quoteId))
+      .where(and(eq(quoteVariants.quoteId, quoteId), eq(quoteVariants.deleted, false)))
       .orderBy(quoteVariants.isDefault ? desc(quoteVariants.isDefault) : asc(quoteVariants.variantNumber));
 
     // Get versions for each variant
@@ -291,6 +296,7 @@ export async function getQuoteVariantsByQuote(quoteId: string): Promise<QuoteVar
           isDefault: variant.isDefault,
           blocked: variant.blocked,
           blockedBy: variant.blockedBy,
+          deleted: variant.deleted,
           createdAt: variant.createdAt,
           updatedAt: variant.updatedAt,
           createdBy: variant.createdBy,
@@ -322,7 +328,7 @@ export async function getQuoteVersionsByVariant(variantId: string): Promise<Quot
     const versions = await db
       .select()
       .from(quoteVersions)
-      .where(eq(quoteVersions.variantId, variantId))
+      .where(and(eq(quoteVersions.variantId, variantId), eq(quoteVersions.deleted, false)))
       .orderBy(desc(quoteVersions.isLatest), desc(quoteVersions.createdAt));
 
     // Get positions for each version
@@ -333,7 +339,7 @@ export async function getQuoteVersionsByVariant(variantId: string): Promise<Quot
         const [positionsCountResult] = await db
           .select({ count: count(quotePositions.id) })
           .from(quotePositions)
-          .where(eq(quotePositions.versionId, version.id));
+          .where(and(eq(quotePositions.versionId, version.id), eq(quotePositions.deleted, false)));
 
         return {
           ...version,
@@ -356,7 +362,7 @@ export async function getQuotePositionsByVersion(versionId: string): Promise<Quo
     const positions = await db
       .select()
       .from(quotePositions)
-      .where(eq(quotePositions.versionId, versionId))
+      .where(and(eq(quotePositions.versionId, versionId), eq(quotePositions.deleted, false)))
       .orderBy(
         asc(quotePositions.quotePositionParentId), // nulls first for root level
         asc(quotePositions.positionNumber)
@@ -372,7 +378,7 @@ export async function getQuotePositionsByVersion(versionId: string): Promise<Quo
           const [articleResult] = await db
             .select()
             .from(articles)
-            .where(eq(articles.id, position.articleId));
+            .where(and(eq(articles.id, position.articleId), eq(articles.deleted, false)));
           article = articleResult || null;
         }
 
@@ -380,7 +386,7 @@ export async function getQuotePositionsByVersion(versionId: string): Promise<Quo
           const [blockResult] = await db
             .select()
             .from(blocks)
-            .where(eq(blocks.id, position.blockId));
+            .where(and(eq(blocks.id, position.blockId), eq(blocks.deleted, false)));
           block = blockResult || null;
         }
 
@@ -413,6 +419,7 @@ export async function createQuote(
       .insert(quotes)
       .values({
         ...quoteData,
+        deleted: false,
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,
       })
@@ -460,7 +467,7 @@ export async function saveQuote(
   }
 }
 
-// Delete a quote and all related data
+// Soft delete a quote and all related data
 export async function deleteQuote(quoteId: string): Promise<void> {
   try {
     // Check if quote is editable by current user
@@ -471,9 +478,10 @@ export async function deleteQuote(quoteId: string): Promise<void> {
       throw new Error('Benutzer nicht authentifiziert');
     }
 
-    // The cascade delete will handle variants, versions, and positions
+    // Soft delete the quote (set deleted = true)
     await db
-      .delete(quotes)
+      .update(quotes)
+      .set({ deleted: true, updatedAt: sql`NOW()` })
       .where(eq(quotes.id, quoteId));
 
     // TODO: Add audit trail when audit operations are implemented for quotes
@@ -500,6 +508,7 @@ export async function createQuoteVariant(
       .insert(quoteVariants)
       .values({
         ...variantData,
+        deleted: false,
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,
       })
@@ -538,6 +547,7 @@ export async function createQuoteVersion(
         .insert(quoteVersions)
         .values({
           ...versionData,
+          deleted: false,
           createdBy: user.dbUser.id,
           modifiedBy: user.dbUser.id,
         })
@@ -562,7 +572,10 @@ export async function addQuotePosition(
   try {
     const [newPosition] = await db
       .insert(quotePositions)
-      .values(positionData)
+      .values({
+        ...positionData,
+        deleted: false,
+      })
       .returning();
 
     // TODO: Add audit trail when audit operations are implemented for quote positions
@@ -599,6 +612,7 @@ export async function getQuotesList(): Promise<{
       })
       .from(quotes)
       .leftJoin(salesOpportunities, eq(quotes.salesOpportunityId, salesOpportunities.id))
+      .where(eq(quotes.deleted, false))
       .orderBy(desc(quotes.createdAt));
 
     // Get variants counts for each quote
@@ -607,7 +621,7 @@ export async function getQuotesList(): Promise<{
         const [variantsCountResult] = await db
           .select({ count: count(quoteVariants.id) })
           .from(quoteVariants)
-          .where(eq(quoteVariants.quoteId, quote.id));
+          .where(and(eq(quoteVariants.quoteId, quote.id), eq(quoteVariants.deleted, false)));
 
         return {
           id: quote.id,
@@ -1002,7 +1016,7 @@ export async function getNextVariantNumber(quoteId: string): Promise<number> {
     const [maxVariantResult] = await db
       .select({ maxNumber: quoteVariants.variantNumber })
       .from(quoteVariants)
-      .where(eq(quoteVariants.quoteId, quoteId))
+      .where(and(eq(quoteVariants.quoteId, quoteId), eq(quoteVariants.deleted, false)))
       .orderBy(desc(quoteVariants.variantNumber))
       .limit(1);
 
@@ -1020,7 +1034,7 @@ export async function getNextVersionNumber(variantId: string): Promise<number> {
     const [maxVersionResult] = await db
       .select({ maxVersion: quoteVersions.versionNumber })
       .from(quoteVersions)
-      .where(eq(quoteVersions.variantId, variantId))
+      .where(and(eq(quoteVersions.variantId, variantId), eq(quoteVersions.deleted, false)))
       .orderBy(desc(quoteVersions.versionNumber))
       .limit(1);
 
@@ -1038,7 +1052,7 @@ export async function getLatestVariantForQuote(quoteId: string): Promise<QuoteVa
     const [latestVariant] = await db
       .select()
       .from(quoteVariants)
-      .where(eq(quoteVariants.quoteId, quoteId))
+      .where(and(eq(quoteVariants.quoteId, quoteId), eq(quoteVariants.deleted, false)))
       .orderBy(desc(quoteVariants.variantNumber))
       .limit(1);
 
@@ -1058,7 +1072,8 @@ export async function getLatestVersionForVariant(variantId: string): Promise<Quo
       .from(quoteVersions)
       .where(and(
         eq(quoteVersions.variantId, variantId),
-        eq(quoteVersions.isLatest, true)
+        eq(quoteVersions.isLatest, true),
+        eq(quoteVersions.deleted, false)
       ))
       .limit(1);
 
@@ -1070,7 +1085,7 @@ export async function getLatestVersionForVariant(variantId: string): Promise<Quo
     const [highestVersion] = await db
       .select()
       .from(quoteVersions)
-      .where(eq(quoteVersions.variantId, variantId))
+      .where(and(eq(quoteVersions.variantId, variantId), eq(quoteVersions.deleted, false)))
       .orderBy(desc(quoteVersions.versionNumber))
       .limit(1);
 
@@ -1087,7 +1102,7 @@ export async function getQuoteVariantById(variantId: string): Promise<QuoteVaria
     const [variant] = await db
       .select()
       .from(quoteVariants)
-      .where(eq(quoteVariants.id, variantId))
+      .where(and(eq(quoteVariants.id, variantId), eq(quoteVariants.deleted, false)))
       .limit(1);
 
     return variant || null;
@@ -1103,7 +1118,7 @@ export async function getQuoteVersionById(versionId: string): Promise<QuoteVersi
     const [version] = await db
       .select()
       .from(quoteVersions)
-      .where(eq(quoteVersions.id, versionId))
+      .where(and(eq(quoteVersions.id, versionId), eq(quoteVersions.deleted, false)))
       .limit(1);
 
     return version || null;
@@ -1129,7 +1144,10 @@ async function createStandardBlockPositions(
       mandatory: blocks.mandatory,
     })
     .from(blocks)
-    .where(or(eq(blocks.standard, true), eq(blocks.mandatory, true)))
+    .where(and(
+      or(eq(blocks.standard, true), eq(blocks.mandatory, true)),
+      eq(blocks.deleted, false)
+    ))
     .orderBy(asc(blocks.position), asc(blocks.name));
 
   // For each block, create a quote position
@@ -1146,7 +1164,8 @@ async function createStandardBlockPositions(
       .where(
         and(
           eq(blockContent.blockId, block.id),
-          eq(blockContent.languageId, languageId)
+          eq(blockContent.languageId, languageId),
+          eq(blockContent.deleted, false)
         )
       )
       .limit(1);
@@ -1188,7 +1207,7 @@ export async function createQuoteWithVariantAndVersion(quoteData: {
 
     return await db.transaction(async (tx) => {
       // Create quote
-      const quoteCount = await tx.select({ count: count(quotes.id) }).from(quotes);
+      const quoteCount = await tx.select({ count: count(quotes.id) }).from(quotes).where(eq(quotes.deleted, false));
       const startNumber = Number(process.env.QUOTE_NUMBER_START || 1);
       const nextNumber = startNumber + (Number(quoteCount[0]?.count || 0));
       const quoteNumber = `${String(nextNumber).padStart(4, '0')}`;
@@ -1196,6 +1215,7 @@ export async function createQuoteWithVariantAndVersion(quoteData: {
       const [newQuote] = await tx.insert(quotes).values({
         ...quoteData,
         quoteNumber,
+        deleted: false,
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,
       }).returning();
@@ -1207,6 +1227,7 @@ export async function createQuoteWithVariantAndVersion(quoteData: {
         variantNumber: 1,
         languageId: quoteData.languageId,
         isDefault: true,
+        deleted: false,
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,
       }).returning();
@@ -1216,6 +1237,7 @@ export async function createQuoteWithVariantAndVersion(quoteData: {
         variantId: newVariant.id,
         versionNumber: 1,
         isLatest: true,
+        deleted: false,
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,
       }).returning();
@@ -1260,6 +1282,7 @@ export async function createVariantForQuote(
         variantNumber: nextNumber,
         languageId,
         isDefault: false,
+        deleted: false,
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,
       }).returning();
@@ -1269,6 +1292,7 @@ export async function createVariantForQuote(
         variantId: newVariant.id,
         versionNumber: 1,
         isLatest: true,
+        deleted: false,
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,
       }).returning();
@@ -1309,6 +1333,7 @@ export async function createVersionForVariant(
         variantId,
         versionNumber: nextVersionNumber,
         isLatest: true,
+        deleted: false,
         createdBy: user.dbUser.id,
         modifiedBy: user.dbUser.id,
       }).returning();
@@ -1343,6 +1368,7 @@ export async function copyQuote(originalQuoteId: string): Promise<Quote> {
       validUntil: originalQuote.validUntil,
       blocked: null,
       blockedBy: null,
+      deleted: false,
     });
 
     // TODO: Copy variants, versions, and positions in a transaction
@@ -1468,5 +1494,45 @@ export async function updateQuotePositions(
   } catch (error) {
     console.error('Error updating quote positions:', error);
     throw new Error('Failed to update quote positions');
+  }
+} 
+
+// Soft delete a quote
+export async function softDeleteQuote(quoteId: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db
+      .update(quotes)
+      .set({ deleted: true, updatedAt: sql`NOW()` })
+      .where(eq(quotes.id, quoteId));
+
+    // TODO: Add audit trail when audit operations are implemented for quotes
+  } catch (error) {
+    console.error('Error soft deleting quote:', error);
+    throw new Error('Failed to soft delete quote');
+  }
+}
+
+// Restore a soft deleted quote
+export async function restoreQuote(quoteId: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db
+      .update(quotes)
+      .set({ deleted: false, updatedAt: sql`NOW()` })
+      .where(eq(quotes.id, quoteId));
+
+    // TODO: Add audit trail when audit operations are implemented for quotes
+  } catch (error) {
+    console.error('Error restoring quote:', error);
+    throw new Error('Failed to restore quote');
   }
 } 

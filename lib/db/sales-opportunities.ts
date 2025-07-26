@@ -80,6 +80,7 @@ export async function getSalesOpportunities(): Promise<SalesOpportunity[]> {
     return await db
       .select()
       .from(salesOpportunities)
+      .where(eq(salesOpportunities.deleted, false))
       .orderBy(desc(salesOpportunities.createdAt));
   } catch (error) {
     console.error('Error fetching sales opportunities:', error);
@@ -107,6 +108,7 @@ export async function getSalesOpportunityWithDetails(
         quoteVolume: salesOpportunities.quoteVolume,
         blocked: salesOpportunities.blocked,
         blockedBy: salesOpportunities.blockedBy,
+        deleted: salesOpportunities.deleted,
         createdAt: salesOpportunities.createdAt,
         updatedAt: salesOpportunities.updatedAt,
         createdBy: salesOpportunities.createdBy,
@@ -123,7 +125,7 @@ export async function getSalesOpportunityWithDetails(
       })
       .from(salesOpportunities)
       .leftJoin(clients, eq(salesOpportunities.clientId, clients.id))
-      .where(eq(salesOpportunities.id, salesOpportunityId));
+      .where(and(eq(salesOpportunities.id, salesOpportunityId), eq(salesOpportunities.deleted, false)));
 
     if (!opportunity) return null;
 
@@ -155,7 +157,7 @@ export async function getSalesOpportunityWithDetails(
     const [quotesCountResult] = await db
       .select({ count: count(quotes.id) })
       .from(quotes)
-      .where(eq(quotes.salesOpportunityId, salesOpportunityId));
+      .where(and(eq(quotes.salesOpportunityId, salesOpportunityId), eq(quotes.deleted, false)));
 
     // Find the most recent change
     let lastChangedBy = null;
@@ -200,6 +202,7 @@ export async function getSalesOpportunityWithDetails(
       quoteVolume: opportunity.quoteVolume,
       blocked: opportunity.blocked,
       blockedBy: opportunity.blockedBy,
+      deleted: opportunity.deleted,
       createdAt: opportunity.createdAt,
       updatedAt: opportunity.updatedAt,
       createdBy: opportunity.createdBy,
@@ -212,6 +215,7 @@ export async function getSalesOpportunityWithDetails(
         phone: opportunity.clientPhone || null,
         casLink: opportunity.clientCasLink || null,
         languageId: opportunity.clientLanguageId || '',
+        deleted: false,
         createdAt: opportunity.clientCreatedAt || '',
         updatedAt: opportunity.clientUpdatedAt || '',
       },
@@ -302,7 +306,7 @@ export async function deleteSalesOpportunity(salesOpportunityId: string): Promis
     const [quotesCount] = await db
       .select({ count: count(quotes.id) })
       .from(quotes)
-      .where(eq(quotes.salesOpportunityId, salesOpportunityId));
+      .where(and(eq(quotes.salesOpportunityId, salesOpportunityId), eq(quotes.deleted, false)));
 
     if (Number(quotesCount?.count || 0) > 0) {
       throw new Error('Verkaufschance kann nicht gelöscht werden, da Angebote existieren');
@@ -355,6 +359,7 @@ export async function getSalesOpportunitiesList(): Promise<{
       })
       .from(salesOpportunities)
       .leftJoin(clients, eq(salesOpportunities.clientId, clients.id))
+      .where(eq(salesOpportunities.deleted, false))
       .orderBy(desc(salesOpportunities.createdAt));
 
     // Get contact person names, sales representative names, and quotes counts for each opportunity
@@ -384,7 +389,7 @@ export async function getSalesOpportunitiesList(): Promise<{
         const [quotesCountResult] = await db
           .select({ count: count(quotes.id) })
           .from(quotes)
-          .where(eq(quotes.salesOpportunityId, opportunity.id));
+          .where(and(eq(quotes.salesOpportunityId, opportunity.id), eq(quotes.deleted, false)));
 
                  return {
            id: opportunity.id,
@@ -449,11 +454,52 @@ export async function copySalesOpportunity(
       quoteVolume: originalOpportunity.quoteVolume,
       blocked: null,
       blockedBy: null,
+      deleted: false,
     });
 
     return newOpportunity;
   } catch (error) {
     console.error('Error copying sales opportunity:', error);
     throw new Error('Failed to copy sales opportunity');
+  }
+}
+
+// Soft delete a sales opportunity
+export async function softDeleteSalesOpportunity(salesOpportunityId: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db
+      .update(salesOpportunities)
+      .set({ deleted: true, updatedAt: sql`NOW()` })
+      .where(eq(salesOpportunities.id, salesOpportunityId));
+
+    // TODO: Add audit trail when audit operations are implemented for sales opportunities
+  } catch (error) {
+    console.error('Error soft deleting sales opportunity:', error);
+    throw new Error('Failed to soft delete sales opportunity');
+  }
+}
+
+// Restore a soft deleted sales opportunity
+export async function restoreSalesOpportunity(salesOpportunityId: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    await db
+      .update(salesOpportunities)
+      .set({ deleted: false, updatedAt: sql`NOW()` })
+      .where(eq(salesOpportunities.id, salesOpportunityId));
+
+    // TODO: Add audit trail when audit operations are implemented for sales opportunities
+  } catch (error) {
+    console.error('Error restoring sales opportunity:', error);
+    throw new Error('Failed to restore sales opportunity');
   }
 } 

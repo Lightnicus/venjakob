@@ -421,6 +421,8 @@ The project includes a comprehensive audit system that tracks all changes to dat
 - **Detailed tracking**: Records exactly what changed, who made the change, and when
 - **Performance optimized**: Uses proper indexing for fast queries
 - **Type-safe**: Full TypeScript support with proper error handling
+- **Soft Delete Integration**: Delete operations now perform soft deletes instead of hard deletes
+- **Proper Entity ID Handling**: Audit logs are created with correct entity IDs after insert operations
 
 ### Usage
 
@@ -820,6 +822,48 @@ if (Number(relatedCount?.count || 0) > 0) {
   throw new Error('Cannot delete: related records exist');
 }
 ```
+
+## Soft Delete and Restore Functions
+
+The following functions are available for soft deleting and restoring entities:
+
+### Articles
+- `softDeleteArticle(articleId: string): Promise<void>` - Soft delete an article
+- `restoreArticle(articleId: string): Promise<void>` - Restore a soft deleted article
+
+### Blocks
+- `softDeleteBlock(blockId: string): Promise<void>` - Soft delete a block
+- `restoreBlock(blockId: string): Promise<void>` - Restore a soft deleted block
+
+### Sales Opportunities
+- `softDeleteSalesOpportunity(salesOpportunityId: string): Promise<void>` - Soft delete a sales opportunity
+- `restoreSalesOpportunity(salesOpportunityId: string): Promise<void>` - Restore a soft deleted sales opportunity
+
+### Contact Persons
+- `softDeleteContactPerson(contactPersonId: string): Promise<void>` - Soft delete a contact person
+- `restoreContactPerson(contactPersonId: string): Promise<void>` - Restore a soft deleted contact person
+
+### Quotes
+- `softDeleteQuote(quoteId: string): Promise<void>` - Soft delete a quote
+- `restoreQuote(quoteId: string): Promise<void>` - Restore a soft deleted quote
+
+### Usage Examples
+
+```typescript
+// Soft delete an article
+await softDeleteArticle('article-id-123');
+
+// Restore a soft deleted article
+await restoreArticle('article-id-123');
+
+// Soft delete a sales opportunity
+await softDeleteSalesOpportunity('sales-opp-id-456');
+
+// Restore a soft deleted sales opportunity
+await restoreSalesOpportunity('sales-opp-id-456');
+```
+
+**Note**: All soft delete and restore functions require user authentication and will update the `updatedAt` timestamp automatically.
 
 ## File Structure
 

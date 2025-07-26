@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
       salesRepresentative,
       keyword,
       quoteVolume,
+      deleted: false,
       blocked: null,
       blockedBy: null,
     });

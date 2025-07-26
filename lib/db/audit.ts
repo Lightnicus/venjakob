@@ -50,10 +50,15 @@ export const withAudit = async <T>(
     // 1. Perform the main operation
     const result = await operation(tx);
     
-    // 2. Log the change in the same transaction
+    // 2. Update entityId with the actual result ID for INSERT operations
+    if (auditData.action === 'INSERT' && result && typeof result === 'object' && 'id' in result) {
+      auditData.entityId = (result as any).id;
+    }
+    
+    // 3. Log the change in the same transaction
     await createAuditLog(tx, auditData);
     
-    // 3. Both succeed or both fail
+    // 4. Both succeed or both fail
     return result;
   });
 };
@@ -116,27 +121,30 @@ export const auditedArticleOperations = {
     });
   },
 
-  // Delete article with audit
+  // Soft delete article with audit
   delete: async (id: string, userId: string, metadata?: Record<string, any>) => {
     return await db.transaction(async (tx) => {
       // 1. Get current state before deletion
       const [currentArticle] = await tx.select().from(articles).where(eq(articles.id, id));
       if (!currentArticle) throw new Error('Article not found');
 
-      // 2. Delete the article
-      await tx.delete(articles).where(eq(articles.id, id));
+      // 2. Soft delete the article (set deleted = true)
+      const [deletedArticle] = await tx.update(articles)
+        .set({ deleted: true, updatedAt: new Date().toISOString() })
+        .where(eq(articles.id, id))
+        .returning();
 
       // 3. Create audit log
       await createAuditLog(tx, {
         entityType: ENTITY_TYPES.ARTICLES,
         entityId: id,
         action: 'DELETE',
-        changedFields: currentArticle,
+        changedFields: { deleted: { old: false, new: true } },
         userId,
         metadata,
       });
 
-      return currentArticle;
+      return deletedArticle;
     });
   },
 };
@@ -199,27 +207,30 @@ export const auditedBlockOperations = {
     });
   },
 
-  // Delete block with audit
+  // Soft delete block with audit
   delete: async (id: string, userId: string, metadata?: Record<string, any>) => {
     return await db.transaction(async (tx) => {
       // 1. Get current state before deletion
       const [currentBlock] = await tx.select().from(blocks).where(eq(blocks.id, id));
       if (!currentBlock) throw new Error('Block not found');
 
-      // 2. Delete the block
-      await tx.delete(blocks).where(eq(blocks.id, id));
+      // 2. Soft delete the block (set deleted = true)
+      const [deletedBlock] = await tx.update(blocks)
+        .set({ deleted: true, updatedAt: new Date().toISOString() })
+        .where(eq(blocks.id, id))
+        .returning();
 
       // 3. Create audit log
       await createAuditLog(tx, {
         entityType: ENTITY_TYPES.BLOCKS,
         entityId: id,
         action: 'DELETE',
-        changedFields: currentBlock,
+        changedFields: { deleted: { old: false, new: true } },
         userId,
         metadata,
       });
 
-      return currentBlock;
+      return deletedBlock;
     });
   },
 };

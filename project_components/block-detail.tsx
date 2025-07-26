@@ -284,6 +284,7 @@ const BlockDetail: FC<BlockDetailProps> = ({
             title: editedBlockContents[lang.value]?.title || '',
             content: editedBlockContents[lang.value]?.content || '',
             languageId: lang.id,
+            deleted: false,
           }))
         );
         await onSaveChanges(block.id, blockContentsToSave);
