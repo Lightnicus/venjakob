@@ -422,6 +422,7 @@ The project includes a comprehensive audit system that tracks all changes to dat
 - **Performance optimized**: Uses proper indexing for fast queries
 - **Type-safe**: Full TypeScript support with proper error handling
 - **Soft Delete Integration**: Delete operations now perform soft deletes instead of hard deletes
+- **Cascading Soft Deletes**: When articles or blocks are soft deleted, their associated `blockContent` records are also soft deleted to maintain referential integrity
 - **Proper Entity ID Handling**: Audit logs are created with correct entity IDs after insert operations
 
 ### Usage
@@ -830,10 +831,14 @@ The following functions are available for soft deleting and restoring entities:
 ### Articles
 - `softDeleteArticle(articleId: string): Promise<void>` - Soft delete an article
 - `restoreArticle(articleId: string): Promise<void>` - Restore a soft deleted article
+- **Cascading Delete**: When an article is soft deleted, all its associated `blockContent` records are also soft deleted
+- **Cascading Restore**: When an article is restored, all its associated soft-deleted `blockContent` records are also restored
 
 ### Blocks
 - `softDeleteBlock(blockId: string): Promise<void>` - Soft delete a block
 - `restoreBlock(blockId: string): Promise<void>` - Restore a soft deleted block
+- **Cascading Delete**: When a block is soft deleted, all its associated `blockContent` records are also soft deleted
+- **Cascading Restore**: When a block is restored, all its associated soft-deleted `blockContent` records are also restored
 
 ### Sales Opportunities
 - `softDeleteSalesOpportunity(salesOpportunityId: string): Promise<void>` - Soft delete a sales opportunity
@@ -846,6 +851,8 @@ The following functions are available for soft deleting and restoring entities:
 ### Quotes
 - `softDeleteQuote(quoteId: string): Promise<void>` - Soft delete a quote
 - `restoreQuote(quoteId: string): Promise<void>` - Restore a soft deleted quote
+- **Cascading Delete**: When a quote is soft deleted, all its associated `quoteVariants`, `quoteVersions`, and `quotePositions` are also soft deleted
+- **Cascading Restore**: When a quote is restored, all its associated soft-deleted `quoteVariants`, `quoteVersions`, and `quotePositions` are also restored
 
 ### Usage Examples
 

@@ -134,7 +134,30 @@ export const auditedArticleOperations = {
         .where(eq(articles.id, id))
         .returning();
 
-      // 3. Create audit log
+      // 3. Soft delete associated block content (cascade)
+      const associatedContent = await tx.select().from(blockContent).where(eq(blockContent.articleId, id));
+      for (const content of associatedContent) {
+        await tx.update(blockContent)
+          .set({ deleted: true, updatedAt: new Date().toISOString() })
+          .where(eq(blockContent.id, content.id));
+
+        // Create audit log for each deleted content piece
+        await createAuditLog(tx, {
+          entityType: ENTITY_TYPES.BLOCK_CONTENT,
+          entityId: content.id,
+          action: 'DELETE',
+          changedFields: { deleted: { old: false, new: true } },
+          userId,
+          metadata: {
+            ...metadata,
+            reason: 'Cascading soft delete from article deletion',
+            parentEntityType: 'articles',
+            parentEntityId: id,
+          },
+        });
+      }
+
+      // 4. Create audit log for article
       await createAuditLog(tx, {
         entityType: ENTITY_TYPES.ARTICLES,
         entityId: id,
@@ -220,7 +243,30 @@ export const auditedBlockOperations = {
         .where(eq(blocks.id, id))
         .returning();
 
-      // 3. Create audit log
+      // 3. Soft delete associated block content (cascade)
+      const associatedContent = await tx.select().from(blockContent).where(eq(blockContent.blockId, id));
+      for (const content of associatedContent) {
+        await tx.update(blockContent)
+          .set({ deleted: true, updatedAt: new Date().toISOString() })
+          .where(eq(blockContent.id, content.id));
+
+        // Create audit log for each deleted content piece
+        await createAuditLog(tx, {
+          entityType: ENTITY_TYPES.BLOCK_CONTENT,
+          entityId: content.id,
+          action: 'DELETE',
+          changedFields: { deleted: { old: false, new: true } },
+          userId,
+          metadata: {
+            ...metadata,
+            reason: 'Cascading soft delete from block deletion',
+            parentEntityType: 'blocks',
+            parentEntityId: id,
+          },
+        });
+      }
+
+      // 4. Create audit log for block
       await createAuditLog(tx, {
         entityType: ENTITY_TYPES.BLOCKS,
         entityId: id,
@@ -293,27 +339,30 @@ export const auditedBlockContentOperations = {
     });
   },
 
-  // Delete block content with audit
+  // Soft delete block content with audit
   delete: async (id: string, userId: string, metadata?: Record<string, any>) => {
     return await db.transaction(async (tx) => {
       // 1. Get current state before deletion
       const [currentContent] = await tx.select().from(blockContent).where(eq(blockContent.id, id));
       if (!currentContent) throw new Error('Block content not found');
 
-      // 2. Delete the content
-      await tx.delete(blockContent).where(eq(blockContent.id, id));
+      // 2. Soft delete the content (set deleted = true)
+      const [deletedContent] = await tx.update(blockContent)
+        .set({ deleted: true, updatedAt: new Date().toISOString() })
+        .where(eq(blockContent.id, id))
+        .returning();
 
       // 3. Create audit log
       await createAuditLog(tx, {
         entityType: ENTITY_TYPES.BLOCK_CONTENT,
         entityId: id,
         action: 'DELETE',
-        changedFields: currentContent,
+        changedFields: { deleted: { old: false, new: true } },
         userId,
         metadata,
       });
 
-      return currentContent;
+      return deletedContent;
     });
   },
 
@@ -333,13 +382,17 @@ export const auditedBlockContentOperations = {
       
       const existingContent = await tx.select().from(blockContent).where(whereClause);
 
-      // 2. Delete existing content with audit logs
+      // 2. Soft delete existing content with audit logs
       for (const content of existingContent) {
+        await tx.update(blockContent)
+          .set({ deleted: true, updatedAt: new Date().toISOString() })
+          .where(eq(blockContent.id, content.id));
+
         await createAuditLog(tx, {
           entityType: ENTITY_TYPES.BLOCK_CONTENT,
           entityId: content.id,
           action: 'DELETE',
-          changedFields: content,
+          changedFields: { deleted: { old: false, new: true } },
           userId,
           metadata: {
             ...metadata,
@@ -350,13 +403,13 @@ export const auditedBlockContentOperations = {
         });
       }
 
-      // 3. Delete the content records
-      await tx.delete(blockContent).where(whereClause);
-
       // 4. Insert new content with audit logs
       const createdContent = [];
       for (const contentData of newContentData) {
-        const [newContent] = await tx.insert(blockContent).values(contentData).returning();
+        const [newContent] = await tx.insert(blockContent).values({
+          ...contentData,
+          deleted: false,
+        }).returning();
         
         await createAuditLog(tx, {
           entityType: ENTITY_TYPES.BLOCK_CONTENT,

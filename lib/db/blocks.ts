@@ -587,12 +587,28 @@ export async function restoreBlock(blockId: string): Promise<void> {
       throw new Error('Benutzer nicht authentifiziert');
     }
 
-    await db
-      .update(blocks)
-      .set({ deleted: false, updatedAt: sql`NOW()` })
-      .where(eq(blocks.id, blockId));
+    await db.transaction(async (tx) => {
+      // 1. Restore the block
+      await tx
+        .update(blocks)
+        .set({ deleted: false, updatedAt: sql`NOW()` })
+        .where(eq(blocks.id, blockId));
 
-    // TODO: Add audit trail when audit operations are implemented for blocks
+      // 2. Restore associated block content (cascade)
+      const associatedContent = await tx
+        .select()
+        .from(blockContent)
+        .where(and(eq(blockContent.blockId, blockId), eq(blockContent.deleted, true)));
+
+      for (const content of associatedContent) {
+        await tx
+          .update(blockContent)
+          .set({ deleted: false, updatedAt: sql`NOW()` })
+          .where(eq(blockContent.id, content.id));
+      }
+
+      // TODO: Add audit trail when audit operations are implemented for blocks
+    });
   } catch (error) {
     console.error('Error restoring block:', error);
     throw new Error('Failed to restore block');

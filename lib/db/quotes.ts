@@ -478,13 +478,47 @@ export async function deleteQuote(quoteId: string): Promise<void> {
       throw new Error('Benutzer nicht authentifiziert');
     }
 
-    // Soft delete the quote (set deleted = true)
-    await db
-      .update(quotes)
-      .set({ deleted: true, updatedAt: sql`NOW()` })
-      .where(eq(quotes.id, quoteId));
+    await db.transaction(async (tx) => {
+      // 1. Soft delete the quote (set deleted = true)
+      await tx
+        .update(quotes)
+        .set({ deleted: true, updatedAt: sql`NOW()` })
+        .where(eq(quotes.id, quoteId));
 
-    // TODO: Add audit trail when audit operations are implemented for quotes
+      // 2. Soft delete all related quote variants
+      const variants = await tx
+        .select({ id: quoteVariants.id })
+        .from(quoteVariants)
+        .where(eq(quoteVariants.quoteId, quoteId));
+
+      for (const variant of variants) {
+        await tx
+          .update(quoteVariants)
+          .set({ deleted: true, updatedAt: sql`NOW()` })
+          .where(eq(quoteVariants.id, variant.id));
+
+        // 3. Soft delete all related quote versions for this variant
+        const versions = await tx
+          .select({ id: quoteVersions.id })
+          .from(quoteVersions)
+          .where(eq(quoteVersions.variantId, variant.id));
+
+        for (const version of versions) {
+          await tx
+            .update(quoteVersions)
+            .set({ deleted: true, updatedAt: sql`NOW()` })
+            .where(eq(quoteVersions.id, version.id));
+
+          // 4. Soft delete all related quote positions for this version
+          await tx
+            .update(quotePositions)
+            .set({ deleted: true, updatedAt: sql`NOW()` })
+            .where(eq(quotePositions.versionId, version.id));
+        }
+      }
+
+      // TODO: Add audit trail when audit operations are implemented for quotes
+    });
   } catch (error) {
     if (error instanceof EditLockError) {
       throw error; // Re-throw edit lock errors as-is
@@ -1505,12 +1539,47 @@ export async function softDeleteQuote(quoteId: string): Promise<void> {
       throw new Error('Benutzer nicht authentifiziert');
     }
 
-    await db
-      .update(quotes)
-      .set({ deleted: true, updatedAt: sql`NOW()` })
-      .where(eq(quotes.id, quoteId));
+    await db.transaction(async (tx) => {
+      // 1. Soft delete the quote
+      await tx
+        .update(quotes)
+        .set({ deleted: true, updatedAt: sql`NOW()` })
+        .where(eq(quotes.id, quoteId));
 
-    // TODO: Add audit trail when audit operations are implemented for quotes
+      // 2. Soft delete all related quote variants
+      const variants = await tx
+        .select({ id: quoteVariants.id })
+        .from(quoteVariants)
+        .where(eq(quoteVariants.quoteId, quoteId));
+
+      for (const variant of variants) {
+        await tx
+          .update(quoteVariants)
+          .set({ deleted: true, updatedAt: sql`NOW()` })
+          .where(eq(quoteVariants.id, variant.id));
+
+        // 3. Soft delete all related quote versions for this variant
+        const versions = await tx
+          .select({ id: quoteVersions.id })
+          .from(quoteVersions)
+          .where(eq(quoteVersions.variantId, variant.id));
+
+        for (const version of versions) {
+          await tx
+            .update(quoteVersions)
+            .set({ deleted: true, updatedAt: sql`NOW()` })
+            .where(eq(quoteVersions.id, version.id));
+
+          // 4. Soft delete all related quote positions for this version
+          await tx
+            .update(quotePositions)
+            .set({ deleted: true, updatedAt: sql`NOW()` })
+            .where(eq(quotePositions.versionId, version.id));
+        }
+      }
+
+      // TODO: Add audit trail when audit operations are implemented for quotes
+    });
   } catch (error) {
     console.error('Error soft deleting quote:', error);
     throw new Error('Failed to soft delete quote');
@@ -1525,12 +1594,47 @@ export async function restoreQuote(quoteId: string): Promise<void> {
       throw new Error('Benutzer nicht authentifiziert');
     }
 
-    await db
-      .update(quotes)
-      .set({ deleted: false, updatedAt: sql`NOW()` })
-      .where(eq(quotes.id, quoteId));
+    await db.transaction(async (tx) => {
+      // 1. Restore the quote
+      await tx
+        .update(quotes)
+        .set({ deleted: false, updatedAt: sql`NOW()` })
+        .where(eq(quotes.id, quoteId));
 
-    // TODO: Add audit trail when audit operations are implemented for quotes
+      // 2. Restore all related soft-deleted quote variants
+      const variants = await tx
+        .select({ id: quoteVariants.id })
+        .from(quoteVariants)
+        .where(and(eq(quoteVariants.quoteId, quoteId), eq(quoteVariants.deleted, true)));
+
+      for (const variant of variants) {
+        await tx
+          .update(quoteVariants)
+          .set({ deleted: false, updatedAt: sql`NOW()` })
+          .where(eq(quoteVariants.id, variant.id));
+
+        // 3. Restore all related soft-deleted quote versions for this variant
+        const versions = await tx
+          .select({ id: quoteVersions.id })
+          .from(quoteVersions)
+          .where(and(eq(quoteVersions.variantId, variant.id), eq(quoteVersions.deleted, true)));
+
+        for (const version of versions) {
+          await tx
+            .update(quoteVersions)
+            .set({ deleted: false, updatedAt: sql`NOW()` })
+            .where(eq(quoteVersions.id, version.id));
+
+          // 4. Restore all related soft-deleted quote positions for this version
+          await tx
+            .update(quotePositions)
+            .set({ deleted: false, updatedAt: sql`NOW()` })
+            .where(and(eq(quotePositions.versionId, version.id), eq(quotePositions.deleted, true)));
+        }
+      }
+
+      // TODO: Add audit trail when audit operations are implemented for quotes
+    });
   } catch (error) {
     console.error('Error restoring quote:', error);
     throw new Error('Failed to restore quote');
