@@ -3,6 +3,24 @@
 ## Overview
 This is a Next.js 15 application for managing quotes, articles, blocks, and sales opportunities.
 
+## Documentation Index
+
+### Core Systems
+- **[Database Setup](db.md)** - Complete guide to Supabase and Drizzle ORM setup, migrations, seeding, and database operations
+- **[Authentication System](auth.md)** - Server-side authentication utilities with DRY patterns for API routes and permission management
+- **[Component Patterns](component-patterns.md)** - Rich Text Editor (PlateJS) integration patterns, dual-component architecture, and best practices
+
+### Dialog & UI Management
+- **[Dialog Manager System](dialog-manager-docs.md)** - Comprehensive dialog workflow management with history tracking, smart back functionality, and data transfer
+- **[Smart Dialog Flows](smart-dialog-flows.md)** - Advanced data-driven dialog sequences that adapt based on real-time data availability and user selections
+- **[Edit Lock System](edit-lock-system.md)** - Multi-user editing prevention system with optimistic UI updates and automatic cleanup
+- **[useEditLock Hook](use-edit-lock.md)** - Detailed documentation for the edit lock hook implementation and usage patterns
+
+### Data Management
+- **[Quotes Save System](quotes-save-system-ui-flow.md)** - Comprehensive save system with batch operations, visual indicators, and change tracking
+- **[Tab Reload System](reload-system-documentation.md)** - Cross-tab data synchronization system for triggering reloads between management and detail views
+- **[Database Seeds](seeds.md)** - SQL and TypeScript seed files for initial data population with idempotent execution
+
 ## Key Features
 
 ### Quote Management
