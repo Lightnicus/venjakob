@@ -405,7 +405,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
               isEditing={isEditing} 
               versionId={resolvedVersionId}
               onTreeDataChange={setTreeData}
-              hasUnsavedChanges={hasUnsavedChanges}
               addChange={addChange}
               removeChange={removeChange}
               hasPositionChanges={hasPositionChanges}
@@ -416,7 +415,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
                   fetchAllData();
                 }
               }}
-              languageId={variantLanguageId}
+              languageId={variantLanguageId || "en"}
             />
           )}
         </TabsContent>

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateQuotePosition } from '@/lib/db/quotes';
+import { updateQuotePosition, softDeleteQuotePosition } from '@/lib/db/quotes';
 
 export async function PUT(
   request: NextRequest,
@@ -43,6 +43,41 @@ export async function PUT(
     console.error('Error updating quote position:', error);
     return NextResponse.json(
       { error: 'Failed to update quote position' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ versionId: string; positionId: string }> }
+) {
+  try {
+    const { positionId } = await params;
+    
+    // Validate required fields
+    if (!positionId) {
+      return NextResponse.json(
+        { error: 'Position ID is required' },
+        { status: 400 }
+      );
+    }
+    
+    await softDeleteQuotePosition(positionId);
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting quote position:', error);
+    
+    if (error instanceof Error && error.message.includes('children')) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: 400 }
+      );
+    }
+    
+    return NextResponse.json(
+      { error: 'Failed to delete quote position' },
       { status: 500 }
     );
   }

@@ -10,9 +10,30 @@ export async function fetchLanguages(): Promise<Language[]> {
   return response.json();
 }
 
+// Fetch the default language
+export async function fetchDefaultLanguage(): Promise<Language | null> {
+  const response = await fetch('/api/languages/default');
+  if (!response.ok) {
+    if (response.status === 404) {
+      return null;
+    }
+    throw new Error('Failed to fetch default language');
+  }
+  return response.json();
+}
+
 // Fetch all blocks with content
 export async function fetchBlocksWithContent(): Promise<BlockWithContent[]> {
   const response = await fetch('/api/blocks');
+  if (!response.ok) {
+    throw new Error('Failed to fetch blocks');
+  }
+  return response.json();
+}
+
+// Fetch blocks with content filtered by language
+export async function fetchBlocksWithContentByLanguage(languageId: string): Promise<BlockWithContent[]> {
+  const response = await fetch(`/api/blocks?languageId=${languageId}`);
   if (!response.ok) {
     throw new Error('Failed to fetch blocks');
   }

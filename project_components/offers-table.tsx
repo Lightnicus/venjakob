@@ -95,7 +95,7 @@ export function OffersTable({
 
   const handleOfferNameClick = (offer: Offer) => {
     openNewTab({
-      id: `split-panel-demo-${offer.id}`,
+      id: `offer-${offer.id}`,
       title: `Angebot ${offer.offer}`,
       content: <OfferDetail title={offer.offer} />,
       closable: true,

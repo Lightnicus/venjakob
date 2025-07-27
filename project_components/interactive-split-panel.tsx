@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect, useMemo, useCallback, useImperativeHandle } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { ArboristTree } from './arborist-tree';
 import { MyTreeNodeData, createCustomNodeWithDragState } from './custom-node';
 import { Input } from '@/components/ui/input';
@@ -13,10 +13,10 @@ import AddBlockDialog from './add-block-dialog';
 import type { BlockWithContent as DialogBlockWithContent } from './add-block-dialog';
 import AddArticleDialog from './add-article-dialog';
 import type { Article } from './add-article-dialog';
-import type { Language } from '@/lib/db/schema';
-import { fetchBlocksWithContent, fetchLanguages } from '@/lib/api/blocks';
+import { fetchBlocksWithContentByLanguage } from '@/lib/api/blocks';
 import type { BlockWithContent } from '@/lib/db/blocks';
 import { toast } from 'sonner';
+import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 
 
 interface InteractiveSplitPanelProps {
@@ -24,13 +24,12 @@ interface InteractiveSplitPanelProps {
   isEditing?: boolean;
   versionId?: string;
   onTreeDataChange?: (newTreeData: MyTreeNodeData[]) => void;
-  hasUnsavedChanges?: boolean;
   addChange?: (positionId: string, field: string, oldValue: any, newValue: any) => void;
   removeChange?: (positionId: string, field?: string) => void;
   hasPositionChanges?: (positionId: string) => boolean;
   getPositionChanges?: (positionId: string) => { [field: string]: { oldValue: any; newValue: any } };
   onRefreshRequested?: () => void;
-  languageId?: string;
+  languageId: string;
 }
 
 const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({ 
@@ -38,7 +37,6 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   isEditing = false,
   versionId,
   onTreeDataChange,
-  hasUnsavedChanges = false,
   addChange,
   removeChange,
   hasPositionChanges,
@@ -53,8 +51,9 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   const [selectedNodeType, setSelectedNodeType] = useState<string | undefined>(undefined);
   const [showAddBlockDialog, setShowAddBlockDialog] = useState(false);
   const [blocks, setBlocks] = useState<BlockWithContent[]>([]);
-  const [languages, setLanguages] = useState<Language[]>([]);
   const [showAddArticleDialog, setShowAddArticleDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
   
@@ -82,16 +81,13 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   // Load blocks and languages function
   const loadData = useCallback(async () => {
     try {
-      const [blocksData, languagesData] = await Promise.all([
-        fetchBlocksWithContent(),
-        fetchLanguages()
-      ]);
+      const blocksData = await fetchBlocksWithContentByLanguage(languageId);
+      
       setBlocks(blocksData);
-      setLanguages(languagesData);
     } catch (error) {
-      console.error('Error loading blocks and languages:', error);
+      console.error('Error loading blocks:', error);
     }
-  }, []);
+  }, [languageId]);
 
   // Load blocks and languages on component mount
   useEffect(() => {
@@ -411,6 +407,53 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
     toast.info('Artikel-Hinzufügen-Funktion wird implementiert');
   }, []);
 
+  // Delete position handlers
+  const handleDeleteClick = useCallback(() => {
+    if (!selectedNodeId) return;
+    
+    // Check if node has children
+    const selectedNode = findNodeById(treeData, selectedNodeId);
+    if (selectedNode?.children && selectedNode.children.length > 0) {
+      toast.error('Element kann nicht gelöscht werden, da es Kinder hat');
+      return;
+    }
+    
+    setShowDeleteDialog(true);
+  }, [selectedNodeId, treeData, findNodeById]);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!selectedNodeId || !versionId) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/quotes/versions/${versionId}/positions/${selectedNodeId}`, {
+        method: 'DELETE',
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete position');
+      }
+      
+      toast.success('Element erfolgreich gelöscht');
+      setShowDeleteDialog(false);
+      
+      // Clear selection and refresh data
+      setSelectedNodeId(undefined);
+      setSelectedNode(null);
+      setSelectedNodeType(undefined);
+      
+      if (onRefreshRequested) {
+        onRefreshRequested();
+      }
+    } catch (error) {
+      console.error('Error deleting position:', error);
+      toast.error(error instanceof Error ? error.message : 'Fehler beim Löschen des Elements');
+    } finally {
+      setIsDeleting(false);
+    }
+  }, [selectedNodeId, versionId, onRefreshRequested]);
+
   // Memoized custom node renderer
   const customNodeRenderer = useMemo(() => createCustomNodeWithDragState(isEditing, hasPositionChanges), [isEditing, hasPositionChanges]);
 
@@ -426,8 +469,13 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
               <Button tabIndex={0} aria-label="Artikel hinzufügen" onClick={handleOpenAddArticle}>
                 Artikel hinzufügen
               </Button>
-              <Button tabIndex={0} aria-label="Element löschen" onClick={() => {}}>
-                Element löschen
+              <Button 
+                tabIndex={0} 
+                aria-label="Element löschen" 
+                onClick={handleDeleteClick}
+                disabled={!selectedNodeId || isDeleting}
+              >
+                {isDeleting ? 'Lösche...' : 'Element löschen'}
               </Button>
             </>
           )}
@@ -516,6 +564,13 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
         versionId={versionId}
         selectedNodeId={selectedNodeId}
         onPositionCreated={handlePositionCreated}
+      />
+      <DeleteConfirmationDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onConfirm={handleDeleteConfirm}
+        title="Element löschen?"
+        description="Möchten Sie dieses Element wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden."
       />
     </div>
   );

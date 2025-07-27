@@ -1640,3 +1640,31 @@ export async function restoreQuote(quoteId: string): Promise<void> {
     throw new Error('Failed to restore quote');
   }
 } 
+
+// Soft delete a quote position
+export async function softDeleteQuotePosition(positionId: string): Promise<void> {
+  try {
+    // Check if position has children
+    const children = await db
+      .select()
+      .from(quotePositions)
+      .where(eq(quotePositions.quotePositionParentId, positionId));
+
+    if (children.length > 0) {
+      throw new Error('Position cannot be deleted because it has children');
+    }
+
+    // Soft delete the position
+    await db
+      .update(quotePositions)
+      .set({ 
+        deleted: true,
+        updatedAt: new Date().toISOString()
+      })
+      .where(eq(quotePositions.id, positionId));
+
+  } catch (error) {
+    console.error('Error soft deleting quote position:', error);
+    throw error;
+  }
+} 

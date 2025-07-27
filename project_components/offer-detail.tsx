@@ -132,7 +132,7 @@ const OfferDetail: React.FC<OfferDetailProps> = ({ title, variantId, language })
           <TabsTrigger value="versionen" className="flex items-center gap-1 rounded-none border-r px-4 py-2 data-[state=active]:bg-gray-100">Versionen</TabsTrigger>
         </TabsList>
         <TabsContent value="bloecke" className="flex-1 overflow-auto">
-          <InteractiveSplitPanel />
+          <InteractiveSplitPanel languageId="en" />
         </TabsContent>
         <TabsContent value="eigenschaften" className="flex-1 overflow-auto flex items-center justify-center">
           <OfferProperties {...(offerPropertiesData as OfferPropertiesProps)} />

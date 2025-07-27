@@ -812,6 +812,88 @@ The enhanced PlateJS rich text editor prevents multiple instance issues through:
 - **HTML5 Backend Conflict Prevention**: Drag-and-drop functionality is disabled in rich text editors to prevent conflicts with tree drag-and-drop
 - **Context-Aware Functionality**: Tree provides drag-and-drop for reordering, rich text editor focuses on content editing
 
+### Language Filtering for Blocks
+
+The `InteractiveSplitPanel` component now supports language-specific block loading:
+
+#### Implementation Details
+
+**Database Level:**
+- `getBlocksWithContentByLanguage(languageId: string)` - Fetches only blocks that have content for the specified language
+- Filters `blockContent` table by `languageId` before joining with blocks
+- Only returns blocks that have at least one content entry for the specified language
+
+**API Level:**
+- `fetchBlocksWithContentByLanguage(languageId: string)` - API wrapper for language-filtered block fetching
+- `GET /api/blocks?languageId={languageId}` - API endpoint that accepts languageId parameter
+
+**Component Level:**
+- `InteractiveSplitPanel` receives `languageId` prop (required)
+- Uses `fetchBlocksWithContentByLanguage()` to load blocks filtered by language
+- `dialogBlocks` useMemo automatically handles the filtered data structure
+
+### Delete Functionality
+
+The `InteractiveSplitPanel` component includes a delete feature for tree nodes:
+
+#### Implementation Details
+
+**Database Level:**
+- `softDeleteQuotePosition(positionId: string)` - Soft deletes a position and validates it has no children
+- Checks for child positions before deletion to prevent orphaned data
+- Updates `deleted` field and `updatedAt` timestamp
+
+**API Level:**
+- `DELETE /api/quotes/versions/[versionId]/positions/[positionId]` - Deletes a specific position
+- Returns appropriate error messages for validation failures
+- Handles both client and server-side validation
+
+**Component Level:**
+- Delete button only shows when a node is selected
+- Confirmation dialog prevents accidental deletions
+- Loading state during deletion operation
+- Automatic data refresh after successful deletion
+- Error handling with user-friendly toast messages
+
+#### Delete Restrictions
+
+- **Nodes with Children**: Cannot be deleted (shows error toast)
+- **Selected Node Required**: Button disabled when no node is selected
+- **Soft Delete**: Positions are marked as deleted but not physically removed
+- **Data Integrity**: Maintains referential integrity with child positions
+
+#### User Experience
+
+1. **Button State**: Disabled when no node selected or during deletion
+2. **Confirmation**: Shows dialog with clear warning about permanent deletion
+3. **Loading**: Button shows "Lösche..." during operation
+4. **Success**: Toast notification and automatic data refresh
+5. **Error**: Specific error messages for different failure scenarios
+
+#### Usage Example
+
+```tsx
+<InteractiveSplitPanel
+  languageId="en"
+  versionId={versionId}
+  // ... other props
+/>
+```
+
+#### Benefits
+
+1. **Performance**: Only loads blocks relevant to the current language
+2. **User Experience**: Users only see blocks available in their language
+3. **Data Integrity**: Prevents creation of positions with missing content
+4. **Scalability**: Reduces memory usage and network traffic
+5. **Type Safety**: Mandatory languageId ensures proper language filtering
+
+#### Requirements
+
+- `languageId` is now a required prop
+- Must provide a valid language ID that exists in the database
+- Component will fail to load blocks if languageId is invalid
+
 ## Related Documentation
 
 - [Authentication System](./auth.md) - Server-side authentication utilities
@@ -822,4 +904,4 @@ The enhanced PlateJS rich text editor prevents multiple instance issues through:
 
 ---
 
-For questions about component patterns or suggestions for new reusable components, please refer to the project maintainers or create an issue in the project repository. 
+For questions about component patterns or suggestions for new reusable components, please refer to the project maintainers or create an issue in the project repository.

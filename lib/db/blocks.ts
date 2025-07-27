@@ -78,6 +78,22 @@ export async function getLanguages(): Promise<Language[]> {
   }
 }
 
+// Get the default language
+export async function getDefaultLanguage(): Promise<Language | null> {
+  try {
+    const [defaultLanguage] = await db
+      .select()
+      .from(languages)
+      .where(eq(languages.default, true))
+      .limit(1);
+    
+    return defaultLanguage || null;
+  } catch (error) {
+    console.error('Error fetching default language:', error);
+    throw new Error('Failed to fetch default language');
+  }
+}
+
 // Fetch all blocks with their content
 export async function getBlocksWithContent(): Promise<BlockWithContent[]> {
   try {
@@ -102,6 +118,47 @@ export async function getBlocksWithContent(): Promise<BlockWithContent[]> {
     return blocksWithContent;
   } catch (error) {
     console.error('Error fetching blocks with content:', error);
+    throw new Error('Failed to fetch blocks');
+  }
+}
+
+// Fetch blocks with content filtered by language
+export async function getBlocksWithContentByLanguage(languageId: string): Promise<BlockWithContent[]> {
+  try {
+    // Fetch all blocks
+    const allBlocks = await db
+      .select()
+      .from(blocks)
+      .where(eq(blocks.deleted, false))
+      .orderBy(blocks.position, blocks.name);
+
+    // Fetch block content filtered by language
+    const blockContentForLanguage = await db
+      .select()
+      .from(blockContent)
+      .where(
+        and(
+          eq(blockContent.deleted, false),
+          eq(blockContent.languageId, languageId)
+        )
+      );
+
+    // Join the data and only include blocks that have content for the specified language
+    const blocksWithContent: BlockWithContent[] = allBlocks
+      .map(block => {
+        const blockContents = blockContentForLanguage.filter(
+          content => content.blockId === block.id,
+        );
+        return {
+          ...block,
+          blockContents,
+        };
+      })
+      .filter(block => block.blockContents.length > 0); // Only include blocks with content for this language
+
+    return blocksWithContent;
+  } catch (error) {
+    console.error('Error fetching blocks with content by language:', error);
     throw new Error('Failed to fetch blocks');
   }
 }

@@ -1,9 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBlocksWithContent, createBlock } from '@/lib/db/blocks';
+import { getBlocksWithContent, getBlocksWithContentByLanguage, createBlock } from '@/lib/db/blocks';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const blocks = await getBlocksWithContent();
+    const { searchParams } = new URL(request.url);
+    const languageId = searchParams.get('languageId');
+    
+    let blocks;
+    if (languageId) {
+      blocks = await getBlocksWithContentByLanguage(languageId);
+    } else {
+      blocks = await getBlocksWithContent();
+    }
+    
     return NextResponse.json(blocks);
   } catch (error) {
     console.error('Error fetching blocks:', error);
