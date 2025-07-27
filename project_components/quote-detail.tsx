@@ -399,6 +399,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
             <div className="flex items-center justify-center h-full">
               <p className="text-gray-500">Lade Angebotspositionen...</p>
             </div>
+          ) : !variantLanguageId ? (
+            <div className="flex items-center justify-center h-full">
+              <p className="text-gray-500">Keine Sprache für diese Variante definiert.</p>
+            </div>
           ) : (
             <InteractiveSplitPanel 
               initialTreeData={treeData} 
@@ -415,7 +419,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
                   fetchAllData();
                 }
               }}
-              languageId={variantLanguageId || "en"}
+              languageId={variantLanguageId}
             />
           )}
         </TabsContent>

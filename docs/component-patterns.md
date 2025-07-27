@@ -892,7 +892,8 @@ The `InteractiveSplitPanel` component includes a delete feature for tree nodes:
 
 - `languageId` is now a required prop
 - Must provide a valid language ID that exists in the database
-- Component will fail to load blocks if languageId is invalid
+- Component will show an error message if languageId is not available
+- No fallback to default language - each variant must have a defined language
 
 ## Related Documentation
 
