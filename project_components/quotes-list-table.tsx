@@ -12,7 +12,7 @@ import type { ColumnDef, Row } from '@tanstack/react-table';
 import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
 import QuoteDetail from '@/project_components/quote-detail';
 import type { Language } from '@/lib/db/schema';
-import { Edit, Copy, Trash2 } from 'lucide-react';
+import { Edit, Copy, Trash2, Lock } from 'lucide-react';
 import { DeleteConfirmationDialog } from '@/project_components/delete-confirmation-dialog';
 import QuoteDialogs, { QUOTE_DIALOGS, useDialogManager } from '@/project_components/quote_dialogs/quotes-dialogs';
 import { TableActionsCell, TableAction } from '@/project_components/table-actions-cell';
@@ -36,6 +36,11 @@ type VariantListItem = {
   lastModifiedBy: string | null;
   lastModifiedByUserName: string | null;
   lastModifiedAt: string;
+  // Lock status for the latest version
+  isLocked?: boolean;
+  lockedBy?: string | null;
+  lockedByName?: string | null;
+  lockedAt?: string | null;
 };
 
 
@@ -192,6 +197,27 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
       ),
     },
     {
+      accessorKey: 'isLocked',
+      header: 'Gesperrt',
+      cell: ({ row }) => {
+        const isLocked = row.getValue('isLocked') as boolean;
+        const lockedByName = row.original.lockedByName;
+        
+        if (!isLocked) {
+          return <span className="text-gray-400">-</span>;
+        }
+        
+        return (
+          <div className="flex items-center gap-1">
+            <Lock size={12} className="text-red-600" />
+            <span className="text-xs text-red-600">
+              {lockedByName || 'Unbekannt'}
+            </span>
+          </div>
+        );
+      },
+    },
+    {
       id: 'actions',
       header: 'Aktionen',
       cell: ({ row }) => {
@@ -200,11 +226,13 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
             icon: Edit,
             title: 'Bearbeiten',
             onClick: () => handleEditVariant(row.original),
+            disabled: row.original.isLocked,
           },
           {
             icon: Copy,
             title: 'Kopieren',
             onClick: () => handleCopyVariant(row.original),
+            disabled: row.original.isLocked,
           },
           {
             icon: Trash2,

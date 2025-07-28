@@ -10,13 +10,14 @@ The Edit Lock System prevents multiple users from editing the same resources (ar
 
 1. **`useEditLock` Hook** (`hooks/use-edit-lock.tsx`)
    - Reusable hook for lock management
-   - Supports 'articles' and 'blocks' resource types
+   - Supports 'articles', 'blocks', and 'quote-versions' resource types
    - Provides optimistic UI updates
    - Automatic cleanup on component unmount
 
 2. **API Endpoints**
    - `/api/articles/[id]/lock` - GET, POST, DELETE
    - `/api/blocks/[id]/lock` - GET, POST, DELETE
+   - `/api/quote-versions/[id]/lock` - GET, POST, DELETE
    - Authentication and conflict handling
    - User information retrieval
 
@@ -423,6 +424,13 @@ blocked TIMESTAMP,  -- UTC timestamp when locked (NULL when not locked)
 blockedBy TEXT REFERENCES auth.users(id)  -- User ID who has the lock
 ```
 
+### Quote Version Locks
+```sql
+-- quote_versions table
+blocked TIMESTAMP,  -- UTC timestamp when locked (NULL when not locked)
+blockedBy TEXT REFERENCES auth.users(id)  -- User ID who has the lock
+```
+
 ### Timestamp Handling
 
 The system uses PostgreSQL's `NOW()` function for consistent UTC timestamps:
@@ -559,7 +567,7 @@ import { sql } from 'drizzle-orm';
 ### 3. Extend Hook Type
 ```typescript
 // hooks/use-edit-lock.tsx
-type ResourceType = 'articles' | 'blocks' | 'new-resource';
+type ResourceType = 'articles' | 'blocks' | 'quote-versions' | 'new-resource';
 ```
 
 ### 4. Use EditLockButton
@@ -575,6 +583,17 @@ type ResourceType = 'articles' | 'blocks' | 'new-resource';
   initialUpdatedAt={resourceData?.updatedAt}
 />
 ```
+
+### Example: Quote Versions Implementation
+
+The quote versions edit lock system demonstrates the complete implementation:
+
+1. **Database Schema**: Quote versions table includes `blocked` and `blockedBy` fields
+2. **API Endpoint**: `/api/quote-versions/[id]/lock` with GET, POST, DELETE operations
+3. **Hook Support**: `useEditLock` supports 'quote-versions' resource type
+4. **Component Integration**: `QuoteDetail` uses `EditLockButton` for lock management
+5. **Lock Validation**: All quote version operations check locks before proceeding
+6. **UI Display**: Quote list table shows lock status and disables actions for locked versions
 
 ## Troubleshooting
 

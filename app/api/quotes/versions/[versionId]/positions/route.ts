@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getQuotePositionsByVersion, addQuotePositionWithHierarchy, addQuotePositionWithHierarchyForArticle } from '@/lib/db/quotes';
+import { getQuotePositionsByVersion, addQuotePositionWithHierarchy, addQuotePositionWithHierarchyForArticle, EditLockError } from '@/lib/db/quotes';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ versionId: string }> }) {
   try {
@@ -52,6 +52,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     
     return NextResponse.json(newPosition, { status: 201 });
   } catch (error) {
+    if (error instanceof EditLockError) {
+      return NextResponse.json(
+        { 
+          error: error.message,
+          type: 'EDIT_LOCK_ERROR',
+          quoteId: error.quoteId,
+          lockedBy: error.lockedBy,
+          lockedAt: error.lockedAt
+        },
+        { status: 409 }
+      );
+    }
     console.error('Error creating quote position:', error);
     return NextResponse.json(
       { error: 'Failed to create quote position' },

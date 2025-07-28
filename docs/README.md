@@ -45,6 +45,27 @@ The quote detail component implements a comprehensive save system with complete 
 5. **Change Tracking**: Only modified positions are included in save operations
 6. **Fresh Data Access**: Direct tree data access prevents stale reference issues
 
+### Edit Lock System
+The system prevents multiple users from editing the same resources simultaneously. For detailed documentation, see [Edit Lock System](edit-lock-system.md).
+
+**Supported Resource Types:**
+- **Articles**: Lock at article level
+- **Blocks**: Lock at block level  
+- **Quote Versions**: Lock at quote version level (newly implemented)
+
+**Key Features:**
+- Optimistic UI updates for fast response times
+- Automatic cleanup on component unmount
+- Force override capability for authorized users
+- Comprehensive error handling and user feedback
+- Lock status display in management tables
+
+**Quote Version Locks:**
+- Locks are applied at the quote version level
+- All position operations (create, update, reorder) check locks
+- Quote detail component uses `EditLockButton` for lock management
+- Quote list table shows lock status and disables actions for locked versions
+
 ### API Endpoints
 
 #### Quote Positions
@@ -53,52 +74,22 @@ The quote detail component implements a comprehensive save system with complete 
 - `PUT /api/quotes/versions/[versionId]/positions/batch` - Update multiple positions
 - `PUT /api/quotes/versions/[versionId]/positions/reorder` - Reorder positions
 
+#### Quote Version Locks
+- `GET /api/quote-versions/[id]/lock` - Check lock status
+- `POST /api/quote-versions/[id]/lock` - Lock version (with force override support)
+- `DELETE /api/quote-versions/[id]/lock` - Unlock version
+
 ### Database Functions
 - `updateQuotePosition()` - Update individual position
 - `updateQuotePositions()` - Batch update multiple positions
 - `updateQuotePositionsOrder()` - Update position order and hierarchy
+- `checkQuoteVersionEditable()` - Validate quote version locks
 
 ### Components
 
 #### Core Components
-- **`QuoteDetail`**: Main quote management interface with save functionality
+- **`QuoteDetail`**: Main quote management interface with save functionality and lock management
 - **`InteractiveSplitPanel`**: Tree view with position editing and fresh data access
 - **`OfferPositionText`**: Text position editor with change tracking
 - **`OfferPositionArticle`**: Article position editor with change tracking
-
-#### Save Lifecycle
-1. **User makes changes** → `addChange()` stores in change tracking
-2. **Visual indicators appear** → Orange dots and ring around save button
-3. **User clicks save** → `handleSaveChanges()` in `QuoteDetail`
-4. **API call** → `saveQuotePositions()` sends batch update
-5. **Tree data updates** → `setTreeData()` with saved values
-6. **UI refreshes** → Components re-render with fresh data
-7. **Changes cleared** → `clearAllChanges()` resets tracking
-
-#### RTE Data Flow
-1. **Component renders** → `renderFormContent()` calls `findNodeById(treeData, selectedNodeId)`
-2. **Fresh data retrieved** → Gets latest node data from `treeData`
-3. **Updated node created** → `updatedSelectedNode` with fresh data
-4. **Position components receive** → Current values from `getCurrentDescription()`
-5. **RTE displays** → Saved content immediately without revert
-
-## Development
-
-### Prerequisites
-- Node.js 18+
-- pnpm
-- PostgreSQL database
-
-### Setup
-1. Install dependencies: `pnpm install`
-2. Set up environment variables
-3. Run database migrations: `pnpm db:migrate`
-4. Start development server: `pnpm dev`
-
-### Key Technologies
-- Next.js 15
-- TypeScript
-- TailwindCSS
-- Drizzle ORM
-- PlateJS (Rich Text Editor)
-- React Arborist (Tree Component) 
+- **`EditLockButton`**: Lock management component for quote versions

@@ -20,6 +20,7 @@ import { fetchCompleteQuoteData, saveQuotePositions } from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { formatGermanDate } from '@/helper/date-formatter';
+import EditLockButton from '@/project_components/edit-lock-button';
 
 type QuoteDetailProps = {
   title: string;
@@ -196,6 +197,38 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     fetchAllData();
   }, [fetchAllData]);
 
+  // Focused data refresh function for EditLockButton
+  const loadQuoteVersionData = useCallback(async () => {
+    if (!quoteId || !resolvedVersionId) return;
+    
+    try {
+      const completeData = await fetchCompleteQuoteData(quoteId, variantId, resolvedVersionId);
+      
+      // Update only version-specific data
+      if (completeData.version) {
+        setVersionNumber(completeData.version.versionNumber || '');
+      }
+      
+      // Update positions tree data
+      if (completeData.positions) {
+        const transformedData = transformPositionsToTreeData(completeData.positions);
+        setTreeData(transformedData);
+      }
+      
+      // Update last changed info
+      if (completeData.version?.modifiedByUserName && completeData.version?.updatedAt) {
+        setLastChangedInfo({
+          userName: completeData.version.modifiedByUserName,
+          timestamp: completeData.version.updatedAt,
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error refreshing quote version data:', error);
+      throw error; // Let EditLockButton handle the error
+    }
+  }, [quoteId, resolvedVersionId, variantId]);
+
   const handleCreateVariant = () => {
     const newVariantId = resolvedVariantId ? `${resolvedVariantId}-neu` : 'V1';
     openNewTab({
@@ -229,6 +262,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     } else {
       toast('Bearbeitungsmodus aktiviert.');
     }
+    setIsEditing(!isEditing);
+  };
+
+  const handleToggleEdit = () => {
     setIsEditing(!isEditing);
   };
 
@@ -285,8 +322,17 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       
       clearAllChanges();
       
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving changes:', error);
+      
+      // Handle edit lock errors
+      if (error.response?.data?.type === 'EDIT_LOCK_ERROR') {
+        toast.error(`Fehler beim Speichern: ${error.response.data.error}`);
+        // Exit edit mode if lock was lost
+        setIsEditing(false);
+        return;
+      }
+      
       toast.error('Fehler beim Speichern der Änderungen. Bitte versuchen Sie es erneut.');
     } finally {
       setIsSaving(false);
@@ -313,43 +359,17 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           <p className="text-sm text-gray-500 mb-2">Sprache: {language}</p>
         )}
         <div className="flex flex-wrap gap-2 items-center mb-2">
-          {isEditing ? (
-            <>
-              <Button
-                variant="default"
-                size="sm"
-                className={`flex items-center gap-1 bg-blue-600 hover:bg-blue-700 text-white ${hasUnsavedChanges ? 'ring-2 ring-orange-500' : ''}`}
-                tabIndex={0}
-                aria-label="Speichern"
-                onClick={handleEditClick}
-                disabled={isSaving}
-              >
-                <Save size={14} className="inline-block" /> 
-                {isSaving ? 'Speichere...' : hasUnsavedChanges ? 'Speichern*' : 'Speichern'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-1"
-                tabIndex={0}
-                aria-label="Änderungen verwerfen"
-                onClick={handleCancelClick}
-                disabled={isSaving}
-              >
-                <RotateCcw size={14} className="inline-block" /> Verwerfen
-              </Button>
-            </>
-          ) : (
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1"
-              tabIndex={0}
-              aria-label="Bearbeiten"
-              onClick={handleEditClick}
-            >
-              <Edit3 size={14} className="inline-block" /> Bearbeiten
-            </Button>
+          {resolvedVersionId && (
+            <EditLockButton
+              resourceType="quote-versions"
+              resourceId={resolvedVersionId}
+              isEditing={isEditing}
+              isSaving={isSaving}
+              onToggleEdit={handleToggleEdit}
+              onSave={handleSaveChanges}
+              onRefreshData={loadQuoteVersionData}
+              initialUpdatedAt={lastChangedInfo?.timestamp || undefined}
+            />
           )}
           <Button
             variant="outline"

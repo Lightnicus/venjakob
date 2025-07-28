@@ -101,6 +101,38 @@ async function checkQuoteEditable(quoteId: string): Promise<void> {
   }
 }
 
+// Check if a quote version is editable by the current user
+async function checkQuoteVersionEditable(versionId: string): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) {
+    throw new EditLockError('Benutzer nicht authentifiziert', versionId);
+  }
+
+  // Get quote version with lock info
+  const [version] = await db
+    .select({
+      id: quoteVersions.id,
+      blocked: quoteVersions.blocked,
+      blockedBy: quoteVersions.blockedBy,
+    })
+    .from(quoteVersions)
+    .where(eq(quoteVersions.id, versionId));
+
+  if (!version) {
+    throw new Error('Quote version not found');
+  }
+
+  // Check if quote version is locked by another user
+  if (version.blocked && version.blockedBy && version.blockedBy !== user.dbUser.id) {
+    throw new EditLockError(
+      'Quote version is being edited by another user',
+      versionId,
+      version.blockedBy,
+      version.blocked,
+    );
+  }
+}
+
 // Fetch all quotes
 export async function getQuotes(): Promise<Quote[]> {
   try {
@@ -695,6 +727,11 @@ export async function getVariantsList(): Promise<{
   lastModifiedBy: string | null;
   lastModifiedByUserName: string | null;
   lastModifiedAt: string;
+  // Lock status for the latest version
+  isLocked?: boolean;
+  lockedBy?: string | null;
+  lockedByName?: string | null;
+  lockedAt?: string | null;
 }[]> {
   try {
     const variantsData = await db
@@ -727,19 +764,37 @@ export async function getVariantsList(): Promise<{
       .where(eq(quoteVariants.deleted, false))
       .orderBy(desc(quotes.createdAt), asc(quoteVariants.variantNumber));
 
-    // Get latest version number for each variant
+    // Get latest version number and lock status for each variant
     const variantsWithLatestVersion = await Promise.all(
       variantsData.map(async (variant) => {
         const [latestVersionResult] = await db
-          .select({ versionNumber: quoteVersions.versionNumber })
+          .select({ 
+            versionNumber: quoteVersions.versionNumber,
+            blocked: quoteVersions.blocked,
+            blockedBy: quoteVersions.blockedBy,
+          })
           .from(quoteVersions)
           .where(and(eq(quoteVersions.variantId, variant.id), eq(quoteVersions.deleted, false)))
           .orderBy(desc(quoteVersions.versionNumber))
           .limit(1);
 
+        // Get lock holder name if version is locked
+        let lockedByName = null;
+        if (latestVersionResult?.blocked && latestVersionResult?.blockedBy) {
+          const [lockHolder] = await db
+            .select({ name: users.name })
+            .from(users)
+            .where(eq(users.id, latestVersionResult.blockedBy));
+          lockedByName = lockHolder?.name;
+        }
+
         return {
           ...variant,
           latestVersionNumber: latestVersionResult?.versionNumber || 0,
+          isLocked: !!latestVersionResult?.blocked,
+          lockedBy: latestVersionResult?.blockedBy || null,
+          lockedByName,
+          lockedAt: latestVersionResult?.blocked || null,
         };
       })
     );
@@ -865,6 +920,9 @@ export async function addQuotePositionWithHierarchy(
       throw new Error('Benutzer nicht authentifiziert');
     }
 
+    // Check if quote version is editable by current user
+    await checkQuoteVersionEditable(versionId);
+
     // Get all positions for this version to understand the current structure
     const allPositions = await db
       .select()
@@ -973,6 +1031,9 @@ export async function addQuotePositionWithHierarchy(
 
     return newPosition;
   } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error; // Re-throw edit lock errors as-is
+    }
     console.error('Error adding quote position with hierarchy:', error);
     throw new Error('Failed to add quote position');
   }
@@ -994,6 +1055,9 @@ export async function addQuotePositionWithHierarchyForArticle(
     if (!user) {
       throw new Error('Benutzer nicht authentifiziert');
     }
+
+    // Check if quote version is editable by current user
+    await checkQuoteVersionEditable(versionId);
 
     // Get all positions for this version to understand the current structure
     const allPositions = await db
@@ -1113,6 +1177,9 @@ export async function addQuotePositionWithHierarchyForArticle(
 
     return newPosition;
   } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error; // Re-throw edit lock errors as-is
+    }
     console.error('Error adding quote position with hierarchy for article:', error);
     throw new Error('Failed to add quote position');
   }
@@ -1520,6 +1587,9 @@ export async function updateQuotePositionsOrder(
     throw new Error('Benutzer nicht authentifiziert');
   }
 
+  // Check if quote version is editable by current user
+  await checkQuoteVersionEditable(versionId);
+
   await db.transaction(async (tx) => {
     // Step 1: Set all positions to temporary negative values to avoid unique constraint conflicts
     // This clears the (version_id, position_number) unique constraint temporarily
@@ -1569,6 +1639,17 @@ export async function updateQuotePosition(
       throw new Error('Benutzer nicht authentifiziert');
     }
 
+    // Get the version ID from the position to check locks
+    const [position] = await db
+      .select({ versionId: quotePositions.versionId })
+      .from(quotePositions)
+      .where(eq(quotePositions.id, positionId));
+
+    if (position) {
+      // Check if quote version is editable by current user
+      await checkQuoteVersionEditable(position.versionId);
+    }
+
     await db
       .update(quotePositions)
       .set({
@@ -1579,6 +1660,9 @@ export async function updateQuotePosition(
 
     // TODO: Add audit trail when audit operations are implemented for quote positions
   } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error; // Re-throw edit lock errors as-is
+    }
     console.error('Error updating quote position:', error);
     throw new Error('Failed to update quote position');
   }
@@ -1602,6 +1686,19 @@ export async function updateQuotePositions(
       throw new Error('Benutzer nicht authentifiziert');
     }
 
+    // Get the version ID from the first position to check locks
+    if (positionUpdates.length > 0) {
+      const [firstPosition] = await db
+        .select({ versionId: quotePositions.versionId })
+        .from(quotePositions)
+        .where(eq(quotePositions.id, positionUpdates[0].id));
+
+      if (firstPosition) {
+        // Check if quote version is editable by current user
+        await checkQuoteVersionEditable(firstPosition.versionId);
+      }
+    }
+
     await db.transaction(async (tx) => {
       for (const update of positionUpdates) {
         const { id, ...updateData } = update;
@@ -1617,6 +1714,9 @@ export async function updateQuotePositions(
 
     // TODO: Add audit trail when audit operations are implemented for quote positions
   } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error; // Re-throw edit lock errors as-is
+    }
     console.error('Error updating quote positions:', error);
     throw new Error('Failed to update quote positions');
   }

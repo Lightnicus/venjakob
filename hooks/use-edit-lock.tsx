@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useUser } from './use-user';
 
-export type LockableResource = 'articles' | 'blocks';
+export type LockableResource = 'articles' | 'blocks' | 'quote-versions';
 
 export interface LockInfo {
   isLocked: boolean;

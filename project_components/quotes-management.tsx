@@ -31,6 +31,11 @@ type VariantListItem = {
   lastModifiedBy: string | null;
   lastModifiedByUserName: string | null;
   lastModifiedAt: string;
+  // Lock status for the latest version
+  isLocked?: boolean;
+  lockedBy?: string | null;
+  lockedByName?: string | null;
+  lockedAt?: string | null;
 };
 
 const QuotesManagement = () => {

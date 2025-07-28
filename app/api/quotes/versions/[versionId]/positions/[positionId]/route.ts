@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateQuotePosition, softDeleteQuotePosition } from '@/lib/db/quotes';
+import { updateQuotePosition, softDeleteQuotePosition, EditLockError } from '@/lib/db/quotes';
 
 export async function PUT(
   request: NextRequest,
@@ -40,6 +40,18 @@ export async function PUT(
     
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (error instanceof EditLockError) {
+      return NextResponse.json(
+        { 
+          error: error.message,
+          type: 'EDIT_LOCK_ERROR',
+          quoteId: error.quoteId,
+          lockedBy: error.lockedBy,
+          lockedAt: error.lockedAt
+        },
+        { status: 409 }
+      );
+    }
     console.error('Error updating quote position:', error);
     return NextResponse.json(
       { error: 'Failed to update quote position' },
