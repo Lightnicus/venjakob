@@ -9,6 +9,7 @@ This is a Next.js 15 application for managing quotes, articles, blocks, and sale
 - **[Database Setup](db.md)** - Complete guide to Supabase and Drizzle ORM setup, migrations, seeding, and database operations
 - **[Authentication System](auth.md)** - Server-side authentication utilities with DRY patterns for API routes and permission management
 - **[Component Patterns](component-patterns.md)** - Rich Text Editor (PlateJS) integration patterns, dual-component architecture, and best practices
+- **[Helper Functions](helper-functions.md)** - Comprehensive documentation of all helper functions in the `@/helper` folder
 
 ### Dialog & UI Management
 - **[Dialog Manager System](dialog-manager-docs.md)** - Comprehensive dialog workflow management with history tracking, smart back functionality, and data transfer

@@ -19,6 +19,31 @@ export async function fetchQuotesList(): Promise<{
   return response.json();
 }
 
+// Fetch variants list data
+export async function fetchVariantsList(): Promise<{
+  id: string;
+  quoteId: string;
+  quoteNumber: string | null;
+  quoteTitle: string | null;
+  variantNumber: number;
+  variantDescriptor: string;
+  languageId: string;
+  languageLabel: string | null;
+  salesOpportunityStatus: string | null;
+  clientForeignId: string | null;
+  clientName: string | null;
+  latestVersionNumber: number;
+  lastModifiedBy: string | null;
+  lastModifiedByUserName: string | null;
+  lastModifiedAt: string;
+}[]> {
+  const response = await fetch('/api/quotes/variants/list');
+  if (!response.ok) {
+    throw new Error('Failed to fetch variants list');
+  }
+  return response.json();
+}
+
 // Fetch a single quote (basic data only)
 export async function fetchQuote(quoteId: string): Promise<Quote | null> {
   const response = await fetch(`/api/quotes/${quoteId}`);

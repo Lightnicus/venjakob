@@ -16,44 +16,54 @@ import { Edit, Copy, Trash2 } from 'lucide-react';
 import { DeleteConfirmationDialog } from '@/project_components/delete-confirmation-dialog';
 import QuoteDialogs, { QUOTE_DIALOGS, useDialogManager } from '@/project_components/quote_dialogs/quotes-dialogs';
 import { TableActionsCell, TableAction } from '@/project_components/table-actions-cell';
+import { translateSalesOpportunityStatus } from '@/helper/status-translations';
+import { formatGermanDate } from '@/helper/date-formatter';
+import { toast } from 'sonner';
 
-type QuoteListItem = {
+type VariantListItem = {
   id: string;
-  quoteNumber: string;
-  title: string | null;
-  salesOpportunityKeyword: string | null;
-  variantsCount: number;
-  validUntil: string | null;
-  createdAt: string;
-  updatedAt: string;
+  quoteId: string;
+  quoteNumber: string | null;
+  quoteTitle: string | null;
+  variantNumber: number;
+  variantDescriptor: string;
+  languageId: string;
+  languageLabel: string | null;
+  salesOpportunityStatus: string | null;
+  clientForeignId: string | null;
+  clientName: string | null;
+  latestVersionNumber: number;
+  lastModifiedBy: string | null;
+  lastModifiedByUserName: string | null;
+  lastModifiedAt: string;
 };
 
 
 
 interface QuotesListTableProps {
-  data: QuoteListItem[];
+  data: VariantListItem[];
   languages: Language[];
   onSaveQuoteProperties: (quoteId: string, quoteData: any, reloadData?: boolean) => Promise<void>;
-  onDeleteQuote: (quoteId: string) => Promise<void>;
-  onCreateQuote: () => Promise<QuoteListItem>;
-  onCopyQuote: (quote: QuoteListItem) => Promise<QuoteListItem>;
+  onDeleteVariant: (variantId: string) => Promise<void>;
+  onCreateQuote: () => Promise<VariantListItem>;
+  onCopyVariant: (variant: VariantListItem) => Promise<VariantListItem>;
 }
 
-// Quotes list content component that uses DialogManager
+// Variants list content component that uses DialogManager
 const QuotesListContent: FC<QuotesListTableProps> = ({
   data,
   languages,
   onSaveQuoteProperties,
-  onDeleteQuote,
+  onDeleteVariant,
   onCreateQuote,
-  onCopyQuote,
+  onCopyVariant,
 }) => {
   const { openDialog } = useDialogManager();
   const { openNewTab } = useTabbedInterface();
   const [selectedStatus, setSelectedStatus] = useState('Alle');
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [quoteToDelete, setQuoteToDelete] = useState<QuoteListItem | null>(null);
-  const [deletingQuoteId, setDeletingQuoteId] = useState<string | null>(null);
+  const [variantToDelete, setVariantToDelete] = useState<VariantListItem | null>(null);
+  const [deletingVariantId, setDeletingVariantId] = useState<string | null>(null);
   const [selectedQuoteNumber, setSelectedQuoteNumber] = useState('ANG-2023-0001');
   const [selectedVariantIdentifier, setSelectedVariantIdentifier] = useState('A');
 
@@ -73,103 +83,112 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
     });
   };
 
-  const handleEditQuote = (quote: QuoteListItem) => {
+  const handleEditVariant = (variant: VariantListItem) => {
     openNewTab({
-      id: `angebot-${quote.id}`,
-      title: `${quote.title || quote.quoteNumber}`,
-      content: <QuoteDetail title={quote.title || quote.quoteNumber} quoteId={quote.id} />,
+      id: `variant-${variant.id}`,
+      title: `${variant.quoteTitle || variant.quoteNumber || 'Angebot'} - Variante ${variant.variantNumber}`,
+      content: <QuoteDetail title={variant.quoteTitle || variant.quoteNumber || 'Angebot'} quoteId={variant.quoteId} variantId={variant.id} />,
       closable: true
     });
   };
 
-  const handleCopyQuote = async (quote: QuoteListItem) => {
+  const handleCopyVariant = async (variant: VariantListItem) => {
     try {
-      await onCopyQuote(quote);
+      await onCopyVariant(variant);
     } catch (error) {
-      console.error('Error copying quote:', error);
+      console.error('Error copying variant:', error);
     }
   };
 
-  const handleDeleteClick = (quote: QuoteListItem) => {
-    setQuoteToDelete(quote);
+  const handleDeleteClick = (variant: VariantListItem) => {
+    setVariantToDelete(variant);
     setDeleteDialogOpen(true);
   };
 
   const handleDeleteConfirm = async () => {
-    if (quoteToDelete) {
+    if (variantToDelete) {
       try {
-        setDeletingQuoteId(quoteToDelete.id);
-        await onDeleteQuote(quoteToDelete.id);
+        setDeletingVariantId(variantToDelete.id);
+        await onDeleteVariant(variantToDelete.id);
         setDeleteDialogOpen(false);
-        setQuoteToDelete(null);
+        setVariantToDelete(null);
+        toast.success('Variante erfolgreich gelöscht');
       } catch (error) {
-        console.error('Error deleting quote:', error);
+        console.error('Error deleting variant:', error);
+        toast.error('Fehler beim Löschen der Variante');
       } finally {
-        setDeletingQuoteId(null);
+        setDeletingVariantId(null);
       }
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('de-DE');
-  };
 
-  const handleRowClick = (row: Row<QuoteListItem>) => {
-    handleEditQuote(row.original);
+
+  const handleRowClick = (row: Row<VariantListItem>) => {
+    handleEditVariant(row.original);
   };
 
   // Define columns for the FilterableTable
-  const columns = useMemo<ColumnDef<QuoteListItem>[]>(() => [
+  const columns = useMemo<ColumnDef<VariantListItem>[]>(() => [
     {
       accessorKey: 'quoteNumber',
-      header: 'Angebotsnummer',
+      header: 'Angebots-Nr',
       cell: ({ row }) => (
-        <span className="font-medium">{row.getValue('quoteNumber')}</span>
+        <span className="font-medium">{row.getValue('quoteNumber') || '-'}</span>
       ),
     },
     {
-      accessorKey: 'title',
+      accessorKey: 'quoteTitle',
       header: 'Titel',
       cell: ({ row }) => (
-        <span>{row.getValue('title') || '-'}</span>
+        <span>{row.getValue('quoteTitle') || '-'}</span>
       ),
     },
     {
-      accessorKey: 'salesOpportunityKeyword',
-      header: 'Verkaufschance',
-      cell: ({ row }) => (
-        <span>{row.getValue('salesOpportunityKeyword') || '-'}</span>
-      ),
-    },
-    {
-      accessorKey: 'variantsCount',
-      header: 'Varianten',
-      cell: ({ row }) => (
-        <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
-          {row.getValue('variantsCount')}
-        </span>
-      ),
-    },
-    {
-      accessorKey: 'validUntil',
-      header: 'Gültig bis',
+      accessorKey: 'salesOpportunityStatus',
+      header: 'Status',
       cell: ({ row }) => {
-        const validUntil = row.getValue('validUntil') as string | null;
-        return <span>{validUntil ? formatDate(validUntil) : '-'}</span>;
+        const status = row.getValue('salesOpportunityStatus') as string | null;
+        return (
+          <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+            {status ? translateSalesOpportunityStatus(status) : '-'}
+          </span>
+        );
       },
     },
     {
-      accessorKey: 'createdAt',
-      header: 'Erstellt am',
+      accessorKey: 'clientForeignId',
+      header: 'KdNr',
       cell: ({ row }) => (
-        <span>{formatDate(row.getValue('createdAt'))}</span>
+        <span>{row.getValue('clientForeignId') || '-'}</span>
       ),
     },
     {
-      accessorKey: 'updatedAt',
-      header: 'Zuletzt geändert',
+      accessorKey: 'clientName',
+      header: 'AngebotsEmpfänger',
       cell: ({ row }) => (
-        <span>{formatDate(row.getValue('updatedAt'))}</span>
+        <span>{row.getValue('clientName') || '-'}</span>
+      ),
+    },
+    {
+      accessorKey: 'latestVersionNumber',
+      header: 'Version',
+      cell: ({ row }) => (
+        <span>{row.getValue('latestVersionNumber')}</span>
+      ),
+    },
+    {
+      accessorKey: 'lastModifiedByUserName',
+      header: 'Geändert von',
+      cell: ({ row }) => (
+        <span>{row.getValue('lastModifiedByUserName') || '-'}</span>
+      ),
+    },
+    {
+      accessorKey: 'lastModifiedAt',
+      header: 'Geändert am',
+      cell: ({ row }) => (
+        <span>{formatGermanDate(row.getValue('lastModifiedAt'))}</span>
       ),
     },
     {
@@ -180,19 +199,19 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
           {
             icon: Edit,
             title: 'Bearbeiten',
-            onClick: () => handleEditQuote(row.original),
+            onClick: () => handleEditVariant(row.original),
           },
           {
             icon: Copy,
             title: 'Kopieren',
-            onClick: () => handleCopyQuote(row.original),
+            onClick: () => handleCopyVariant(row.original),
           },
           {
             icon: Trash2,
             title: 'Löschen',
             onClick: () => handleDeleteClick(row.original),
             variant: 'destructive' as const,
-            isLoading: deletingQuoteId === row.original.id,
+            isLoading: deletingVariantId === row.original.id,
           },
         ];
 
@@ -201,13 +220,12 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
       enableSorting: false,
       enableGlobalFilter: false,
     },
-  ], [deletingQuoteId]);
+  ], [deletingVariantId]);
 
   // Filter data based on selected status
-  const filteredData = data.filter(quote => {
+  const filteredData = data.filter(variant => {
     if (selectedStatus === 'Alle') return true;
-    // Add status filtering logic here when status field is available
-    return true;
+    return variant.salesOpportunityStatus === selectedStatus;
   });
 
   return (
@@ -229,9 +247,12 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="Alle">Alle</SelectItem>
-            <SelectItem value="Offen">Offen</SelectItem>
-            <SelectItem value="Geschlossen">Geschlossen</SelectItem>
+            <SelectItem value="Alle">Alle Status</SelectItem>
+            <SelectItem value="open">Offen</SelectItem>
+            <SelectItem value="in_progress">In Bearbeitung</SelectItem>
+            <SelectItem value="won">Gewonnen</SelectItem>
+            <SelectItem value="lost">Verloren</SelectItem>
+            <SelectItem value="cancelled">Storniert</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -239,22 +260,22 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
       <FilterableTable
         data={filteredData}
         columns={columns}
-        filterPlaceholder="Angebote suchen..."
-        globalFilterColumnIds={['quoteNumber', 'title', 'salesOpportunityKeyword']}
+        filterPlaceholder="Varianten suchen..."
+        globalFilterColumnIds={['quoteNumber', 'quoteTitle', 'clientName', 'clientForeignId']}
         onRowClick={handleRowClick}
         getRowClassName={() => "cursor-pointer hover:bg-gray-50"}
-        defaultSorting={[{ id: 'updatedAt', desc: true }]}
+        defaultSorting={[{ id: 'lastModifiedAt', desc: true }]}
       />
 
       <DeleteConfirmationDialog
         open={deleteDialogOpen}
         onOpenChange={(open) => {
           setDeleteDialogOpen(open);
-          if (!open) setQuoteToDelete(null);
+          if (!open) setVariantToDelete(null);
         }}
         onConfirm={handleDeleteConfirm}
-        title={`Angebot "${quoteToDelete?.title || quoteToDelete?.quoteNumber}" löschen?`}
-        description="Diese Aktion kann nicht rückgängig gemacht werden. Das Angebot und alle zugehörigen Daten werden dauerhaft gelöscht."
+        title={`Variante "${variantToDelete?.quoteTitle || variantToDelete?.quoteNumber}" löschen?`}
+        description="Diese Aktion kann nicht rückgängig gemacht werden. Die Variante und alle zugehörigen Daten werden dauerhaft gelöscht."
       />
     </div>
   );

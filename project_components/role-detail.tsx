@@ -5,6 +5,7 @@ import { useState, useEffect, type FC } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { formatGermanDate } from '@/helper/date-formatter';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -278,8 +279,8 @@ const RoleDetail: FC<RoleDetailProps> = ({
                 />
               </div>
               <div className="text-sm text-gray-500">
-                <div>Erstellt am: {new Date(role.createdAt).toLocaleDateString('de-DE')}</div>
-                <div>Zuletzt geändert: {new Date(role.updatedAt).toLocaleDateString('de-DE')}</div>
+                              <div>Erstellt am: {formatGermanDate(role.createdAt)}</div>
+              <div>Zuletzt geändert: {formatGermanDate(role.updatedAt)}</div>
               </div>
             </CardContent>
           </Card>

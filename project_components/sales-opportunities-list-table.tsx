@@ -8,6 +8,7 @@ import type { SalesOpportunityListItem } from '@/lib/api/sales-opportunities';
 import type { SalesOpportunity } from '@/lib/db/schema';
 import { DeleteConfirmationDialog } from '@/project_components/delete-confirmation-dialog';
 import { TableActionsCell, TableAction } from '@/project_components/table-actions-cell';
+import { formatGermanDate } from '@/helper/date-formatter';
 import { toast } from 'sonner';
 
 interface SalesOpportunitiesListTableProps {
@@ -132,8 +133,7 @@ const SalesOpportunitiesListTable: React.FC<SalesOpportunitiesListTableProps> = 
       accessorKey: 'updatedAt',
       header: 'Geändert am',
       cell: ({ row }) => {
-        const date = new Date(row.original.updatedAt);
-        return date.toLocaleDateString('de-DE');
+        return formatGermanDate(row.original.updatedAt);
       },
       enableSorting: true,
     },

@@ -11,6 +11,7 @@ import IconButton from './icon-button';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 import UserDetail from './user-detail';
 import { useTabbedInterface } from './tabbed-interface-provider';
+import { formatGermanDate } from '@/helper/date-formatter';
 import type { Role } from '@/lib/db/schema';
 
 type UserListItem = {
@@ -54,7 +55,7 @@ const UserListTable: FC<UserListTableProps> = ({
 
   const getLastModified = (user: UserListItem): string => {
     if (user.lastModified === 'Nie') return 'Nie';
-    return new Date(user.lastModified).toLocaleDateString('de-DE');
+    return formatGermanDate(user.lastModified);
   };
 
   const handleOpenUserDetail = (user: UserListItem) => {

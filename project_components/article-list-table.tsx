@@ -2,6 +2,7 @@ import { FC, useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Pencil, Copy, Trash2 } from 'lucide-react';
 import { useTabbedInterface } from './tabbed-interface-provider';
+import { formatGermanDate } from '@/helper/date-formatter';
 import ArticleDetail from './article-detail';
 import { FilterableTable } from './filterable-table';
 import IconButton from './icon-button';
@@ -77,7 +78,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
   };
 
   const getLastModified = (article: ArticleListItem): string => {
-    return new Date(article.updatedAt).toLocaleDateString('de-DE');
+    return formatGermanDate(article.updatedAt);
   };
 
   const handleOpenArticleDetail = async (article: ArticleListItem) => {

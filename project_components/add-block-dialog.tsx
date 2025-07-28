@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import type { Block, BlockContent } from '@/lib/db/schema';
 import { parseJsonContent } from '@/helper/plate-json-parser';
 import { plateValueToHtml } from '@/helper/plate-serialization';
+import { formatGermanDate } from '@/helper/date-formatter';
 import { createQuotePosition } from '@/lib/api/quotes';
 import { toast } from 'sonner';
 
@@ -119,7 +120,7 @@ const AddBlockDialog: React.FC<Props> = ({
         header: 'letzte Änderung',
         cell: ({ row }) => 
           row.original.updatedAt 
-            ? new Date(row.original.updatedAt).toLocaleDateString('de-DE')
+            ? formatGermanDate(row.original.updatedAt)
             : '-',
       },
       {

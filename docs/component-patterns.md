@@ -832,6 +832,47 @@ The `InteractiveSplitPanel` component now supports language-specific block loadi
 - Uses `fetchBlocksWithContentByLanguage()` to load blocks filtered by language
 - `dialogBlocks` useMemo automatically handles the filtered data structure
 
+### QuotesListTable for displaying Variants
+
+#### Implementation Details
+
+**Database Level:**
+- `getVariantsList()` - Fetches all variants with their relationships (quotes, languages, sales opportunities, clients)
+- Includes latest version number for each variant
+- Joins multiple tables to get complete variant information
+
+**API Level:**
+- `fetchVariantsList()` - API wrapper for variant list fetching
+- `GET /api/quotes/variants/list` - API endpoint for variants list
+
+**Component Level:**
+- `QuotesListTable` - Updated existing component to display variants with all required columns
+- Uses `FilterableTable` with sorting, filtering, and pagination
+- Includes status translation helper for German display
+- Action buttons for edit, copy, and delete operations
+- Maintains all existing dialog functionality and quote creation flows
+
+#### Columns Displayed
+
+1. **Angebots-Nr**: Quote number (`quotes.quoteNumber`)
+2. **Titel**: Quote title (`quotes.title`)
+3. **Status**: Sales opportunity status (translated to German)
+4. **KdNr**: Client foreign ID (`clients.foreignId`)
+5. **AngebotsEmpfänger**: Client name (`clients.name`)
+6. **Version**: Latest version number for the variant
+7. **Geändert von**: Last user name who modified the variant
+8. **Geändert am**: Last modification date (German format)
+9. **Aktionen**: Edit, copy, delete buttons
+
+#### Features
+
+- **Sorting**: All columns are sortable
+- **Filtering**: Global search across quote number, title, client name, and client ID
+- **Status Filter**: Dropdown to filter by sales opportunity status
+- **Pagination**: 50 items per page
+- **Row Click**: Opens variant detail in new tab
+- **Action Buttons**: Edit opens QuoteDetail with variant, copy creates new variant, delete soft-deletes variant
+
 ### Delete Functionality
 
 The `InteractiveSplitPanel` component includes a delete feature for tree nodes:

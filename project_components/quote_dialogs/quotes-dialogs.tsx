@@ -16,6 +16,7 @@ import { SaleChance } from '@/project_components/sale-opportunities-table';
 import { fetchSalesOpportunitiesList, type SalesOpportunityListItem } from '@/lib/api/sales-opportunities';
 import { fetchQuotesList } from '@/lib/api/quotes';
 import { useLoading } from '@/project_components/loading-provider';
+import { formatGermanDate } from '@/helper/date-formatter';
 import { toast } from 'sonner';
 
 // Dialog IDs
@@ -133,8 +134,7 @@ const transformSalesOpportunityToSaleChance = (item: SalesOpportunityListItem): 
   // Format date from ISO string to German format (DD.MM.YYYY)
   const formatDate = (isoDate: string): string => {
     try {
-      const date = new Date(isoDate);
-      return date.toLocaleDateString('de-DE');
+      return formatGermanDate(isoDate);
     } catch {
       return '';
     }

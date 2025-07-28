@@ -19,6 +19,7 @@ import type { MyTreeNodeData } from '@/project_components/custom-node';
 import { fetchCompleteQuoteData, saveQuotePositions } from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
+import { formatGermanDate } from '@/helper/date-formatter';
 
 type QuoteDetailProps = {
   title: string;
@@ -50,6 +51,10 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   const [offerPropsData, setOfferPropsData] = useState<any>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [variantLanguageId, setVariantLanguageId] = useState<string | undefined>(undefined);
+  const [lastChangedInfo, setLastChangedInfo] = useState<{
+    userName: string | null;
+    timestamp: string | null;
+  } | null>(null);
   const { openNewTab } = useTabbedInterface();
 
   // Move change tracking to this level
@@ -142,6 +147,16 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         setOfferPropsData(completeData.offerPropsData);
       }
       
+      // Set last changed information from version data
+      if (completeData.version?.modifiedByUserName && completeData.version?.updatedAt) {
+        setLastChangedInfo({
+          userName: completeData.version.modifiedByUserName,
+          timestamp: completeData.version.updatedAt,
+        });
+      } else {
+        setLastChangedInfo(null);
+      }
+      
       // Update positions tree data
       if (completeData.positions) {
         const transformedData = transformPositionsToTreeData(completeData.positions);
@@ -160,6 +175,22 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       setLoadingPositions(false);
     }
   }, [quoteId, variantId, versionId]);
+
+
+
+  const formatLastChangedText = () => {
+    if (!lastChangedInfo) return null;
+    
+    const { userName, timestamp } = lastChangedInfo;
+    const userNameDisplay = userName || 'Unbekannt';
+    
+    if (!timestamp) {
+      return `Zuletzt geändert von ${userNameDisplay}`;
+    }
+    
+    const formattedDate = formatGermanDate(timestamp);
+    return `Zuletzt geändert am ${formattedDate} von ${userNameDisplay}`;
+  };
 
   useEffect(() => {
     fetchAllData();
@@ -446,9 +477,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           <OfferVersionsTable />
         </TabsContent>
       </Tabs>
-      <div className="mt-2 text-xs text-gray-500 text-left">
-        Zuletzt geändert am 01.05.2024 von Max Mustermann
-      </div>
+      {formatLastChangedText() && (
+        <div className="mt-2 text-xs text-gray-500 text-left">
+          {formatLastChangedText()}
+        </div>
+      )}
     </div>
   );
 };

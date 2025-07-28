@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { formatGermanDate } from '@/helper/date-formatter';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Edit3, Save, Loader2 } from 'lucide-react';
@@ -208,8 +209,8 @@ const PermissionDetail: React.FC<PermissionDetailProps> = ({
           </div>
           
           <div className="text-sm text-gray-500">
-            <div>Erstellt am: {new Date(permission.createdAt).toLocaleDateString('de-DE')}</div>
-            <div>Zuletzt geändert: {new Date(permission.updatedAt).toLocaleDateString('de-DE')}</div>
+                          <div>Erstellt am: {formatGermanDate(permission.createdAt)}</div>
+              <div>Zuletzt geändert: {formatGermanDate(permission.updatedAt)}</div>
           </div>
         </CardContent>
       </Card>

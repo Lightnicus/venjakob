@@ -4,7 +4,7 @@ import ManagementWrapper from './management-wrapper';
 import type { Language } from '@/lib/db/schema';
 import { toast } from 'sonner';
 import {
-  fetchQuotesList,
+  fetchVariantsList,
   saveQuotePropertiesAPI,
   deleteQuoteAPI,
   createNewQuoteAPI,
@@ -15,19 +15,26 @@ import { fetchLanguages } from '@/lib/api/blocks';
 import { useTabReload, useTabbedInterface } from '@/project_components/tabbed-interface-provider';
 import QuoteDetail from '@/project_components/quote-detail';
 
-type QuoteListItem = {
+type VariantListItem = {
   id: string;
-  quoteNumber: string;
-  title: string | null;
-  salesOpportunityKeyword: string | null;
-  variantsCount: number;
-  validUntil: string | null;
-  createdAt: string;
-  updatedAt: string;
+  quoteId: string;
+  quoteNumber: string | null;
+  quoteTitle: string | null;
+  variantNumber: number;
+  variantDescriptor: string;
+  languageId: string;
+  languageLabel: string | null;
+  salesOpportunityStatus: string | null;
+  clientForeignId: string | null;
+  clientName: string | null;
+  latestVersionNumber: number;
+  lastModifiedBy: string | null;
+  lastModifiedByUserName: string | null;
+  lastModifiedAt: string;
 };
 
 const QuotesManagement = () => {
-  const [quotes, setQuotes] = useState<QuoteListItem[]>([]);
+  const [variants, setVariants] = useState<VariantListItem[]>([]);
   const [languages, setLanguages] = useState<Language[]>([]);
   const [loading, setLoading] = useState(true);
   const { openNewTab } = useTabbedInterface();
@@ -35,11 +42,11 @@ const QuotesManagement = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      const [quotesData, languagesData] = await Promise.all([
-        fetchQuotesList(),
+      const [variantsData, languagesData] = await Promise.all([
+        fetchVariantsList(),
         fetchLanguages()
       ]);
-      setQuotes(quotesData);
+      setVariants(variantsData);
       setLanguages(languagesData);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -70,15 +77,15 @@ const QuotesManagement = () => {
     }
   };
 
-  const handleDeleteQuote = async (quoteId: string) => {
+  const handleDeleteVariant = async (variantId: string) => {
     try {
-      await deleteQuoteAPI(quoteId);
-      toast.success('Angebot gelöscht');
+      await deleteQuoteAPI(variantId);
+      toast.success('Variante gelöscht');
       // Remove from local state immediately
-      setQuotes(prev => prev.filter(quote => quote.id !== quoteId));
+      setVariants(prev => prev.filter(variant => variant.id !== variantId));
     } catch (error) {
-      console.error('Error deleting quote:', error);
-      toast.error('Fehler beim Löschen des Angebots');
+      console.error('Error deleting variant:', error);
+      toast.error('Fehler beim Löschen der Variante');
     }
   };
 
@@ -88,7 +95,7 @@ const QuotesManagement = () => {
     variantId?: string,
     versionId?: string,
     languageId?: string
-  ): Promise<QuoteListItem> => {
+  ): Promise<VariantListItem> => {
     try {
       if (!salesOpportunityId) {
         throw new Error('Sales opportunity ID is required');
@@ -105,19 +112,26 @@ const QuotesManagement = () => {
         
         toast.success('Neues Angebot mit Variante und Version erstellt');
         
-        // Convert to QuoteListItem format
-        const quoteListItem: QuoteListItem = {
-          id: result.quote.id,
+        // Convert to VariantListItem format
+        const variantListItem: VariantListItem = {
+          id: result.variant.id,
+          quoteId: result.quote.id,
           quoteNumber: result.quote.quoteNumber,
-          title: result.quote.title,
-          salesOpportunityKeyword: null, // New quotes don't have sales opportunity data loaded
-          variantsCount: 1, // We just created one variant
-          validUntil: result.quote.validUntil,
-          createdAt: result.quote.createdAt,
-          updatedAt: result.quote.updatedAt
+          quoteTitle: result.quote.title,
+          variantNumber: result.variant.variantNumber,
+          variantDescriptor: result.variant.variantDescriptor,
+          languageId: result.variant.languageId,
+          languageLabel: null, // Will be loaded from database
+          salesOpportunityStatus: null, // Will be loaded from database
+          clientForeignId: null, // Will be loaded from database
+          clientName: null, // Will be loaded from database
+                  latestVersionNumber: result.version.versionNumber,
+        lastModifiedBy: null,
+        lastModifiedByUserName: null,
+        lastModifiedAt: result.variant.updatedAt
         };
         
-        setQuotes(prev => [...prev, quoteListItem]);
+        setVariants(prev => [...prev, variantListItem]);
         await loadData(); // Reload to get updated sales opportunity data
         
         // Get the selected language label for tab title
@@ -139,7 +153,7 @@ const QuotesManagement = () => {
           closable: true
         });
         
-        return quoteListItem;
+        return variantListItem;
       }
 
       // Flow 2: Create new variant for existing quote (quoteId supplied, but not variantId/versionId)
@@ -164,21 +178,28 @@ const QuotesManagement = () => {
       });
       toast.success('Neues Angebot erstellt');
       
-      // Convert to QuoteListItem format
-      const quoteListItem: QuoteListItem = {
+      // Convert to VariantListItem format
+      const variantListItem: VariantListItem = {
         id: newQuote.id,
+        quoteId: newQuote.id,
         quoteNumber: newQuote.quoteNumber,
-        title: newQuote.title,
-        salesOpportunityKeyword: null, // New quotes don't have sales opportunity data loaded
-        variantsCount: 0,
-        validUntil: newQuote.validUntil,
-        createdAt: newQuote.createdAt,
-        updatedAt: newQuote.updatedAt
+        quoteTitle: newQuote.title,
+        variantNumber: 1,
+        variantDescriptor: 'Variante 1',
+        languageId: '',
+        languageLabel: null,
+        salesOpportunityStatus: null,
+        clientForeignId: null,
+        clientName: null,
+        latestVersionNumber: 1,
+        lastModifiedBy: null,
+        lastModifiedByUserName: null,
+        lastModifiedAt: newQuote.updatedAt
       };
       
-      setQuotes(prev => [...prev, quoteListItem]);
+      setVariants(prev => [...prev, variantListItem]);
       await loadData(); // Reload to get updated sales opportunity data
-      return quoteListItem;
+      return variantListItem;
     } catch (error) {
       console.error('Error creating quote:', error);
       toast.error('Fehler beim Erstellen des Angebots');
@@ -186,28 +207,35 @@ const QuotesManagement = () => {
     }
   };
 
-  const handleCopyQuote = async (quote: QuoteListItem): Promise<QuoteListItem> => {
+  const handleCopyVariant = async (variant: VariantListItem): Promise<VariantListItem> => {
     try {
-      const copiedQuote = await copyQuoteAPI(quote);
-      toast.success(`Angebot "${quote.title || quote.quoteNumber}" wurde kopiert`);
+      const copiedQuote = await copyQuoteAPI({ id: variant.quoteId });
+      toast.success(`Variante "${variant.quoteTitle || variant.quoteNumber}" wurde kopiert`);
       
-      // Convert to QuoteListItem format
-      const quoteListItem: QuoteListItem = {
+      // Convert to VariantListItem format
+      const variantListItem: VariantListItem = {
         id: copiedQuote.id,
+        quoteId: copiedQuote.id,
         quoteNumber: copiedQuote.quoteNumber,
-        title: copiedQuote.title,
-        salesOpportunityKeyword: null, // Copied quotes will get their data when reloaded
-        variantsCount: 0,
-        validUntil: copiedQuote.validUntil,
-        createdAt: copiedQuote.createdAt,
-        updatedAt: copiedQuote.updatedAt
+        quoteTitle: copiedQuote.title,
+        variantNumber: variant.variantNumber,
+        variantDescriptor: variant.variantDescriptor,
+        languageId: variant.languageId,
+        languageLabel: variant.languageLabel,
+        salesOpportunityStatus: variant.salesOpportunityStatus,
+        clientForeignId: variant.clientForeignId,
+        clientName: variant.clientName,
+        latestVersionNumber: variant.latestVersionNumber,
+        lastModifiedBy: variant.lastModifiedBy,
+        lastModifiedByUserName: variant.lastModifiedByUserName,
+        lastModifiedAt: copiedQuote.updatedAt
       };
       
-      setQuotes(prev => [...prev, quoteListItem]);
-      return quoteListItem;
+      setVariants(prev => [...prev, variantListItem]);
+      return variantListItem;
     } catch (error) {
-      console.error('Error copying quote:', error);
-      toast.error('Fehler beim Kopieren des Angebots');
+      console.error('Error copying variant:', error);
+      toast.error('Fehler beim Kopieren der Variante');
       throw error;
     }
   };
@@ -215,12 +243,12 @@ const QuotesManagement = () => {
   return (
     <ManagementWrapper title="Angebotsverwaltung" permission="angebote" loading={loading}>
       <QuotesListTable 
-        data={quotes}
+        data={variants}
         languages={languages}
         onSaveQuoteProperties={handleSaveQuoteProperties}
-        onDeleteQuote={handleDeleteQuote}
+        onDeleteVariant={handleDeleteVariant}
         onCreateQuote={handleCreateQuote}
-        onCopyQuote={handleCopyQuote}
+        onCopyVariant={handleCopyVariant}
       />
     </ManagementWrapper>
   );

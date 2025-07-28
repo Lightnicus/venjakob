@@ -4,6 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Pencil, Copy, Trash2 } from 'lucide-react';
 import { useTabbedInterface } from './tabbed-interface-provider';
+import { formatGermanDate } from '@/helper/date-formatter';
 import BlockDetail from './block-detail';
 import { FilterableTable } from './filterable-table';
 import IconButton from './icon-button';
@@ -129,7 +130,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
 
   const getLastModified = (block: BlockListItem): string => {
     if (block.lastModified === 'Nie') return 'Nie';
-    return new Date(block.lastModified).toLocaleDateString('de-DE');
+    return formatGermanDate(block.lastModified);
   };
 
   const handleOpenBlockDetail = (block: BlockListItem) => {

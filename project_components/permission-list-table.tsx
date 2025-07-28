@@ -11,6 +11,7 @@ import IconButton from './icon-button';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 import PermissionDetail from './permission-detail';
 import { useTabbedInterface } from './tabbed-interface-provider';
+import { formatGermanDate } from '@/helper/date-formatter';
 
 type PermissionListItem = {
   id: string;
@@ -49,7 +50,7 @@ const PermissionListTable: FC<PermissionListTableProps> = ({
 
   const getLastModified = (permission: PermissionListItem): string => {
     if (permission.lastModified === 'Nie') return 'Nie';
-    return new Date(permission.lastModified).toLocaleDateString('de-DE');
+    return formatGermanDate(permission.lastModified);
   };
 
   const handleOpenPermissionDetail = (permission: PermissionListItem) => {

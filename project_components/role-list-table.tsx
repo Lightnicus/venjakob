@@ -12,6 +12,7 @@ import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
 import RoleDetail from './role-detail';
 import { useTabbedInterface } from './tabbed-interface-provider';
 import type { Permission } from '@/lib/db/schema';
+import { formatGermanDate } from '@/helper/date-formatter';
 
 type RoleListItem = {
   id: string;
@@ -51,7 +52,7 @@ const RoleListTable: FC<RoleListTableProps> = ({
 
   const getLastModified = (role: RoleListItem): string => {
     if (role.lastModified === 'Nie') return 'Nie';
-    return new Date(role.lastModified).toLocaleDateString('de-DE');
+    return formatGermanDate(role.lastModified);
   };
 
   const handleOpenRoleDetail = (role: RoleListItem) => {

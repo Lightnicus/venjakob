@@ -12,6 +12,7 @@ import {
   languages,
   users,
   changeHistory,
+  clients,
   type Quote,
   type QuoteVariant,
   type QuoteVersion,
@@ -677,6 +678,79 @@ export async function getQuotesList(): Promise<{
   }
 }
 
+// Fetch variants list data with all required relationships
+export async function getVariantsList(): Promise<{
+  id: string;
+  quoteId: string;
+  quoteNumber: string | null;
+  quoteTitle: string | null;
+  variantNumber: number;
+  variantDescriptor: string;
+  languageId: string;
+  languageLabel: string | null;
+  salesOpportunityStatus: string | null;
+  clientForeignId: string | null;
+  clientName: string | null;
+  latestVersionNumber: number;
+  lastModifiedBy: string | null;
+  lastModifiedByUserName: string | null;
+  lastModifiedAt: string;
+}[]> {
+  try {
+    const variantsData = await db
+      .select({
+        // Variant fields
+        id: quoteVariants.id,
+        quoteId: quoteVariants.quoteId,
+        variantNumber: quoteVariants.variantNumber,
+        variantDescriptor: quoteVariants.variantDescriptor,
+        languageId: quoteVariants.languageId,
+        lastModifiedBy: quoteVariants.modifiedBy,
+        lastModifiedByUserName: users.name,
+        lastModifiedAt: quoteVariants.updatedAt,
+        // Quote fields
+        quoteNumber: quotes.quoteNumber,
+        quoteTitle: quotes.title,
+        // Language fields
+        languageLabel: languages.label,
+        // Sales opportunity and client fields
+        salesOpportunityStatus: salesOpportunities.status,
+        clientForeignId: clients.foreignId,
+        clientName: clients.name,
+      })
+      .from(quoteVariants)
+      .leftJoin(quotes, eq(quoteVariants.quoteId, quotes.id))
+      .leftJoin(languages, eq(quoteVariants.languageId, languages.id))
+      .leftJoin(salesOpportunities, eq(quotes.salesOpportunityId, salesOpportunities.id))
+      .leftJoin(clients, eq(salesOpportunities.clientId, clients.id))
+      .leftJoin(users, eq(quoteVariants.modifiedBy, users.id))
+      .where(eq(quoteVariants.deleted, false))
+      .orderBy(desc(quotes.createdAt), asc(quoteVariants.variantNumber));
+
+    // Get latest version number for each variant
+    const variantsWithLatestVersion = await Promise.all(
+      variantsData.map(async (variant) => {
+        const [latestVersionResult] = await db
+          .select({ versionNumber: quoteVersions.versionNumber })
+          .from(quoteVersions)
+          .where(and(eq(quoteVersions.variantId, variant.id), eq(quoteVersions.deleted, false)))
+          .orderBy(desc(quoteVersions.versionNumber))
+          .limit(1);
+
+        return {
+          ...variant,
+          latestVersionNumber: latestVersionResult?.versionNumber || 0,
+        };
+      })
+    );
+
+    return variantsWithLatestVersion;
+  } catch (error) {
+    console.error('Error fetching variants list:', error);
+    throw new Error('Failed to fetch variants list');
+  }
+}
+
 // Get change history for a specific quote
 export async function getQuoteChangeHistory(quoteId: string, limit = 50) {
   try {
@@ -1147,11 +1221,28 @@ export async function getQuoteVariantById(variantId: string): Promise<QuoteVaria
 }
 
 // Get version by ID
-export async function getQuoteVersionById(versionId: string): Promise<QuoteVersion | null> {
+export async function getQuoteVersionById(versionId: string): Promise<QuoteVersion & { modifiedByUserName?: string | null } | null> {
   try {
     const [version] = await db
-      .select()
+      .select({
+        id: quoteVersions.id,
+        variantId: quoteVersions.variantId,
+        versionNumber: quoteVersions.versionNumber,
+        accepted: quoteVersions.accepted,
+        calculationDataLive: quoteVersions.calculationDataLive,
+        totalPrice: quoteVersions.totalPrice,
+        isLatest: quoteVersions.isLatest,
+        blocked: quoteVersions.blocked,
+        blockedBy: quoteVersions.blockedBy,
+        deleted: quoteVersions.deleted,
+        createdAt: quoteVersions.createdAt,
+        updatedAt: quoteVersions.updatedAt,
+        createdBy: quoteVersions.createdBy,
+        modifiedBy: quoteVersions.modifiedBy,
+        modifiedByUserName: users.name,
+      })
       .from(quoteVersions)
+      .leftJoin(users, eq(quoteVersions.modifiedBy, users.id))
       .where(and(eq(quoteVersions.id, versionId), eq(quoteVersions.deleted, false)))
       .limit(1);
 
