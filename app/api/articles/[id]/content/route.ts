@@ -17,7 +17,7 @@ export async function PUT(
         { 
           error: error.message,
           type: 'EDIT_LOCK_ERROR',
-          articleId: error.articleId,
+          resourceId: error.resourceId,
           lockedBy: error.lockedBy,
           lockedAt: error.lockedAt
         },

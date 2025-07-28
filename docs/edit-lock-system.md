@@ -2,7 +2,93 @@
 
 ## Overview
 
-The Edit Lock System prevents multiple users from editing the same resources (articles and blocks) simultaneously. It provides a DRY (Don't Repeat Yourself) solution with optimistic UI updates, automatic cleanup, and comprehensive user feedback.
+The Edit Lock System prevents multiple users from editing the same resources (articles, blocks, and quote versions) simultaneously. It provides a DRY (Don't Repeat Yourself) solution with optimistic UI updates, automatic cleanup, and comprehensive user feedback.
+
+### Generic Lock API Factory
+
+#### `lib/api/create-lock-routes.ts`
+- **Purpose**: Generic factory function that creates standardized lock API routes
+- **Usage**: Generates GET, POST, DELETE handlers for any lockable resource
+- **Benefits**: 
+  - Eliminates duplicate API route code
+  - Ensures consistent behavior across all resource types
+  - Centralizes lock logic and error handling
+  - Reduces maintenance overhead
+
+```typescript
+// Example usage for blocks
+import { createLockRoutes } from '@/lib/api/create-lock-routes';
+import { blocks } from '@/lib/db/schema';
+
+const { GET, POST, DELETE } = createLockRoutes({
+  table: blocks,
+  columns: {
+    id: blocks.id,
+    blocked: blocks.blocked,
+    blockedBy: blocks.blockedBy,
+  },
+  entityName: 'block',
+  messages: LOCK_ROUTE_CONFIGS.blocks,
+});
+```
+
+#### Supported Resource Types
+- **Articles**: `/api/articles/[id]/lock`
+- **Blocks**: `/api/blocks/[id]/lock`  
+- **Quote Versions**: `/api/quote-versions/[id]/lock`
+
+### Centralized Error Handling
+
+#### `lib/db/edit-lock-error.ts`
+- **Purpose**: Centralized `EditLockError` class for consistent error handling
+- **Features**:
+  - Generic `resourceId` property (works for all resource types)
+  - Consistent error messages and structure
+  - Proper TypeScript typing for all resource types
+
+```typescript
+export class EditLockError extends Error {
+  constructor(
+    message: string,
+    public readonly resourceId: string,
+    public readonly lockedBy: string | null = null,
+    public readonly lockedAt: string | null = null
+  ) {
+    super(message);
+    this.name = 'EditLockError';
+  }
+}
+```
+
+#### `lib/db/lock-validation.ts`
+- **Purpose**: Generic lock validation utility
+- **Features**:
+  - Reusable `checkResourceEditable()` function
+  - Works with any lockable resource type
+  - Consistent validation logic across all resources
+
+```typescript
+export function checkResourceEditable(
+  config: LockValidationConfig,
+  resourceId: string,
+  currentUserId: string
+): void {
+  // Generic lock validation logic
+  // Throws EditLockError if resource is locked by another user
+}
+```
+
+### Database Schema Consistency
+
+All lockable resources follow the same database schema pattern:
+
+```sql
+-- Common pattern for all lockable resources
+blocked TIMESTAMP,     -- UTC timestamp when locked (NULL when not locked)
+blockedBy UUID,        -- User ID who has the lock (REFERENCES auth.users(id))
+```
+
+This consistency enables the generic lock API factory to work seamlessly across all resource types.
 
 ## Architecture
 
@@ -14,10 +100,11 @@ The Edit Lock System prevents multiple users from editing the same resources (ar
    - Provides optimistic UI updates
    - Automatic cleanup on component unmount
 
-2. **API Endpoints**
+2. **Generic API Endpoints**
    - `/api/articles/[id]/lock` - GET, POST, DELETE
    - `/api/blocks/[id]/lock` - GET, POST, DELETE
    - `/api/quote-versions/[id]/lock` - GET, POST, DELETE
+   - All endpoints use the same generic factory
    - Authentication and conflict handling
    - User information retrieval
 

@@ -15,49 +15,25 @@ import { auditedArticleOperations, auditedBlockContentOperations, auditQueries, 
 import { changeHistory, users } from './schema';
 import articleCalculationConfig from '@/data/article-calculation-config.json';
 
-// Common error type for edit lock conflicts
-export class EditLockError extends Error {
-  constructor(
-    message: string,
-    public readonly articleId: string,
-    public readonly lockedBy: string | null = null,
-    public readonly lockedAt: string | null = null
-  ) {
-    super(message);
-    this.name = 'EditLockError';
-  }
-}
+// Import shared edit lock utilities
+import { EditLockError } from './edit-lock-error';
+import { checkResourceEditable, LOCK_CONFIGS } from './lock-validation';
+
+// Re-export for backward compatibility
+export { EditLockError };
 
 // Check if an article is editable by the current user
 async function checkArticleEditable(articleId: string): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new EditLockError('Benutzer nicht authentifiziert', articleId);
-  }
-
-  // Get article with lock info
-  const [article] = await db
-    .select({
+  await checkResourceEditable({
+    table: articles,
+    columns: {
       id: articles.id,
       blocked: articles.blocked,
       blockedBy: articles.blockedBy,
-    })
-    .from(articles)
-    .where(eq(articles.id, articleId));
-
-  if (!article) {
-    throw new Error('Artikel nicht gefunden');
-  }
-
-  // Check if article is locked by another user
-  if (article.blocked && article.blockedBy && article.blockedBy !== user.dbUser.id) {
-    throw new EditLockError(
-      'Artikel wird bereits von einem anderen Benutzer bearbeitet',
-      articleId,
-      article.blockedBy,
-      article.blocked
-    );
-  }
+    },
+    entityId: articleId,
+    ...LOCK_CONFIGS.articles,
+  });
 }
 
 export type ArticleWithCalculations = Article & {

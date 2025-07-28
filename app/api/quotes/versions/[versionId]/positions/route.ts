@@ -57,7 +57,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         { 
           error: error.message,
           type: 'EDIT_LOCK_ERROR',
-          quoteId: error.quoteId,
+          resourceId: error.resourceId,
           lockedBy: error.lockedBy,
           lockedAt: error.lockedAt
         },

@@ -56,7 +56,7 @@ export async function PUT(
         {
           error: error.message,
           type: 'EDIT_LOCK_ERROR',
-          blockId: error.blockId,
+          resourceId: error.resourceId,
           lockedBy: error.lockedBy,
           lockedAt: error.lockedAt,
         },
@@ -85,7 +85,7 @@ export async function DELETE(
         {
           error: error.message,
           type: 'EDIT_LOCK_ERROR',
-          blockId: error.blockId,
+          resourceId: error.resourceId,
           lockedBy: error.lockedBy,
           lockedAt: error.lockedAt,
         },

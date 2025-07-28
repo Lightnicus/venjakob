@@ -28,18 +28,12 @@ import { copyArticle } from './articles';
 import { copyBlock } from './blocks';
 import { getSalesOpportunityWithDetails, type SalesOpportunityWithDetails } from './sales-opportunities';
 
-// Common error type for edit lock conflicts
-export class EditLockError extends Error {
-  constructor(
-    message: string,
-    public readonly quoteId: string,
-    public readonly lockedBy: string | null = null,
-    public readonly lockedAt: string | null = null,
-  ) {
-    super(message);
-    this.name = 'EditLockError';
-  }
-}
+// Import shared edit lock utilities
+import { EditLockError } from './edit-lock-error';
+import { checkResourceEditable, LOCK_CONFIGS } from './lock-validation';
+
+// Re-export for backward compatibility
+export { EditLockError };
 
 export type QuoteWithDetails = Quote & {
   salesOpportunity: SalesOpportunityWithDetails;
@@ -103,34 +97,16 @@ async function checkQuoteEditable(quoteId: string): Promise<void> {
 
 // Check if a quote version is editable by the current user
 async function checkQuoteVersionEditable(versionId: string): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new EditLockError('Benutzer nicht authentifiziert', versionId);
-  }
-
-  // Get quote version with lock info
-  const [version] = await db
-    .select({
+  await checkResourceEditable({
+    table: quoteVersions,
+    columns: {
       id: quoteVersions.id,
       blocked: quoteVersions.blocked,
       blockedBy: quoteVersions.blockedBy,
-    })
-    .from(quoteVersions)
-    .where(eq(quoteVersions.id, versionId));
-
-  if (!version) {
-    throw new Error('Quote version not found');
-  }
-
-  // Check if quote version is locked by another user
-  if (version.blocked && version.blockedBy && version.blockedBy !== user.dbUser.id) {
-    throw new EditLockError(
-      'Quote version is being edited by another user',
-      versionId,
-      version.blockedBy,
-      version.blocked,
-    );
-  }
+    },
+    entityId: versionId,
+    ...LOCK_CONFIGS.quoteVersions,
+  });
 }
 
 // Fetch all quotes

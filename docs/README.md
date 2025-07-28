@@ -16,6 +16,7 @@ This is a Next.js 15 application for managing quotes, articles, blocks, and sale
 - **[Smart Dialog Flows](smart-dialog-flows.md)** - Advanced data-driven dialog sequences that adapt based on real-time data availability and user selections
 - **[Edit Lock System](edit-lock-system.md)** - Multi-user editing prevention system with optimistic UI updates and automatic cleanup
 - **[useEditLock Hook](use-edit-lock.md)** - Detailed documentation for the edit lock hook implementation and usage patterns
+- **[DRY Improvements](dry-improvements.md)** - Comprehensive documentation of the DRY refactoring improvements to the edit lock system
 
 ### Data Management
 - **[Quotes Save System](quotes-save-system-ui-flow.md)** - Comprehensive save system with batch operations, visual indicators, and change tracking
@@ -59,6 +60,12 @@ The system prevents multiple users from editing the same resources simultaneousl
 - Force override capability for authorized users
 - Comprehensive error handling and user feedback
 - Lock status display in management tables
+
+**DRY Architecture:**
+- **Generic Lock API Factory**: Single factory function generates lock routes for all resource types
+- **Centralized Error Handling**: Unified `EditLockError` class for consistent error handling
+- **Generic Lock Validation**: Reusable validation logic across all resource types
+- **Consistent Database Schema**: All lockable resources use the same `blocked`/`blockedBy` pattern
 
 **Quote Version Locks:**
 - Locks are applied at the quote version level

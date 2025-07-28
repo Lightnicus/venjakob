@@ -4,6 +4,23 @@
 
 The Edit Lock System provides a DRY (Don't Repeat Yourself) solution for preventing multiple users from editing the same dataset simultaneously. It uses optimistic UI updates for fast response times while maintaining data integrity through database locks.
 
+## DRY Architecture
+
+### Generic Lock API Factory
+- **Location**: `lib/api/create-lock-routes.ts`
+- **Purpose**: Single factory function that generates lock API routes for any resource type
+- **Benefits**: Consistent behavior, reduced maintenance, centralized logic
+
+### Centralized Error Handling
+- **Location**: `lib/db/edit-lock-error.ts`
+- **Purpose**: Unified error class for all lock-related conflicts
+- **Features**: Generic `resourceId` property, consistent error structure
+
+### Generic Lock Validation
+- **Location**: `lib/db/lock-validation.ts`
+- **Purpose**: Reusable validation logic for any lockable resource
+- **Usage**: `checkResourceEditable()` function works with all resource types
+
 ## Components
 
 ### 1. `useEditLock` Hook
@@ -12,9 +29,37 @@ The core hook that manages lock state and provides locking/unlocking functions.
 ### 2. `EditLockButton` Component
 A reusable UI component that handles all edit/lock interactions.
 
-### 3. API Endpoints
+### 3. Generic API Endpoints
 - `/api/articles/[id]/lock` - Lock management for articles
 - `/api/blocks/[id]/lock` - Lock management for blocks
+- `/api/quote-versions/[id]/lock` - Lock management for quote versions
+
+All endpoints use the same generic factory for consistent behavior.
+
+## Supported Resource Types
+
+The system now supports three resource types with identical behavior:
+
+```typescript
+type LockableResource = 'articles' | 'blocks' | 'quote-versions';
+```
+
+### Resource Type Examples
+
+#### Articles
+```typescript
+const { lockInfo } = useEditLock('articles', articleId);
+```
+
+#### Blocks  
+```typescript
+const { lockInfo } = useEditLock('blocks', blockId);
+```
+
+#### Quote Versions
+```typescript
+const { lockInfo } = useEditLock('quote-versions', versionId);
+```
 
 ## Quick Start
 
@@ -56,7 +101,7 @@ const MyComponent = () => {
 
   return (
     <EditLockButton
-      resourceType="articles" // or "blocks"
+      resourceType="articles" // or "blocks" or "quote-versions"
       resourceId="your-resource-id"
       isEditing={isEditing}
       isSaving={isSaving}

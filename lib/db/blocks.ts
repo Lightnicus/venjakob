@@ -12,18 +12,12 @@ import { getCurrentUser } from '@/lib/auth/server';
 import { auditedBlockOperations, auditedBlockContentOperations, auditQueries, ENTITY_TYPES } from './audit';
 import { changeHistory, users } from './schema';
 
-// Common error type for edit lock conflicts
-export class EditLockError extends Error {
-  constructor(
-    message: string,
-    public readonly blockId: string,
-    public readonly lockedBy: string | null = null,
-    public readonly lockedAt: string | null = null,
-  ) {
-    super(message);
-    this.name = 'EditLockError';
-  }
-}
+// Import shared edit lock utilities
+import { EditLockError } from './edit-lock-error';
+import { checkResourceEditable, LOCK_CONFIGS } from './lock-validation';
+
+// Re-export for backward compatibility
+export { EditLockError };
 
 export type BlockWithContent = Block & {
   blockContents: BlockContent[];
@@ -38,34 +32,16 @@ export type BlockWithContent = Block & {
 
 // Check if a block is editable by the current user
 async function checkBlockEditable(blockId: string): Promise<void> {
-  const user = await getCurrentUser();
-  if (!user) {
-    throw new EditLockError('Benutzer nicht authentifiziert', blockId);
-  }
-
-  // Get block with lock info
-  const [block] = await db
-    .select({
+  await checkResourceEditable({
+    table: blocks,
+    columns: {
       id: blocks.id,
       blocked: blocks.blocked,
       blockedBy: blocks.blockedBy,
-    })
-    .from(blocks)
-    .where(eq(blocks.id, blockId));
-
-  if (!block) {
-    throw new Error('Block nicht gefunden');
-  }
-
-  // Check if block is locked by another user
-  if (block.blocked && block.blockedBy && block.blockedBy !== user.dbUser.id) {
-    throw new EditLockError(
-      'Block wird bereits von einem anderen Benutzer bearbeitet',
-      blockId,
-      block.blockedBy,
-      block.blocked,
-    );
-  }
+    },
+    entityId: blockId,
+    ...LOCK_CONFIGS.blocks,
+  });
 }
 
 // Fetch all languages
