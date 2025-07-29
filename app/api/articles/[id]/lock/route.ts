@@ -5,9 +5,9 @@ import { articles } from '@/lib/db/schema';
 const lockRoutes = createLockRoutes({
   table: articles,
   columns: {
-    id: articles.id,
-    blocked: articles.blocked,
-    blockedBy: articles.blockedBy,
+        id: articles.id,
+        blocked: articles.blocked,
+        blockedBy: articles.blockedBy,
   },
   ...LOCK_ROUTE_CONFIGS.articles,
 });

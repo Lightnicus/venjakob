@@ -14,22 +14,22 @@ export async function POST() {
 
     // Unlock all resources locked by this user
     const unlockPromises = [
-      // Unlock all articles locked by this user
+    // Unlock all articles locked by this user
       db
-        .update(articles)
-        .set({
-          blocked: null,
-          blockedBy: null,
-        })
+      .update(articles)
+      .set({
+        blocked: null,
+        blockedBy: null,
+      })
         .where(eq(articles.blockedBy, dbUser.id)),
 
-      // Unlock all blocks locked by this user
+    // Unlock all blocks locked by this user
       db
-        .update(blocks)
-        .set({
-          blocked: null,
-          blockedBy: null,
-        })
+      .update(blocks)
+      .set({
+        blocked: null,
+        blockedBy: null,
+      })
         .where(eq(blocks.blockedBy, dbUser.id)),
 
       // Unlock all quote versions locked by this user

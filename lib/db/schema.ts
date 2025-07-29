@@ -403,11 +403,12 @@ export const quotePositions = pgTable(
       'article_or_block_check',
       sql`(${table.articleId} IS NOT NULL AND ${table.blockId} IS NULL) OR (${table.articleId} IS NULL AND ${table.blockId} IS NOT NULL)`,
     ),
-    // Ensure position number is unique within a variant and parent level
+    // Ensure position number is unique within a variant and parent level (excluding soft-deleted positions)
     versionPositionUnique: unique('version_position_unique').on(
       table.versionId,
       table.quotePositionParentId,
       table.positionNumber,
+      table.deleted,
     ),
     // Self-reference foreign key constraint
     quotePositionParentFK: foreignKey({

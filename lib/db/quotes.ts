@@ -1567,16 +1567,21 @@ export async function updateQuotePositionsOrder(
   await checkQuoteVersionEditable(versionId);
 
   await db.transaction(async (tx) => {
-    // Step 1: Set ALL positions in this version to temporary negative values
+    // Step 1: Set ALL non-deleted positions in this version to temporary negative values
     // This completely clears the unique constraint space for this version
     
-    // Get all positions for this version (including soft-deleted ones that may be causing conflicts)
+    // Get all non-deleted positions for this version
     const allVersionPositions = await tx
       .select({ id: quotePositions.id })
       .from(quotePositions)
-      .where(eq(quotePositions.versionId, versionId));
+      .where(
+        and(
+          eq(quotePositions.versionId, versionId),
+          eq(quotePositions.deleted, false)
+        )
+      );
     
-    // Set ALL positions to temporary negative values to clear constraint space
+    // Set ALL non-deleted positions to temporary negative values to clear constraint space
     for (let i = 0; i < allVersionPositions.length; i++) {
       const position = allVersionPositions[i];
       const tempValue = -(i + 1000); // Use large negative values to avoid conflicts
@@ -1589,12 +1594,13 @@ export async function updateQuotePositionsOrder(
         .where(
           and(
             eq(quotePositions.id, position.id),
-            eq(quotePositions.versionId, versionId)
+            eq(quotePositions.versionId, versionId),
+            eq(quotePositions.deleted, false)
           )
         );
     }
 
-    // Step 2: Update to final position numbers and parent relationships
+    // Step 2: Update to final position numbers and parent relationships (only non-deleted positions)
     for (const update of positionUpdates) {
       await tx
         .update(quotePositions)
@@ -1606,7 +1612,8 @@ export async function updateQuotePositionsOrder(
         .where(
           and(
             eq(quotePositions.id, update.id),
-            eq(quotePositions.versionId, versionId)
+            eq(quotePositions.versionId, versionId),
+            eq(quotePositions.deleted, false)
           )
         );
     }
@@ -1830,13 +1837,13 @@ export async function softDeleteQuotePosition(positionId: string): Promise<void>
       throw new Error('Position cannot be deleted because it has children');
     }
 
-    // Soft delete the position and use a unique negative position number to avoid constraint conflicts
-    const uniqueNegativeNumber = -Math.floor(Date.now() / 1000); // Use timestamp-based unique negative number
+    // Soft delete the position and use timestamp as position number
+    const timestamp = Math.floor(Date.now() / 1000); // Use timestamp as position number
     await db
       .update(quotePositions)
       .set({ 
         deleted: true,
-        positionNumber: uniqueNegativeNumber, // Use a unique negative number to avoid constraint conflicts
+        positionNumber: timestamp, // Use timestamp as position number
         updatedAt: new Date().toISOString()
       })
       .where(eq(quotePositions.id, positionId));

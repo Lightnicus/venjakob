@@ -5,12 +5,12 @@ import { blocks } from '@/lib/db/schema';
 const lockRoutes = createLockRoutes({
   table: blocks,
   columns: {
-    id: blocks.id,
-    blocked: blocks.blocked,
-    blockedBy: blocks.blockedBy,
+        id: blocks.id,
+        blocked: blocks.blocked,
+        blockedBy: blocks.blockedBy,
   },
   ...LOCK_ROUTE_CONFIGS.blocks,
-});
+    });
 
 // Export the standardized routes
 export const { GET, POST, DELETE } = lockRoutes; 
