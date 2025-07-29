@@ -21,6 +21,7 @@ import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { formatGermanDate } from '@/helper/date-formatter';
 import EditLockButton from '@/project_components/edit-lock-button';
+import { LoadingIndicator } from './loading-indicator';
 
 type QuoteDetailProps = {
   title: string;
@@ -448,7 +449,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         <TabsContent value="bloecke" className="flex-1 overflow-auto">
           {loadingPositions || loadingIds || loadingDisplayData ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500">Lade Angebotspositionen...</p>
+              <LoadingIndicator text="Lade Angebotspositionen..." variant="centered" />
             </div>
           ) : !variantLanguageId ? (
             <div className="flex items-center justify-center h-full">
@@ -481,7 +482,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           {offerPropsData ? (
             <OfferProperties {...offerPropsData} />
           ) : (
-            <div className="text-gray-500">Lade Angebotseigenschaften...</div>
+            <LoadingIndicator text="Lade Angebotseigenschaften..." variant="centered" />
           )}
         </TabsContent>
         <TabsContent

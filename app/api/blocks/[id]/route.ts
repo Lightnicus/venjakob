@@ -14,7 +14,7 @@ export async function GET(
   try {
     const { id } = await params;
     const block = await getBlockWithContent(id);
-    console.log('Block in API', block?.updatedAt);
+
 
     if (!block) {
       return NextResponse.json({ error: 'Block not found' }, { status: 404 });

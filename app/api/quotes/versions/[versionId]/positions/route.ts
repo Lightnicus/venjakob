@@ -21,7 +21,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     const body = await request.json();
     const { blockId, articleId, selectedNodeId } = body;
 
-    console.log('API received:', { versionId, blockId, articleId, selectedNodeId });
+
 
     // Validate that either blockId or articleId is provided, but not both
     if (!blockId && !articleId) {
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       newPosition = await addQuotePositionWithHierarchyForArticle(versionId, articleId, selectedNodeId);
     }
     
-    console.log('API created position:', newPosition);
+
     
     return NextResponse.json(newPosition, { status: 201 });
   } catch (error) {

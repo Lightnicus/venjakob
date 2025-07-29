@@ -705,7 +705,9 @@ The project provides comprehensive helper functions for database operations, org
 - Visual grip indicator (GripVertical icon) shows when drag is enabled
 - Chevron (>) and folder icons only show when node actually has children
 - Optimistic UI updates with database synchronization
-- Two-step database update to avoid constraint violations during reordering
+- Two-step database update to avoid constraint violations during reordering:
+  - Step 1: Set temporary negative position numbers and clear parent relationships
+  - Step 2: Set final position numbers and parent relationships
 - API endpoint: `PUT /api/quotes/versions/{versionId}/positions/reorder`
 
 **Right Panel Node Details**: When a node is selected in the tree, the right panel displays:

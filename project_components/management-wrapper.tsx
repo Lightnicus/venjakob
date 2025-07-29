@@ -2,6 +2,7 @@ import { ReactNode } from 'react';
 import { usePermissionGuard } from '@/hooks/use-permission-guard';
 import { AuthUser } from '@supabase/supabase-js';
 import { User as DbUser } from '@/lib/db/schema';
+import { LoadingIndicator } from './loading-indicator';
 
 interface ManagementWrapperProps {
   title: string;
@@ -18,9 +19,7 @@ const ManagementWrapper = ({ title, permission, loading, children }: ManagementW
     return (
       <div className="p-4">
         <h2 className="text-2xl font-bold mb-2">{title}</h2>
-        <div className="flex items-center justify-center py-8">
-          <div className="text-gray-500">Prüfe Berechtigungen...</div>
-        </div>
+        <LoadingIndicator text="Prüfe Berechtigungen..." variant="centered" />
       </div>
     );
   } else {
@@ -34,9 +33,7 @@ const ManagementWrapper = ({ title, permission, loading, children }: ManagementW
         return (
           <div className="p-4">
             <h2 className="text-2xl font-bold mb-2">{title}</h2>
-            <div className="flex items-center justify-center py-8">
-              <div className="text-gray-500">Lade Daten...</div>
-            </div>
+            <LoadingIndicator text="Lade Daten..." variant="centered" />
           </div>
         );
       }

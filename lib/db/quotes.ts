@@ -1567,19 +1567,28 @@ export async function updateQuotePositionsOrder(
   await checkQuoteVersionEditable(versionId);
 
   await db.transaction(async (tx) => {
-    // Step 1: Set all positions to temporary negative values to avoid unique constraint conflicts
-    // This clears the (version_id, position_number) unique constraint temporarily
-    for (let i = 0; i < positionUpdates.length; i++) {
-      const update = positionUpdates[i];
+    // Step 1: Set ALL positions in this version to temporary negative values
+    // This completely clears the unique constraint space for this version
+    
+    // Get all positions for this version (including soft-deleted ones that may be causing conflicts)
+    const allVersionPositions = await tx
+      .select({ id: quotePositions.id })
+      .from(quotePositions)
+      .where(eq(quotePositions.versionId, versionId));
+    
+    // Set ALL positions to temporary negative values to clear constraint space
+    for (let i = 0; i < allVersionPositions.length; i++) {
+      const position = allVersionPositions[i];
+      const tempValue = -(i + 1000); // Use large negative values to avoid conflicts
       await tx
         .update(quotePositions)
         .set({
-          positionNumber: -(i + 1), // Use negative values as temporary placeholders
+          positionNumber: tempValue,
           updatedAt: new Date().toISOString(),
         })
         .where(
           and(
-            eq(quotePositions.id, update.id),
+            eq(quotePositions.id, position.id),
             eq(quotePositions.versionId, versionId)
           )
         );
@@ -1821,11 +1830,13 @@ export async function softDeleteQuotePosition(positionId: string): Promise<void>
       throw new Error('Position cannot be deleted because it has children');
     }
 
-    // Soft delete the position
+    // Soft delete the position and use a unique negative position number to avoid constraint conflicts
+    const uniqueNegativeNumber = -Math.floor(Date.now() / 1000); // Use timestamp-based unique negative number
     await db
       .update(quotePositions)
       .set({ 
         deleted: true,
+        positionNumber: uniqueNegativeNumber, // Use a unique negative number to avoid constraint conflicts
         updatedAt: new Date().toISOString()
       })
       .where(eq(quotePositions.id, positionId));

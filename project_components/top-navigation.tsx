@@ -27,6 +27,7 @@ import {
 import { signOut } from '@/lib/auth/actions';
 import { useLoading } from './loading-provider';
 import { useUser } from '@/hooks/use-user';
+import { LoadingIndicator } from './loading-indicator';
 
 // Import tab content components - no longer needed here as they are imported in menu.tsx
 

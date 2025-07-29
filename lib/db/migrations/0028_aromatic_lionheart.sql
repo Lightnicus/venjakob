@@ -1,0 +1,1 @@
+ALTER TABLE "quote_positions" ALTER COLUMN "position_number" DROP NOT NULL;

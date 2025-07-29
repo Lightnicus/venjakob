@@ -357,6 +357,9 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
       const unlocked = await unlockResource();
       if (unlocked) {
         toast.success('Gespeichert und für andere freigegeben');
+        // Exit edit mode after successful save and unlock
+        setEditStartUpdatedAt(null);
+        onToggleEdit();
       } else {
         toast.error('Fehler beim Entsperren nach dem Speichern');
       }
