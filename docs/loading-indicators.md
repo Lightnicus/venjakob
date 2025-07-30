@@ -76,6 +76,8 @@ Global loading overlay that appears when any loading state is active.
 
 Automatically shows when `isAnyLoading()` returns true.
 
+**Usage:** Added to the root layout (`app/layout.tsx`) to provide global loading feedback for operations like logout.
+
 ## Migration Guide
 
 ### Before (Text-only loading)
@@ -143,6 +145,32 @@ if (loading) {
 
 - `ManagementWrapper` - Centered loading for management pages
 - `GlobalLoadingIndicator` - Fullscreen loading overlay
+- `TopNavigation` - Logout loading state with sitewide indicator
+- `MobileNavigation` - Logout loading state with sitewide indicator
+
+## Logout Loading Implementation
+
+The logout functionality in both `TopNavigation` and `MobileNavigation` components uses the sitewide loading indicator:
+
+```tsx
+const handleLogout = async () => {
+  try {
+    setLoading('logout', true);
+    await signOut();
+    // The signOut function will redirect to '/' automatically
+  } catch (error) {
+    console.error('Logout failed:', error);
+    // Fallback to manual redirect if signOut fails
+    router.push('/');
+  } finally {
+    setLoading('logout', false);
+  }
+};
+
+const isLoggingOut = isLoading('logout');
+```
+
+The logout button shows "Abmelden..." when loading and is disabled during the logout process. The `GlobalLoadingIndicator` provides a fullscreen overlay during logout operations.
 
 ## Future Improvements
 

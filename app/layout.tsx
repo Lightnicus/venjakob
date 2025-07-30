@@ -4,6 +4,7 @@ import './globals.css';
 import ShowNavigation from '../project_components/show-navigation';
 import { TabbedInterfaceProvider } from '@/project_components/tabbed-interface-provider';
 import { LoadingProvider } from '@/project_components/loading-provider';
+import { GlobalLoadingIndicator } from '@/project_components/global-loading-indicator';
 import { Toaster } from 'sonner';
 
 const geistSans = Geist({
@@ -34,6 +35,7 @@ export default function RootLayout({
         <LoadingProvider>
           <TabbedInterfaceProvider initialTabs={[]}>
             <ShowNavigation />
+            <GlobalLoadingIndicator />
             <Toaster 
               position="bottom-right"
               richColors
