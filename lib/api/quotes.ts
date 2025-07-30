@@ -132,6 +132,16 @@ export async function deleteQuoteAPI(quoteId: string): Promise<void> {
   }
 }
 
+// Delete a quote variant
+export async function deleteQuoteVariantAPI(variantId: string): Promise<void> {
+  const response = await fetch(`/api/quotes/variants/${variantId}`, {
+    method: 'DELETE',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to delete quote variant');
+  }
+}
+
 // Copy a quote
 export async function copyQuoteAPI(originalQuote: { id: string }): Promise<Quote> {
   const response = await fetch('/api/quotes/copy', {

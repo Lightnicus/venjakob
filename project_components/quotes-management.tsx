@@ -7,6 +7,7 @@ import {
   fetchVariantsList,
   saveQuotePropertiesAPI,
   deleteQuoteAPI,
+  deleteQuoteVariantAPI,
   createNewQuoteAPI,
   createQuoteWithVariantAndVersionAPI,
   copyQuoteAPI,
@@ -84,10 +85,10 @@ const QuotesManagement = () => {
 
   const handleDeleteVariant = async (variantId: string) => {
     try {
-      await deleteQuoteAPI(variantId);
+      await deleteQuoteVariantAPI(variantId);
       toast.success('Variante gelöscht');
       // Remove from local state immediately
-      setVariants(prev => prev.filter(variant => variant.id !== variantId));
+      setVariants(prev => prev.filter(v => v.id !== variantId));
     } catch (error) {
       console.error('Error deleting variant:', error);
       toast.error('Fehler beim Löschen der Variante');

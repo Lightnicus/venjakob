@@ -1852,4 +1852,67 @@ export async function softDeleteQuotePosition(positionId: string): Promise<void>
     console.error('Error soft deleting quote position:', error);
     throw error;
   }
+}
+
+// Soft delete a quote variant and all its versions and positions
+export async function softDeleteQuoteVariant(variantId: string): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    // Check if variant exists and is not already deleted
+    const [variant] = await db
+      .select()
+      .from(quoteVariants)
+      .where(and(eq(quoteVariants.id, variantId), eq(quoteVariants.deleted, false)));
+
+    if (!variant) {
+      throw new Error('Variante nicht gefunden');
+    }
+
+    await db.transaction(async (tx) => {
+      // 1. Soft delete the variant
+      await tx
+        .update(quoteVariants)
+        .set({ 
+          deleted: true, 
+          updatedAt: sql`NOW()`,
+          modifiedBy: user.dbUser.id
+        })
+        .where(eq(quoteVariants.id, variantId));
+
+      // 2. Soft delete all related quote versions for this variant
+      const versions = await tx
+        .select({ id: quoteVersions.id })
+        .from(quoteVersions)
+        .where(eq(quoteVersions.variantId, variantId));
+
+      for (const version of versions) {
+        await tx
+          .update(quoteVersions)
+          .set({ 
+            deleted: true, 
+            updatedAt: sql`NOW()`,
+            modifiedBy: user.dbUser.id
+          })
+          .where(eq(quoteVersions.id, version.id));
+
+        // 3. Soft delete all related quote positions for this version
+        await tx
+          .update(quotePositions)
+          .set({ 
+            deleted: true, 
+            updatedAt: sql`NOW()`
+          })
+          .where(eq(quotePositions.versionId, version.id));
+      }
+
+      // TODO: Add audit trail when audit operations are implemented for quote variants
+    });
+  } catch (error) {
+    console.error('Error soft deleting quote variant:', error);
+    throw error;
+  }
 } 

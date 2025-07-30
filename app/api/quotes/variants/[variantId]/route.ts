@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getQuoteVariantById } from '@/lib/db/quotes';
+import { getQuoteVariantById, softDeleteQuoteVariant } from '@/lib/db/quotes';
 
 export async function GET(
   request: NextRequest,
@@ -23,6 +23,29 @@ export async function GET(
     console.error('Error fetching variant:', error);
     return NextResponse.json(
       { error: 'Fehler beim Laden der Variante' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ variantId: string }> }
+) {
+  try {
+    const { variantId } = await params;
+    
+    if (!variantId) {
+      return NextResponse.json({ error: 'Varianten-ID ist erforderlich' }, { status: 400 });
+    }
+
+    await softDeleteQuoteVariant(variantId);
+    
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting variant:', error);
+    return NextResponse.json(
+      { error: 'Fehler beim Löschen der Variante' },
       { status: 500 }
     );
   }

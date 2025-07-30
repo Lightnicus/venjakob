@@ -680,6 +680,7 @@ The project provides comprehensive helper functions for database operations, org
 - `createQuoteVariant(variantData)` - Create new quote variant
 - `getNextVariantNumber(quoteId)` - Get next variant number (1, 2, 3, etc.) - returns integer
 - `createVariantForQuote(quoteId, languageId)` - Create new variant with auto-incremented number and first version
+- `softDeleteQuoteVariant(variantId)` - Soft delete variant and all its versions and positions
 
 #### Version Management
 - `getQuoteVersionsByVariant(variantId)` - Get versions for a variant with positions
