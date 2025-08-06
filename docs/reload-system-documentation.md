@@ -122,6 +122,10 @@ const ArticleDetail = ({ articleId }) => {
 - **BlockManagement**: Listens for `'blocks'` reload signals
 - **BlockDetail**: Triggers `'blocks'` reload when saved
 
+### Quote System
+- **QuotesManagement**: Listens for `'quotes'` reload signals
+- **QuoteDetail**: Triggers `'quotes'` reload when saved or when variants are copied
+
 ## Benefits
 
 1. **Real-time Synchronization**: Changes in one tab immediately reflect in other open tabs
@@ -132,6 +136,7 @@ const ArticleDetail = ({ articleId }) => {
 
 ## Usage Workflow
 
+### Article System Example
 1. User opens ArticleManagement tab (loads article list)
 2. User opens ArticleDetail tab for a specific article (tab shows "Artikel: Original Name")
 3. User edits the article name and other properties in ArticleDetail
@@ -140,6 +145,15 @@ const ArticleDetail = ({ articleId }) => {
 6. ArticleDetail triggers a reload signal for 'articles'
 7. ArticleManagement automatically reloads its data
 8. Updated article information is now visible in the management tab
+
+### Quote System Example
+1. User opens QuotesManagement tab (loads quote variants list)
+2. User opens QuoteDetail tab for a specific variant (tab shows quote details)
+3. User edits quote positions and saves the changes
+4. QuoteDetail triggers a reload signal for 'quotes'
+5. QuotesManagement automatically reloads its data
+6. Updated quote information is now visible in the management tab
+7. When user copies a variant, the new variant appears in the management tab immediately
 
 ## Extension
 

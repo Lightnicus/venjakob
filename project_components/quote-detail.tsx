@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
+import { useTabbedInterface, useTabReload } from '@/project_components/tabbed-interface-provider';
 import { toast } from 'sonner';
 import { Edit3, Save, RotateCcw, Loader2 } from 'lucide-react';
 import type { MyTreeNodeData } from '@/project_components/custom-node';
@@ -73,6 +73,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   } | null>(null);
 
   const { openNewTab } = useTabbedInterface();
+  
+  // Set up reload functionality for quotes - triggers reload in other tabs (like QuotesManagement)
+  const { triggerReload } = useTabReload('quotes', () => {});
 
   // Move change tracking to this level
   const {
@@ -255,6 +258,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     try {
       const copiedVariant = await copyQuoteVariantAPI(resolvedVariantId);
       
+      // Trigger reload for other tabs (like QuotesManagement) since we created a new variant
+      triggerReload();
+      
       // Open new tab with copied variant
       openNewTab({
         id: `variant-${copiedVariant.id}`,
@@ -320,6 +326,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
 
       await saveQuotePositions(resolvedVersionId, changesToSave);
       toast.success('Änderungen wurden erfolgreich gespeichert.');
+      
+      // Trigger reload for other tabs (like QuotesManagement)
+      triggerReload();
       
       // Update tree data with saved values
       setTreeData(prevData => {
