@@ -138,9 +138,14 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
     {
       accessorKey: 'quoteNumber',
       header: 'Angebots-Nr',
-      cell: ({ row }) => (
-        <span className="font-medium">{row.getValue('quoteNumber') || '-'}</span>
-      ),
+      cell: ({ row }) => {
+        const quoteNumber = row.getValue('quoteNumber') as string | null;
+        const variantNumber = row.original.variantNumber;
+        const displayValue = quoteNumber ? `${quoteNumber}-${variantNumber}` : `-${variantNumber}`;
+        return (
+          <span className="font-medium">{displayValue}</span>
+        );
+      },
     },
     {
       accessorKey: 'quoteTitle',
@@ -192,9 +197,18 @@ const QuotesListContent: FC<QuotesListTableProps> = ({
     {
       accessorKey: 'lastModifiedAt',
       header: 'Geändert am',
-      cell: ({ row }) => (
-        <span>{formatGermanDate(row.getValue('lastModifiedAt'))}</span>
-      ),
+      cell: ({ row }) => {
+        const dateValue = row.getValue('lastModifiedAt') as string;
+        const date = new Date(dateValue);
+        const formattedDate = date.toLocaleDateString('de-DE');
+        const formattedTime = date.toLocaleTimeString('de-DE', { 
+          hour: '2-digit', 
+          minute: '2-digit' 
+        });
+        return (
+          <span>{formattedDate} {formattedTime}</span>
+        );
+      },
     },
     {
       accessorKey: 'isLocked',

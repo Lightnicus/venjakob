@@ -681,6 +681,7 @@ The project provides comprehensive helper functions for database operations, org
 - `getNextVariantNumber(quoteId)` - Get next variant number (1, 2, 3, etc.) - returns integer
 - `createVariantForQuote(quoteId, languageId)` - Create new variant with auto-incremented number and first version
 - `softDeleteQuoteVariant(variantId)` - Soft delete variant and all its versions and positions
+- `copyQuoteVariant(variantId)` - Copy variant with all its versions and positions, preserving tree structure
 
 #### Version Management
 - `getQuoteVersionsByVariant(variantId)` - Get versions for a variant with positions
@@ -698,6 +699,10 @@ The project provides comprehensive helper functions for database operations, org
 - Hierarchical organization of quote content
 - Parent-child relationships for complex quote structures
 - Proper cascade deletion when parent positions are removed
+- **Tree Structure Preservation**: When copying variants, the complete hierarchical structure is preserved using a three-phase approach:
+  1. **Phase 1**: Insert all positions with temporary parent IDs and negative position numbers
+  2. **Phase 2**: Update parent references using ID mapping
+  3. **Phase 3**: Update position numbers to final sequential values
 
 **Drag & Drop Functionality**: The ArboristTree component in InteractiveSplitPanel supports drag and drop reordering with the following business rules:
 - Articles cannot have children (only blocks can have children)

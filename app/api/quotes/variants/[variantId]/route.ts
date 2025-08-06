@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getQuoteVariantById, softDeleteQuoteVariant } from '@/lib/db/quotes';
+import { getQuoteVariantById, softDeleteQuoteVariant, copyQuoteVariant } from '@/lib/db/quotes';
 
 export async function GET(
   request: NextRequest,
@@ -46,6 +46,29 @@ export async function DELETE(
     console.error('Error deleting variant:', error);
     return NextResponse.json(
       { error: 'Fehler beim Löschen der Variante' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ variantId: string }> }
+) {
+  try {
+    const { variantId } = await params;
+    
+    if (!variantId) {
+      return NextResponse.json({ error: 'Varianten-ID ist erforderlich' }, { status: 400 });
+    }
+
+    const copiedVariant = await copyQuoteVariant(variantId);
+    
+    return NextResponse.json(copiedVariant);
+  } catch (error) {
+    console.error('Error copying variant:', error);
+    return NextResponse.json(
+      { error: 'Fehler beim Kopieren der Variante' },
       { status: 500 }
     );
   }

@@ -8,6 +8,7 @@ import {
   saveQuotePropertiesAPI,
   deleteQuoteAPI,
   deleteQuoteVariantAPI,
+  copyQuoteVariantAPI,
   createNewQuoteAPI,
   createQuoteWithVariantAndVersionAPI,
   copyQuoteAPI,
@@ -215,30 +216,39 @@ const QuotesManagement = () => {
 
   const handleCopyVariant = async (variant: VariantListItem): Promise<VariantListItem> => {
     try {
-      const copiedQuote = await copyQuoteAPI({ id: variant.quoteId });
-      toast.success(`Variante "${variant.quoteTitle || variant.quoteNumber}" wurde kopiert`);
+      const copiedVariant = await copyQuoteVariantAPI(variant.id);
       
-      // Convert to VariantListItem format
-      const variantListItem: VariantListItem = {
-        id: copiedQuote.id,
-        quoteId: copiedQuote.id,
-        quoteNumber: copiedQuote.quoteNumber,
-        quoteTitle: copiedQuote.title,
-        variantNumber: variant.variantNumber,
-        variantDescriptor: variant.variantDescriptor,
-        languageId: variant.languageId,
-        languageLabel: variant.languageLabel,
-        salesOpportunityStatus: variant.salesOpportunityStatus,
-        clientForeignId: variant.clientForeignId,
-        clientName: variant.clientName,
-        latestVersionNumber: variant.latestVersionNumber,
-        lastModifiedBy: variant.lastModifiedBy,
-        lastModifiedByUserName: variant.lastModifiedByUserName,
-        lastModifiedAt: copiedQuote.updatedAt
+      // Use the quote number and variant number format for the toast message
+      const variantName = `${variant.quoteNumber || 'N/A'}-${variant.variantNumber}`;
+      toast.success(`Variante "${variantName}" wurde kopiert`);
+      
+      // Reload data to update the UI
+      await loadData();
+      
+      // Construct the new variant from the API response
+      const newVariant: VariantListItem = {
+        id: copiedVariant.id,
+        quoteId: copiedVariant.quoteId,
+        quoteNumber: variant.quoteNumber, // Same quote number as original
+        quoteTitle: variant.quoteTitle, // Same quote title as original
+        variantNumber: copiedVariant.variantNumber,
+        variantDescriptor: copiedVariant.variantDescriptor,
+        languageId: copiedVariant.languageId,
+        languageLabel: variant.languageLabel, // Same language label as original
+        salesOpportunityStatus: variant.salesOpportunityStatus, // Same status as original
+        clientForeignId: variant.clientForeignId, // Same client data as original
+        clientName: variant.clientName, // Same client data as original
+        latestVersionNumber: 1, // New variant starts with version 1
+        lastModifiedBy: null,
+        lastModifiedByUserName: null,
+        lastModifiedAt: copiedVariant.updatedAt,
+        isLocked: false, // New variant is not locked
+        lockedBy: null,
+        lockedByName: null,
+        lockedAt: null,
       };
       
-      setVariants(prev => [...prev, variantListItem]);
-      return variantListItem;
+      return newVariant;
     } catch (error) {
       console.error('Error copying variant:', error);
       toast.error('Fehler beim Kopieren der Variante');

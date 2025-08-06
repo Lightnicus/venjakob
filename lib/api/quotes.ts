@@ -142,6 +142,17 @@ export async function deleteQuoteVariantAPI(variantId: string): Promise<void> {
   }
 }
 
+// Copy a quote variant
+export async function copyQuoteVariantAPI(variantId: string): Promise<any> {
+  const response = await fetch(`/api/quotes/variants/${variantId}`, {
+    method: 'POST',
+  });
+  if (!response.ok) {
+    throw new Error('Failed to copy quote variant');
+  }
+  return response.json();
+}
+
 // Copy a quote
 export async function copyQuoteAPI(originalQuote: { id: string }): Promise<Quote> {
   const response = await fetch('/api/quotes/copy', {

@@ -1915,4 +1915,246 @@ export async function softDeleteQuoteVariant(variantId: string): Promise<void> {
     console.error('Error soft deleting quote variant:', error);
     throw error;
   }
+}
+
+// Helper function to sort positions by dependency (parents first, then children)
+const sortPositionsByDependency = (positions: QuotePosition[]): QuotePosition[] => {
+  // Create adjacency list for dependency graph
+  const adjacencyList = new Map<string, string[]>();
+  const inDegree = new Map<string, number>();
+  
+  // Initialize
+  positions.forEach(pos => {
+    adjacencyList.set(pos.id, []);
+    inDegree.set(pos.id, 0);
+  });
+  
+  // Build dependency graph
+  positions.forEach(pos => {
+    if (pos.quotePositionParentId) {
+      const parentId = pos.quotePositionParentId;
+      const children = adjacencyList.get(parentId) || [];
+      children.push(pos.id);
+      adjacencyList.set(parentId, children);
+      
+      // Increment in-degree for child
+      const currentInDegree = inDegree.get(pos.id) || 0;
+      inDegree.set(pos.id, currentInDegree + 1);
+    }
+  });
+  
+  // Topological sort (parents before children)
+  const sorted: QuotePosition[] = [];
+  const queue: string[] = [];
+  
+  // Add root nodes (positions with no parent)
+  positions.forEach(pos => {
+    if (!pos.quotePositionParentId) {
+      queue.push(pos.id);
+    }
+  });
+  
+  // Process queue
+  while (queue.length > 0) {
+    const currentId = queue.shift()!;
+    const currentPos = positions.find(p => p.id === currentId)!;
+    sorted.push(currentPos);
+    
+    // Add children to queue
+    const children = adjacencyList.get(currentId) || [];
+    children.forEach(childId => {
+      const childInDegree = inDegree.get(childId)! - 1;
+      inDegree.set(childId, childInDegree);
+      
+      if (childInDegree === 0) {
+        queue.push(childId);
+      }
+    });
+  }
+  
+  return sorted;
+};
+
+// Helper function to update position numbers to final values
+const updatePositionNumbers = async (
+  tx: any, 
+  versionId: string,
+  originalPositions: QuotePosition[],
+  positionIdMapping: Map<string, string>
+): Promise<void> => {
+  // Group original positions by parent ID to maintain order
+  const positionsByParent = new Map<string | null, QuotePosition[]>();
+  
+  originalPositions.forEach(pos => {
+    const parentId = pos.quotePositionParentId;
+    const group = positionsByParent.get(parentId) || [];
+    group.push(pos);
+    positionsByParent.set(parentId, group);
+  });
+  
+  // Update position numbers for each group, preserving original order
+  for (const [parentId, originalGroupPositions] of positionsByParent) {
+    // Sort by original position number to maintain order
+    const sortedOriginalPositions = originalGroupPositions.sort((a, b) => a.positionNumber - b.positionNumber);
+    
+    // Update position numbers in the correct order
+    for (let i = 0; i < sortedOriginalPositions.length; i++) {
+      const originalPosition = sortedOriginalPositions[i];
+      const newPositionId = positionIdMapping.get(originalPosition.id);
+      
+      if (newPositionId) {
+        await tx
+          .update(quotePositions)
+          .set({ positionNumber: i + 1 })
+          .where(eq(quotePositions.id, newPositionId));
+      }
+    }
+  }
+};
+
+// Helper function to copy positions with tree structure preservation
+const copyPositionsWithTreeStructure = async (
+  tx: any, 
+  originalVersionId: string, 
+  newVersionId: string
+): Promise<void> => {
+  // Get original positions
+  const originalPositions = await getQuotePositionsByVersion(originalVersionId);
+  
+  if (originalPositions.length === 0) {
+    return; // No positions to copy
+  }
+  
+  // Create ID mapping
+  const positionIdMapping = new Map<string, string>();
+  
+  // Sort by dependency (parents first)
+  const sortedPositions = sortPositionsByDependency(originalPositions);
+  
+  // Phase 1: Insert all positions with temporary parent IDs
+  for (let i = 0; i < sortedPositions.length; i++) {
+    const originalPosition = sortedPositions[i];
+    
+    // Use temporary negative position number to avoid unique constraint
+    const tempPositionNumber = -(i + 1000);
+    
+    const newPosition = await tx
+      .insert(quotePositions)
+      .values({
+        versionId: newVersionId,
+        title: originalPosition.title,
+        description: originalPosition.description,
+        quantity: originalPosition.quantity,
+        unitPrice: originalPosition.unitPrice,
+        totalPrice: originalPosition.totalPrice,
+        articleCost: originalPosition.articleCost,
+        articleId: originalPosition.articleId,
+        blockId: originalPosition.blockId,
+        positionNumber: tempPositionNumber, // Temporary negative number
+        quotePositionParentId: null, // Temporary null
+        deleted: false,
+      })
+      .returning();
+    
+    // Store mapping: originalId -> newId
+    positionIdMapping.set(originalPosition.id, newPosition[0].id);
+  }
+  
+  // Phase 2: Update parent references
+  for (const originalPosition of sortedPositions) {
+    if (originalPosition.quotePositionParentId) {
+      const newParentId = positionIdMapping.get(originalPosition.quotePositionParentId);
+      const newPositionId = positionIdMapping.get(originalPosition.id);
+      
+      if (newParentId && newPositionId) {
+        await tx
+          .update(quotePositions)
+          .set({ quotePositionParentId: newParentId })
+          .where(eq(quotePositions.id, newPositionId));
+      }
+    }
+  }
+  
+  // Phase 3: Update position numbers to final values
+  await updatePositionNumbers(tx, newVersionId, originalPositions, positionIdMapping);
+};
+
+// Copy a quote variant with all its versions and positions
+export async function copyQuoteVariant(variantId: string): Promise<QuoteVariant> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    // Get the original variant with all its versions and positions
+    const originalVariant = await getQuoteVariantById(variantId);
+    if (!originalVariant) {
+      throw new Error('Original variant not found');
+    }
+
+    // Get all versions for this variant
+    const originalVersions = await getQuoteVersionsByVariant(variantId);
+
+    const result = await db.transaction(async (tx) => {
+      // 1. Create a new variant with "(Kopie)" appended to the descriptor
+      const nextVariantNumber = await getNextVariantNumber(originalVariant.quoteId);
+      const newVariant = await tx
+        .insert(quoteVariants)
+        .values({
+          quoteId: originalVariant.quoteId,
+          variantDescriptor: `${originalVariant.variantDescriptor} (Kopie)`,
+          variantNumber: nextVariantNumber,
+          languageId: originalVariant.languageId,
+          isDefault: false, // New variant is never default
+          blocked: null,
+          blockedBy: null,
+          deleted: false,
+          createdBy: user.dbUser.id,
+          modifiedBy: user.dbUser.id,
+        })
+        .returning();
+
+      // 2. Copy all versions for this variant
+      for (const originalVersion of originalVersions) {
+        // Create new version
+        const nextVersionNumber = await getNextVersionNumber(newVariant[0].id);
+        const newVersion = await tx
+          .insert(quoteVersions)
+          .values({
+            variantId: newVariant[0].id,
+            versionNumber: nextVersionNumber,
+            isLatest: false, // Will be set to true for the last one
+            blocked: null,
+            blockedBy: null,
+            deleted: false,
+            createdBy: user.dbUser.id,
+            modifiedBy: user.dbUser.id,
+          })
+          .returning();
+
+        // 3. Copy positions with tree structure preservation
+        await copyPositionsWithTreeStructure(tx, originalVersion.id, newVersion[0].id);
+
+        // Set the last version as latest
+        if (originalVersion === originalVersions[originalVersions.length - 1]) {
+          await tx
+            .update(quoteVersions)
+            .set({ isLatest: true })
+            .where(eq(quoteVersions.id, newVersion[0].id));
+        }
+      }
+
+      // TODO: Add audit trail when audit operations are implemented for quote variants
+      
+      return newVariant[0];
+    });
+
+    // Return the newly created variant
+    const newVariantWithDetails = await getQuoteVariantById(result.id);
+    return newVariantWithDetails!;
+  } catch (error) {
+    console.error('Error copying quote variant:', error);
+    throw new Error('Failed to copy quote variant');
+  }
 } 
