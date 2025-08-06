@@ -27,6 +27,7 @@ This is a Next.js 15 application for managing quotes, articles, blocks, and sale
 
 ### Quote Management
 - **Quote Creation**: Create quotes with variants and versions
+- **Variant Copying**: Copy variants with preserved tree structure and position order
 - **Position Management**: Add and manage quote positions (articles and text blocks)
 - **Save Functionality**: Manual save with visual indicators for unsaved changes
 - **Drag & Drop**: Reorder positions with immediate database updates
@@ -86,11 +87,17 @@ The system prevents multiple users from editing the same resources simultaneousl
 - `POST /api/quote-versions/[id]/lock` - Lock version (with force override support)
 - `DELETE /api/quote-versions/[id]/lock` - Unlock version
 
+#### Quote Variant Operations
+- `DELETE /api/quotes/variants/[variantId]` - Soft delete variant and all associated data
+- `POST /api/quotes/variants/[variantId]` - Copy variant with preserved tree structure
+
 ### Database Functions
 - `updateQuotePosition()` - Update individual position
 - `updateQuotePositions()` - Batch update multiple positions
 - `updateQuotePositionsOrder()` - Update position order and hierarchy
 - `checkQuoteVersionEditable()` - Validate quote version locks
+- `softDeleteQuoteVariant()` - Soft delete variant and all associated data
+- `copyQuoteVariant()` - Copy variant with preserved tree structure and position order
 
 ### Components
 

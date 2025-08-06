@@ -14,9 +14,9 @@ import {
 } from '@/components/ui/select';
 import { useTabbedInterface } from '@/project_components/tabbed-interface-provider';
 import { toast } from 'sonner';
-import { Edit3, Save, RotateCcw } from 'lucide-react';
+import { Edit3, Save, RotateCcw, Loader2 } from 'lucide-react';
 import type { MyTreeNodeData } from '@/project_components/custom-node';
-import { fetchCompleteQuoteData, saveQuotePositions } from '@/lib/api/quotes';
+import { fetchCompleteQuoteData, saveQuotePositions, copyQuoteVariantAPI } from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { formatGermanDate } from '@/helper/date-formatter';
@@ -38,25 +38,40 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   versionId,
   language,
 }) => {
+  // UI State
   const [tab, setTab] = useState('bloecke');
   const [dropdownValue, setDropdownValue] = useState('Kalkulation');
   const [isEditing, setIsEditing] = useState(false);
+
+  // Data State
   const [treeData, setTreeData] = useState<MyTreeNodeData[]>([]);
+  const [offerPropsData, setOfferPropsData] = useState<any>(null);
+
+  // Loading States
   const [loadingPositions, setLoadingPositions] = useState(false);
+  const [loadingIds, setLoadingIds] = useState(false);
+  const [loadingDisplayData, setLoadingDisplayData] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isCopyingVariant, setIsCopyingVariant] = useState(false);
+
+  // Resolved IDs
   const [resolvedVariantId, setResolvedVariantId] = useState<string | undefined>(variantId);
   const [resolvedVersionId, setResolvedVersionId] = useState<string | undefined>(versionId);
-  const [loadingIds, setLoadingIds] = useState(false);
+
+  // Display Data
   const [quoteNumber, setQuoteNumber] = useState<string>('');
   const [variantNumber, setVariantNumber] = useState<string>('');
   const [versionNumber, setVersionNumber] = useState<string>('');
-  const [loadingDisplayData, setLoadingDisplayData] = useState(false);
-  const [offerPropsData, setOfferPropsData] = useState<any>(null);
-  const [isSaving, setIsSaving] = useState(false);
+
+  // Variant Configuration
   const [variantLanguageId, setVariantLanguageId] = useState<string | undefined>(undefined);
+
+  // Metadata
   const [lastChangedInfo, setLastChangedInfo] = useState<{
     userName: string | null;
     timestamp: string | null;
   } | null>(null);
+
   const { openNewTab } = useTabbedInterface();
 
   // Move change tracking to this level
@@ -141,12 +156,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       }
       
       if (completeData.version) {
-        setVersionNumber(completeData.version.versionNumber || '');
-      }
-      
-      // Set offer properties data
-      if (completeData.offerPropsData) {
-        setOfferPropsData(completeData.offerPropsData);
+        setVersionNumber(completeData.version.versionNumber?.toString() || '');
       }
       
       // Set last changed information from version data
@@ -165,6 +175,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         setTreeData(transformedData);
       } else {
         setTreeData([]);
+      }
+      
+      // Set offer properties data
+      if (completeData.offerPropsData) {
+        setOfferPropsData(completeData.offerPropsData);
       }
       
     } catch (error) {
@@ -230,22 +245,31 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     }
   }, [quoteId, resolvedVersionId, variantId]);
 
-  const handleCreateVariant = () => {
-    const newVariantId = resolvedVariantId ? `${resolvedVariantId}-neu` : 'V1';
-    openNewTab({
-      id: `angebot-variante-${Date.now()}`,
-      title: `${title} (${newVariantId})`,
-      content: (
-        <QuoteDetail
-          title={title}
-          quoteId={quoteId}
-          variantId={newVariantId}
-          versionId={resolvedVersionId}
-          language={language}
-        />
-      ),
-      closable: true,
-    });
+  const handleCreateVariant = async () => {
+    if (!resolvedVariantId) {
+      toast.error('Keine Variante zum Kopieren verfügbar.');
+      return;
+    }
+
+    setIsCopyingVariant(true);
+    try {
+      const copiedVariant = await copyQuoteVariantAPI(resolvedVariantId);
+      
+      // Open new tab with copied variant
+      openNewTab({
+        id: `variant-${copiedVariant.id}`,
+        title: `${title} - Variante ${copiedVariant.variantNumber}`,
+        content: <QuoteDetail title={title} quoteId={quoteId} variantId={copiedVariant.id} />,
+        closable: true
+      });
+
+      toast.success(`Variante "${title} - ${copiedVariant.variantNumber}" wurde kopiert`);
+    } catch (error) {
+      console.error('Error copying variant:', error);
+      toast.error('Fehler beim Kopieren der Variante');
+    } finally {
+      setIsCopyingVariant(false);
+    }
   };
 
   const handlePublishClick = () => {
@@ -351,9 +375,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           {loadingIds || loadingDisplayData ? (
             'Lade Angebotsdaten...'
           ) : quoteNumber && variantNumber && versionNumber ? (
-            `Angebot ${quoteNumber}-${variantNumber} v${versionNumber}`
+            `${quoteNumber}-${variantNumber}-${versionNumber}`
           ) : (
-            title
+            'Angebot'
           )}
         </h2>
         {language && (
@@ -410,8 +434,16 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
             tabIndex={0}
             aria-label="Variante erstellen"
             onClick={handleCreateVariant}
+            disabled={isCopyingVariant}
           >
-            Variante erstellen
+            {isCopyingVariant ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Kopiere Variante...
+              </>
+            ) : (
+              'Variante erstellen'
+            )}
           </Button>
         </div>
       </div>
