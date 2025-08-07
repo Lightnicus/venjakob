@@ -2,6 +2,7 @@ import { FC, useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ManagedDialog } from '@/project_components/managed-dialog';
+import { LoadingIndicator } from '@/project_components/loading-indicator';
 import { useDialogManager } from './dialog-manager';
 import SalesOpportunitiesTable, {
   SaleChance,
@@ -10,11 +11,13 @@ import SalesOpportunitiesTable, {
 type ChooseSalesOpportunityDialogProps = {
   data?: SaleChance[];
   onWeiter?: (selectedChance: SaleChance) => void;
+  isLoading?: boolean;
 };
 
 const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
   data = [],
   onWeiter,
+  isLoading = false,
 }) => {
   const [selectedChance, setSelectedChance] = useState<SaleChance | null>(null);
   const [showAllOpportunities, setShowAllOpportunities] = useState(false);
@@ -64,7 +67,7 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
     <Button
       type="button"
       aria-label="Weiter"
-      disabled={!selectedChance || !isValidSelection}
+      disabled={!selectedChance || !isValidSelection || isLoading}
       onClick={handleWeiter}
     >
       Weiter
@@ -73,6 +76,9 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
 
   // Get dialog title based on filter state
   const getDialogTitle = () => {
+    if (isLoading) {
+      return 'Verkaufschance auswählen';
+    }
     if (showAllOpportunities) {
       return `Verkaufschance auswählen (${filteredData.length} verfügbar)`;
     }
@@ -92,6 +98,7 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
           <Checkbox 
             checked={showAllOpportunities}
             onCheckedChange={handleCheckboxChange}
+            disabled={isLoading}
             aria-label="Zeige alle Verkaufschancen an" 
             tabIndex={0} 
           />
@@ -99,7 +106,13 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
         </label>
       </div>
       <div className="py-2">
-        {filteredData.length === 0 ? (
+        {isLoading ? (
+          <LoadingIndicator 
+            text="Verkaufschancen werden geladen..." 
+            variant="centered" 
+            size="md"
+          />
+        ) : filteredData.length === 0 ? (
           <div className="flex items-center justify-center py-8 text-gray-500">
             {showAllOpportunities 
               ? 'Keine Verkaufschancen verfügbar.'

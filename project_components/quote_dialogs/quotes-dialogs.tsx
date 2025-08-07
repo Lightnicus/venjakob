@@ -228,6 +228,7 @@ const ChooseSalesOpportunityDialogComponent: FC<{
       <ChooseSalesOpportunityDialog
         data={[]}
         onWeiter={handleWeiter}
+        isLoading={true}
       />
     );
   }
@@ -236,6 +237,7 @@ const ChooseSalesOpportunityDialogComponent: FC<{
     <ChooseSalesOpportunityDialog
       data={salesOpportunities}
       onWeiter={handleWeiter}
+      isLoading={false}
     />
   );
 };

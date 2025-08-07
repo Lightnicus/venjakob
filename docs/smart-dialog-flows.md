@@ -142,6 +142,7 @@ The `ChooseSalesOpportunityDialog` implements intelligent filtering to improve u
 const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
   data = [],
   onWeiter,
+  isLoading = false,
 }) => {
   const [showAllOpportunities, setShowAllOpportunities] = useState(false);
   
@@ -166,10 +167,16 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
         <Checkbox 
           checked={showAllOpportunities}
           onCheckedChange={setShowAllOpportunities}
+          disabled={isLoading}
         />
         <span>Zeige alle Verkaufschancen an</span>
       </div>
-      {filteredData.length === 0 ? (
+      {isLoading ? (
+        <LoadingIndicator 
+          text="Verkaufschancen werden geladen..." 
+          variant="centered" 
+        />
+      ) : filteredData.length === 0 ? (
         <EmptyState message="Es sind derzeit keine Verkaufschancen ohne Angebote verfügbar." />
       ) : (
         <SalesOpportunitiesTable data={filteredData} />
@@ -186,6 +193,7 @@ const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
 - **Visual Feedback**: Disabled rows are visually distinct
 - **Empty State**: Clear messaging when no opportunities match criteria
 - **Dynamic Title**: Dialog title reflects current filter state and count
+- **Loading State**: Proper loading indicator while data is being fetched
 
 ### 4. Dialog Configuration Pattern
 
