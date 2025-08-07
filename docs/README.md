@@ -107,3 +107,4 @@ The system prevents multiple users from editing the same resources simultaneousl
 - **`OfferPositionText`**: Text position editor with change tracking
 - **`OfferPositionArticle`**: Article position editor with change tracking
 - **`EditLockButton`**: Lock management component for quote versions
+- **`QuotesListTable`**: Quote variants management table with reduced mode support - [Documentation](quotes-list-table.md)

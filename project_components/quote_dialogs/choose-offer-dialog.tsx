@@ -1,28 +1,72 @@
 import { ManagedDialog } from '@/project_components/managed-dialog';
-import { OffersTable } from '@/project_components/offers-table';
+import QuotesListTable from '@/project_components/quotes-list-table';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { FC, useState } from 'react';
+import { FC, useState, useEffect } from 'react';
 import { useDialogManager } from './dialog-manager';
+import type { Language } from '@/lib/db/schema';
+import { fetchLanguages } from '@/lib/api/blocks';
+import { fetchVariantsList } from '@/lib/api/quotes';
+import { LoadingIndicator } from '@/project_components/loading-indicator';
 
-type Offer = {
+type VariantListItem = {
   id: string;
-  [key: string]: any;
+  quoteId: string;
+  quoteNumber: string | null;
+  quoteTitle: string | null;
+  variantNumber: number;
+  variantDescriptor: string;
+  languageId: string;
+  languageLabel: string | null;
+  salesOpportunityStatus: string | null;
+  clientForeignId: string | null;
+  clientName: string | null;
+  latestVersionNumber: number;
+  lastModifiedBy: string | null;
+  lastModifiedByUserName: string | null;
+  lastModifiedAt: string;
+  isLocked?: boolean;
+  lockedBy?: string | null;
+  lockedByName?: string | null;
+  lockedAt?: string | null;
 };
 
 type ChooseOfferDialogProps = {
-  onWeiter?: (selectedOffer?: Offer) => void;
+  onWeiter?: (selectedVariant?: VariantListItem) => void;
 };
 
 const ChooseOfferDialog: FC<ChooseOfferDialogProps> = ({ 
   onWeiter 
 }) => {
-  const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null);
+  const [selectedVariant, setSelectedVariant] = useState<VariantListItem | null>(null);
+  const [variants, setVariants] = useState<VariantListItem[]>([]);
+  const [languages, setLanguages] = useState<Language[]>([]);
+  const [loading, setLoading] = useState(true);
   const { closeDialog } = useDialogManager();
 
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const [variantsData, languagesData] = await Promise.all([
+          fetchVariantsList(),
+          fetchLanguages()
+        ]);
+        setVariants(variantsData);
+        setLanguages(languagesData);
+      } catch (error) {
+        console.error('Error loading data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
+
   const handleWeiter = () => {
-    if (onWeiter && selectedOffer) {
-      onWeiter(selectedOffer);
+    if (onWeiter && selectedVariant) {
+      onWeiter(selectedVariant);
     } else {
       closeDialog();
     }
@@ -32,7 +76,7 @@ const ChooseOfferDialog: FC<ChooseOfferDialogProps> = ({
     <Button 
       type="button" 
       aria-label="Weiter" 
-      disabled={!selectedOffer}
+      disabled={!selectedVariant}
       onClick={handleWeiter}
     >
       Weiter
@@ -54,11 +98,24 @@ const ChooseOfferDialog: FC<ChooseOfferDialogProps> = ({
         </label>
       </div>
       <div className="py-2">
-        <OffersTable 
-          reducedMode 
-          selectMode 
-          onSelectOffer={setSelectedOffer} 
-        />
+        {loading || variants.length === 0 ? (
+          <LoadingIndicator 
+            text="Lade Angebote..." 
+            variant="centered" 
+            size="md"
+          />
+        ) : (
+          <QuotesListTable 
+            data={variants}
+            languages={languages}
+            onSaveQuoteProperties={async () => {}}
+            onDeleteVariant={async () => {}}
+            onCreateQuote={async () => variants[0]}
+            onCopyVariant={async () => variants[0]}
+            reducedMode={true}
+            onVariantSelect={setSelectedVariant}
+          />
+        )}
       </div>
     </ManagedDialog>
   );
