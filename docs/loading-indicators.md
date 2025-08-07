@@ -78,6 +78,85 @@ Automatically shows when `isAnyLoading()` returns true.
 
 **Usage:** Added to the root layout (`app/layout.tsx`) to provide global loading feedback for operations like logout.
 
+## Button Loading States
+
+### Standard Button Loading Pattern
+
+For buttons that perform async operations, use the `Loader2` icon from Lucide React with the `animate-spin` class. This is the preferred pattern throughout the codebase.
+
+**Import:**
+```tsx
+import { Loader2 } from 'lucide-react';
+```
+
+**Standard Pattern:**
+```tsx
+<Button onClick={handleSave} disabled={isSaving}>
+  {isSaving ? (
+    <>
+      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+      Speichern...
+    </>
+  ) : (
+    <>
+      <Save className="h-4 w-4 mr-2" />
+      Speichern
+    </>
+  )}
+</Button>
+```
+
+**Key Points:**
+- Use `Loader2` icon with `animate-spin` class
+- Standard size: `h-4 w-4` (16px)
+- Standard spacing: `mr-2` (8px margin-right)
+- Disable button during loading: `disabled={isSaving}`
+- Show loading text: "Speichern..." (or appropriate action)
+
+**Examples from the codebase:**
+- `QuoteDetail` - Variant creation button
+- `EditLockButton` - Save button
+- `ArticleDetail` - Loading states
+- `BlockDetail` - Loading states
+- `RoleDetail` - Save button
+
+### ❌ Avoid Using LoadingIndicator in Buttons
+
+Don't use the `LoadingIndicator` component inside buttons as it's designed for larger content areas:
+
+```tsx
+// ❌ Don't do this
+<Button disabled={isSaving}>
+  {isSaving ? (
+    <>
+      <LoadingIndicator className="h-4 w-4 mr-2" />
+      Speichern...
+    </>
+  ) : (
+    'Speichern'
+  )}
+</Button>
+```
+
+### ✅ Use Loader2 Icon Instead
+
+```tsx
+// ✅ Do this
+<Button disabled={isSaving}>
+  {isSaving ? (
+    <>
+      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+      Speichern...
+    </>
+  ) : (
+    <>
+      <Save className="h-4 w-4 mr-2" />
+      Speichern
+    </>
+  )}
+</Button>
+```
+
 ## Migration Guide
 
 ### Before (Text-only loading)
@@ -105,12 +184,14 @@ if (loading) {
 
 ### After (With spinner in buttons)
 ```tsx
+import { Loader2 } from 'lucide-react';
+
 <Button disabled={loading}>
   {loading ? (
-    <div className="flex items-center gap-2">
-      <LoadingIndicator text="" size="sm" variant="inline" />
-      <span>Loading...</span>
-    </div>
+    <>
+      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+      Loading...
+    </>
   ) : (
     'Submit'
   )}
@@ -141,12 +222,30 @@ if (loading) {
    - Screen readers will announce the loading text
    - Use semantic HTML structure
 
+5. **Button loading states:**
+   - Use `Loader2` icon with `animate-spin` class
+   - Standard size: `h-4 w-4`
+   - Standard spacing: `mr-2`
+   - Always disable button during loading
+   - Show descriptive loading text
+
 ## Components Using LoadingIndicator
 
 - `ManagementWrapper` - Centered loading for management pages
 - `GlobalLoadingIndicator` - Fullscreen loading overlay
 - `TopNavigation` - Logout loading state with sitewide indicator
 - `MobileNavigation` - Logout loading state with sitewide indicator
+
+## Components Using Loader2 for Button Loading
+
+- `QuoteDetail` - Variant creation button
+- `EditLockButton` - Save button
+- `ArticleDetail` - Loading states
+- `BlockDetail` - Loading states
+- `RoleDetail` - Save button
+- `SalesOpportunityDetail` - Save button
+- `PermissionDetail` - Save button
+- `UserDetail` - Save button
 
 ## Logout Loading Implementation
 

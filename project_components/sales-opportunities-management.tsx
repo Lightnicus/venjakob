@@ -30,8 +30,9 @@ const SalesOpportunitiesManagement = () => {
     }
   }, []);
 
-  // Set up reload functionality for sales opportunities
+  // Set up reload functionality for sales opportunities (listen for both plural and singular)
   useTabReload('sales-opportunities', loadSalesOpportunities);
+  useTabReload('sales-opportunity', loadSalesOpportunities);
 
   // Load data on mount
   useEffect(() => {

@@ -1,14 +1,16 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Edit, Save, X } from 'lucide-react';
+import { Edit, Save, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchSalesOpportunity, saveSalesOpportunityPropertiesAPI } from '@/lib/api/sales-opportunities';
 import { fetchLanguages } from '@/lib/api/blocks';
 import type { SalesOpportunityWithDetails } from '@/lib/db/sales-opportunities';
 import type { SalesOpportunity, Language } from '@/lib/db/schema';
+import { useTabReload, useTabTitle } from '@/project_components/tabbed-interface-provider';
+import { LoadingIndicator } from '@/project_components/loading-indicator';
 
 interface SalesOpportunityDetailProps {
   salesOpportunityId: string;
@@ -19,7 +21,15 @@ const SalesOpportunityDetail: React.FC<SalesOpportunityDetailProps> = ({ salesOp
   const [languages, setLanguages] = useState<Language[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [editedData, setEditedData] = useState<Partial<SalesOpportunity>>({});
+  const initialTitleSetRef = useRef(false);
+
+  // Set up reload functionality - triggers reload in other tabs (like SalesOpportunitiesManagement)
+  const { triggerReload } = useTabReload('sales-opportunity', () => {});
+  
+  // Set up tab title functionality
+  const { updateTitle } = useTabTitle(`verkaufschance-${salesOpportunityId}`);
 
   // Load sales opportunity data and languages
   useEffect(() => {
@@ -43,6 +53,14 @@ const SalesOpportunityDetail: React.FC<SalesOpportunityDetailProps> = ({ salesOp
     loadData();
   }, [salesOpportunityId]);
 
+  // Set initial tab title when data loads (only once)
+  useEffect(() => {
+    if (salesOpportunity?.keyword && !initialTitleSetRef.current) {
+      updateTitle(`Verkaufschance: ${salesOpportunity.keyword}`);
+      initialTitleSetRef.current = true;
+    }
+  }, [salesOpportunity?.keyword, updateTitle]);
+
   const handleEdit = () => {
     if (salesOpportunity) {
       setEditedData({
@@ -60,12 +78,22 @@ const SalesOpportunityDetail: React.FC<SalesOpportunityDetailProps> = ({ salesOp
     if (!salesOpportunity) return;
 
     try {
+      setIsSaving(true);
       await saveSalesOpportunityPropertiesAPI(salesOpportunity.id, editedData);
       
       // Update local state
       setSalesOpportunity(prev => prev ? { ...prev, ...editedData } : null);
       setIsEditing(false);
       setEditedData({});
+      
+      // Update tab title if keyword changed
+      if (editedData.keyword && editedData.keyword !== salesOpportunity.keyword) {
+        updateTitle(`Verkaufschance: ${editedData.keyword}`);
+      }
+      
+      // Trigger reload for other tabs (like SalesOpportunitiesManagement)
+      triggerReload();
+      
       toast.success('Verkaufschance erfolgreich gespeichert');
     } catch (error: any) {
       if (error.type === 'EDIT_LOCK_ERROR') {
@@ -73,6 +101,8 @@ const SalesOpportunityDetail: React.FC<SalesOpportunityDetailProps> = ({ salesOp
       } else {
         toast.error('Fehler beim Speichern der Verkaufschance');
       }
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -95,7 +125,7 @@ const SalesOpportunityDetail: React.FC<SalesOpportunityDetailProps> = ({ salesOp
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
-        <div className="text-gray-500">Lade Verkaufschance...</div>
+        <LoadingIndicator />
       </div>
     );
   }
@@ -119,17 +149,26 @@ const SalesOpportunityDetail: React.FC<SalesOpportunityDetailProps> = ({ salesOp
         </div>
         <div className="flex gap-2">
           {!isEditing ? (
-            <Button onClick={handleEdit} variant="outline">
+            <Button onClick={handleEdit} variant="outline" disabled={isSaving}>
               <Edit className="h-4 w-4 mr-2" />
               Bearbeiten
             </Button>
           ) : (
             <>
-              <Button onClick={handleSave} variant="default">
-                <Save className="h-4 w-4 mr-2" />
-                Speichern
+              <Button onClick={handleSave} variant="default" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Speichern...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4 mr-2" />
+                    Speichern
+                  </>
+                )}
               </Button>
-              <Button onClick={handleCancel} variant="outline">
+              <Button onClick={handleCancel} variant="outline" disabled={isSaving}>
                 <X className="h-4 w-4 mr-2" />
                 Abbrechen
               </Button>
