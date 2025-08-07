@@ -134,13 +134,60 @@ const ChooseSalesOpportunityDialog: FC<{
 };
 ```
 
-**Key Points:**
-- Receives context through `dialogData` prop
-- Routes based on both context and user selection
-- Passes enriched context to next dialog
-- Makes data-aware decisions for each specific selection
+### 3. Smart Filtering Pattern
 
-### 3. Dialog Configuration Pattern
+The `ChooseSalesOpportunityDialog` implements intelligent filtering to improve user experience:
+
+```tsx
+const ChooseSalesOpportunityDialog: FC<ChooseSalesOpportunityDialogProps> = ({
+  data = [],
+  onWeiter,
+}) => {
+  const [showAllOpportunities, setShowAllOpportunities] = useState(false);
+  
+  // Filter data based on checkbox state
+  const filteredData = useMemo(() => {
+    if (showAllOpportunities) {
+      return data; // Show all but disable selection of opportunities with quotes
+    }
+    return data.filter(opportunity => opportunity.angebote === 0); // Only show opportunities without quotes
+  }, [data, showAllOpportunities]);
+
+  const handleRowSelect = (chance: SaleChance) => {
+    // Only allow selection of opportunities without quotes
+    if (chance.angebote === 0) {
+      setSelectedChance(chance);
+    }
+  };
+
+  return (
+    <ManagedDialog title={getDialogTitle()}>
+      <div className="flex justify-end mb-2">
+        <Checkbox 
+          checked={showAllOpportunities}
+          onCheckedChange={setShowAllOpportunities}
+        />
+        <span>Zeige alle Verkaufschancen an</span>
+      </div>
+      {filteredData.length === 0 ? (
+        <EmptyState message="Es sind derzeit keine Verkaufschancen ohne Angebote verfügbar." />
+      ) : (
+        <SalesOpportunitiesTable data={filteredData} />
+      )}
+    </ManagedDialog>
+  );
+};
+```
+
+**Key Features:**
+- **Default Filter**: Shows only opportunities without quotes by default
+- **Optional Override**: Checkbox allows viewing all opportunities
+- **Selection Prevention**: Opportunities with quotes cannot be selected even when visible
+- **Visual Feedback**: Disabled rows are visually distinct
+- **Empty State**: Clear messaging when no opportunities match criteria
+- **Dynamic Title**: Dialog title reflects current filter state and count
+
+### 4. Dialog Configuration Pattern
 
 ```tsx
 const SMART_DIALOGS = {
@@ -193,6 +240,7 @@ const createSmartDialogComponents = (onComplete: () => Promise<any>) => [
 - **No Confusion**: Users never see options that don't apply to their data
 - **Better Guidance**: Clear error messages when prerequisites are missing
 - **Consistent Loading**: Professional loading states throughout the flow
+- **Smart Filtering**: Only relevant opportunities shown by default
 
 ### Developer Experience  
 - **Maintainable**: Each dialog has clear responsibilities
@@ -202,8 +250,8 @@ const createSmartDialogComponents = (onComplete: () => Promise<any>) => [
 
 ### Performance
 - **Parallel Loading**: Multiple data sources fetched simultaneously
-- **Smart Caching**: Leverage existing data where possible
-- **Minimal Re-renders**: Efficient state management
+- **Frontend Filtering**: Instant filtering without additional API calls
+- **Efficient Rendering**: Only necessary components rendered
 
 ## Testing Smart Flows
 

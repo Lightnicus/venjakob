@@ -55,7 +55,10 @@ const SalesOpportunitiesTable = ({
       const numericIndex = parseInt(selectedRowIndex, 10);
       if (numericIndex >= 0 && numericIndex < data.length) {
         const chance = data[numericIndex];
-        onRowSelect(chance);
+        // Only call onRowSelect if the opportunity has no quotes
+        if (chance.angebote === 0) {
+          onRowSelect(chance);
+        }
       }
     }
   }, [selectedRowIndex, data, onRowSelect]);
@@ -100,84 +103,47 @@ const SalesOpportunitiesTable = ({
       {
         accessorKey: 'titel',
         header: 'Titel',
-        cell: ({ row }: { row: Row<SaleChance> }) => (
-          <Link
-            href="#"
-            tabIndex={0}
-            aria-label={`Details zu ${row.original.titel} anzeigen`}
-            className="text-blue-600 hover:underline"
-            onClick={e => {
-              e.preventDefault();
-              e.stopPropagation(); // Prevent row click if link is interactive
-              handleOpenSalesOpportunityDetails(row.original.titel);
-            }}
-            onKeyDown={e => {
-              if (e.key === 'Enter' || e.key === ' ') {
+        cell: ({ row }: { row: Row<SaleChance> }) => {
+          const isDisabled = row.original.angebote > 0;
+          return (
+            <Link
+              href="#"
+              tabIndex={isDisabled ? -1 : 0}
+              aria-label={`Details zu ${row.original.titel} anzeigen`}
+              className={`${isDisabled ? 'text-gray-400 cursor-not-allowed' : 'text-blue-600 hover:underline'}`}
+              onClick={e => {
                 e.preventDefault();
-                e.stopPropagation();
-                handleOpenSalesOpportunityDetails(row.original.titel);
-              }
-            }}
-          >
-            {row.original.titel}
-          </Link>
-        ),
+                e.stopPropagation(); // Prevent row click if link is interactive
+                if (!isDisabled) {
+                  handleOpenSalesOpportunityDetails(row.original.titel);
+                }
+              }}
+              onKeyDown={e => {
+                if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleOpenSalesOpportunityDetails(row.original.titel);
+                }
+              }}
+            >
+              {row.original.titel}
+            </Link>
+          );
+        },
         enableSorting: true,
         enableColumnFilter: true, // Assuming basic text filtering is desired
       },
       {
         accessorKey: 'kunde',
         header: 'Kunde',
-        cell: ({ row }: { row: Row<SaleChance> }) => (
-          <span 
-            className="text-blue-600 hover:underline cursor-pointer"
-            tabIndex={0}
-            onClick={(e) => {
-               e.stopPropagation(); 
-               toast("Hier geht's zum CRM");
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.stopPropagation();
-                toast("Hier geht's zum CRM");
-              }
-            }}
-            aria-label={`CRM für ${row.original.kunde} öffnen`}
-          >
-            {row.original.kunde}
-          </span>
-        ),
         enableSorting: true,
         enableColumnFilter: true,
       },
       {
         accessorKey: 'verantwortlicher',
-        header: ({ column }) => (
-          <div className="flex flex-row items-center gap-2 min-w-[180px]">
-            <span>Verantwortlicher</span>
-            <select
-              className="h-7 flex-1 appearance-none rounded border bg-white px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              value={(column.getFilterValue() as string) ?? ''}
-              onChange={e => column.setFilterValue(e.target.value || undefined)}
-              onClick={e => e.stopPropagation()} // Prevent sorting when interacting with select
-              aria-label="Verantwortlicher filtern"
-            >
-              <option value="">Alle</option>
-              {verantwortlicherOptions.map(option => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </div>
-        ),
-        cell: ({ row }: { row: Row<SaleChance> }) => (
-          <span className="min-w-[150px] block">{row.original.verantwortlicher}</span>
-        ),
+        header: 'Verantwortlicher',
         enableSorting: true,
-        enableColumnFilter: true, // Filter is custom via header
-        filterFn: (row, columnId, filterValue) => { // Custom filter function for the select
-          if (!filterValue) return true;
-          return row.original.verantwortlicher === filterValue;
-        }
+        enableColumnFilter: true,
       },
       {
         accessorKey: 'status',
@@ -185,68 +151,93 @@ const SalesOpportunitiesTable = ({
         enableSorting: true,
         enableColumnFilter: true,
       },
-      ...(!reducedMode ? [
-        { accessorKey: 'gb', header: 'GB', enableSorting: true, enableColumnFilter: true } as ColumnDef<SaleChance>,
-        { accessorKey: 'volumen', header: 'Volumen', enableSorting: true, enableColumnFilter: true } as ColumnDef<SaleChance>,
-        { accessorKey: 'liefertermin', header: 'Liefertermin', enableSorting: true, enableColumnFilter: true } as ColumnDef<SaleChance>,
-      ] : []),
+      {
+        accessorKey: 'gb',
+        header: 'GB',
+        enableSorting: true,
+        enableColumnFilter: true,
+      },
+      {
+        accessorKey: 'volumen',
+        header: 'Volumen',
+        enableSorting: true,
+        enableColumnFilter: true,
+      },
+      {
+        accessorKey: 'liefertermin',
+        header: 'Liefertermin',
+        enableSorting: true,
+        enableColumnFilter: true,
+      },
       {
         accessorKey: 'geaendertAm',
-        header: 'Geändert am', // Title for FilterableTable's DateFilterHeader
-        cell: ({ row }: { row: Row<SaleChance> }) => (
-          <span className="min-w-[150px] block">{row.original.geaendertAm}</span>
-        ),
+        header: 'Geändert am',
         enableSorting: true,
-        enableColumnFilter: true, // Will be handled by DateFilterHeader
+        enableColumnFilter: true,
       },
       ...(!reducedMode ? [
         {
           accessorKey: 'angebote',
           header: 'Angebote',
-          cell: ({ row }: { row: Row<SaleChance> }) => (
-            <span className="text-center block">{row.original.angebote}</span>
-          ),
+          cell: ({ row }: { row: Row<SaleChance> }) => {
+            const isDisabled = row.original.angebote > 0;
+            return (
+              <span className={`text-center block ${isDisabled ? 'text-gray-400' : ''}`}>
+                {row.original.angebote}
+              </span>
+            );
+          },
           enableSorting: true,
           enableColumnFilter: false, // Explicitly false if not filterable
         } as ColumnDef<SaleChance>,
         {
           id: 'aktion',
           header: 'Aktion',
-          cell: ({ row }: { row: Row<SaleChance> }) => (
-            <div className="flex gap-2">
-              <Button 
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                aria-label={`${row.original.titel} anzeigen`} 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
-                  handleOpenSalesOpportunityDetails(row.original.titel);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    handleOpenSalesOpportunityDetails(row.original.titel);
-                  }
-                }}
-              >
-                <Eye className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="ghost"
-                size="sm"
-                className="h-8 w-8 p-0"
-                aria-label={`Aktion Kopieren für ${row.original.titel}`}
-                onClick={(e) => { e.stopPropagation(); 
-                  /* TODO: Implement copy action */ console.log("Copy action for:", row.original.titel);
-                  toast("Verkaufschance kopiert")
-                }}
-              >
-                <Copy className="h-4 w-4" />
-              </Button>
-            </div>
-          ),
+          cell: ({ row }: { row: Row<SaleChance> }) => {
+            const isDisabled = row.original.angebote > 0;
+            return (
+              <div className="flex gap-2">
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  aria-label={`${row.original.titel} anzeigen`} 
+                  disabled={isDisabled}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    if (!isDisabled) {
+                      handleOpenSalesOpportunityDetails(row.original.titel);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (!isDisabled && (e.key === 'Enter' || e.key === ' ')) {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleOpenSalesOpportunityDetails(row.original.titel);
+                    }
+                  }}
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 w-8 p-0"
+                  aria-label={`Aktion Kopieren für ${row.original.titel}`}
+                  disabled={isDisabled}
+                  onClick={(e) => { 
+                    e.stopPropagation(); 
+                    if (!isDisabled) {
+                      /* TODO: Implement copy action */ console.log("Copy action for:", row.original.titel);
+                      toast("Verkaufschance kopiert")
+                    }
+                  }}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
+            );
+          },
           enableSorting: false,
           enableColumnFilter: false,
         } as ColumnDef<SaleChance>,
@@ -260,6 +251,7 @@ const SalesOpportunitiesTable = ({
           header: () => <span className="sr-only">Auswahl</span>,
           cell: ({ row }: { row: Row<SaleChance> }) => {
             const isSelected = selectedRowIndex === row.index.toString();
+            const isDisabled = row.original.angebote > 0;
             return (
               <div className="flex justify-center items-center h-full">
                 <div
@@ -268,7 +260,7 @@ const SalesOpportunitiesTable = ({
                   aria-label={`Zeile ${row.original.titel} auswählen`}
                   tabIndex={-1} // Not focusable itself, row is focusable
                   className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
-                    isSelected ? 'border-blue-600 bg-blue-600' : 'border-gray-400'
+                    isSelected ? 'border-blue-600 bg-blue-600' : isDisabled ? 'border-gray-300 bg-gray-100' : 'border-gray-400'
                   }`}
                 >
                   {isSelected && <div className="w-2 h-2 rounded-full bg-white"></div>}
@@ -289,15 +281,19 @@ const SalesOpportunitiesTable = ({
   }, [openNewTab, reducedMode, verantwortlicherOptions, selectedRowIndex, salesOpportunityDetailData, showSelectionRadio, handleOpenSalesOpportunityDetails]); // Add salesOpportunityDetailData if it's stable or memoize SalesOpportunityDetail component and showSelectionRadio
 
   const handleRowClick = (row: Row<SaleChance>) => {
-    setSelectedRowIndex(row.index.toString());
+    // Only allow selection if the opportunity has no quotes
+    if (row.original.angebote === 0) {
+      setSelectedRowIndex(row.index.toString());
+    }
     // The useEffect for selectedRowIndex will call onRowSelect
   };
 
   const getRowClassName = (row: Row<SaleChance>) => {
-    let className = 'cursor-pointer';
+    const isDisabled = row.original.angebote > 0;
+    let className = isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer';
     if (selectedRowIndex === row.index.toString()) {
       className += ' bg-blue-100 hover:bg-blue-200'; // More distinct selected style
-    } else {
+    } else if (!isDisabled) {
       className += ' hover:bg-gray-50';
     }
     return className;
