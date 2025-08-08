@@ -1,44 +1,50 @@
 [
   {
-    "name": "Materialkosten",
+    "name": "Material EK (€)",
     "type": "cost",
     "value": "0.00",
     "order": 1
   },
   {
-    "name": "Arbeitszeit",
-    "type": "time", 
+    "name": "Projektierung (h)",
+    "type": "time",
     "value": "0.00",
     "order": 2
   },
   {
-    "name": "Maschinenkosten",
-    "type": "cost",
+    "name": "m. Konstruktion (h)",
+    "type": "time",
     "value": "0.00",
     "order": 3
   },
   {
-    "name": "Transportkosten",
-    "type": "cost",
+    "name": "e. Konstruktion (h)",
+    "type": "time",
     "value": "0.00",
     "order": 4
   },
   {
-    "name": "Installationszeit",
+    "name": "Automatisierung (h)",
     "type": "time",
     "value": "0.00",
     "order": 5
   },
   {
-    "name": "Qualitätsprüfung",
+    "name": "e. Fertigung (h)",
     "type": "time",
     "value": "0.00",
     "order": 6
   },
   {
-    "name": "Zusatzkosten",
-    "type": "cost",
+    "name": "Vorfertigung (h)",
+    "type": "time",
     "value": "0.00",
     "order": 7
+  },
+  {
+    "name": "Montage (h)",
+    "type": "time",
+    "value": "0.00",
+    "order": 8
   }
-] 
+]

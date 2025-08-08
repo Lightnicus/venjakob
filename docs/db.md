@@ -592,6 +592,18 @@ The project provides comprehensive helper functions for database operations, org
 - `copyArticle(originalArticleId)` - Copy article with all calculations and content
 - `saveArticleContent(articleId, contentData)` - Save article content with audit
 
+##### Default Calculation Items (article-calculation-config.json)
+New articles are initialized with the following calculation items and types:
+
+- Material EK (€) — type: cost
+- Projektierung (h) — type: time
+- m. Konstruktion (h) — type: time
+- e. Konstruktion (h) — type: time
+- Automatisierung (h) — type: time
+- e. Fertigung (h) — type: time
+- Vorfertigung (h) — type: time
+- Montage (h) — type: time
+
 #### History & Auditing
 - `getArticleChangeHistory(articleId, limit)` - Get change history for article
 - `getArticleContentChangeHistory(articleId, limit)` - Get change history for article content
