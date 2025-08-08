@@ -5,6 +5,8 @@ import {
   quoteVariants,
   quoteVersions,
   quotePositions,
+  quotePositionCalculationItems,
+  articleCalculationItem,
   salesOpportunities,
   articles,
   blocks,
@@ -519,10 +521,24 @@ export async function deleteQuote(quoteId: string): Promise<void> {
             .where(eq(quoteVersions.id, version.id));
 
           // 4. Soft delete all related quote positions for this version
-          await tx
-            .update(quotePositions)
-            .set({ deleted: true, updatedAt: sql`NOW()` })
+          const affectedPositions = await tx
+            .select({ id: quotePositions.id })
+            .from(quotePositions)
             .where(eq(quotePositions.versionId, version.id));
+
+          if (affectedPositions.length > 0) {
+            const positionIds = affectedPositions.map(p => p.id);
+            await tx
+              .update(quotePositions)
+              .set({ deleted: true, updatedAt: sql`NOW()` })
+              .where(inArray(quotePositions.id, positionIds));
+
+            // 5. Soft delete calculation items for those positions
+            await tx
+              .update(quotePositionCalculationItems)
+              .set({ deleted: true, updatedAt: sql`NOW()` })
+              .where(inArray(quotePositionCalculationItems.quotePositionId, positionIds));
+          }
         }
       }
 
@@ -823,8 +839,6 @@ export async function addAsPosition(
     const nextPositionNumber = (maxPositionResult?.maxPosition || 0) + 1;
 
     // Create position data referencing original articles/blocks directly
-    let positionData;
-    
     if (articleId) {
       // Get article details for pricing
       const [article] = await db
@@ -836,43 +850,70 @@ export async function addAsPosition(
         throw new Error('Article not found');
       }
 
-      positionData = {
-        versionId,
-        articleId: article.id,
-        blockId: null,
-        positionNumber: nextPositionNumber,
-        quantity: '1',
-        unitPrice: article.price,
-        totalPrice: article.price,
-        articleCost: null,
-        description: null,
-        title: null,
-      };
+      // Create the position and copy calculation items transactionally
+      const newPosition = await db.transaction(async (tx) => {
+        const [insertedPosition] = await tx
+          .insert(quotePositions)
+          .values({
+            versionId,
+            articleId: article.id,
+            blockId: null,
+            positionNumber: nextPositionNumber,
+            quantity: '1',
+            unitPrice: article.price,
+            totalPrice: article.price,
+            articleCost: null,
+            description: null,
+            title: null,
+          })
+          .returning();
+
+        const sourceCalcItems = await tx
+          .select()
+          .from(articleCalculationItem)
+          .where(eq(articleCalculationItem.articleId, article.id));
+
+        if (sourceCalcItems.length > 0) {
+          await tx.insert(quotePositionCalculationItems).values(
+            sourceCalcItems.map((item) => ({
+              quotePositionId: insertedPosition.id,
+              name: item.name,
+              type: item.type,
+              value: item.value,
+              order: item.order,
+              sourceArticleCalculationItemId: item.id,
+              deleted: false,
+            })),
+          );
+        }
+
+        return insertedPosition;
+      });
+
+      return newPosition;
     } else if (blockId) {
-      positionData = {
-        versionId,
-        articleId: null,
-        blockId: blockId,
-        positionNumber: nextPositionNumber,
-        quantity: '1',
-        unitPrice: null,
-        totalPrice: null,
-        articleCost: null,
-        description: null,
-        title: null,
-      };
+      const [newPosition] = await db
+        .insert(quotePositions)
+        .values({
+          versionId,
+          articleId: null,
+          blockId: blockId,
+          positionNumber: nextPositionNumber,
+          quantity: '1',
+          unitPrice: null,
+          totalPrice: null,
+          articleCost: null,
+          description: null,
+          title: null,
+        })
+        .returning();
+      return newPosition;
     } else {
       throw new Error('Either articleId or blockId must be provided');
     }
-
-    const [newPosition] = await db
-      .insert(quotePositions)
-      .values(positionData)
-      .returning();
-
-    // TODO: Add audit trail when audit operations are implemented for quote positions
-
-    return newPosition;
+    // Unreachable, but keeps TypeScript satisfied for all code paths
+    // eslint-disable-next-line no-unreachable
+    throw new Error('Unreachable');
   } catch (error) {
     console.error('Error adding position:', error);
     throw new Error('Failed to add position');
@@ -1131,25 +1172,49 @@ export async function addQuotePositionWithHierarchyForArticle(
       throw new Error('Article not found');
     }
 
-    // Create position data
-    const positionData = {
-      versionId,
-      articleId: articleId,
-      blockId: null,
-      quotePositionParentId: targetParentId,
-      positionNumber,
-      quantity: '1',
-      unitPrice: articleData.price,
-      totalPrice: articleData.price,
-      articleCost: null,
-      description: articleContentData?.content || null,
-      title: articleContentData?.title || null,
-    };
+    // Create position and copy calculation items within a transaction
+    const newPosition = await db.transaction(async (tx) => {
+      // Create position
+      const [insertedPosition] = await tx
+        .insert(quotePositions)
+        .values({
+          versionId,
+          articleId: articleId,
+          blockId: null,
+          quotePositionParentId: targetParentId,
+          positionNumber,
+          quantity: '1',
+          unitPrice: articleData.price,
+          totalPrice: articleData.price,
+          articleCost: null,
+          description: articleContentData?.content || null,
+          title: articleContentData?.title || null,
+        })
+        .returning();
 
-    const [newPosition] = await db
-      .insert(quotePositions)
-      .values(positionData)
-      .returning();
+      // Fetch all calculation items from the source article
+      const sourceCalcItems = await tx
+        .select()
+        .from(articleCalculationItem)
+        .where(eq(articleCalculationItem.articleId, articleId));
+
+      // Copy them to quote_position_calculation_items
+      if (sourceCalcItems.length > 0) {
+        await tx.insert(quotePositionCalculationItems).values(
+          sourceCalcItems.map((item) => ({
+            quotePositionId: insertedPosition.id,
+            name: item.name,
+            type: item.type,
+            value: item.value,
+            order: item.order,
+            sourceArticleCalculationItemId: item.id,
+            deleted: false,
+          })),
+        );
+      }
+
+      return insertedPosition;
+    });
 
     return newPosition;
   } catch (error) {
@@ -1754,10 +1819,24 @@ export async function softDeleteQuote(quoteId: string): Promise<void> {
             .where(eq(quoteVersions.id, version.id));
 
           // 4. Soft delete all related quote positions for this version
-          await tx
-            .update(quotePositions)
-            .set({ deleted: true, updatedAt: sql`NOW()` })
+          const affectedPositions = await tx
+            .select({ id: quotePositions.id })
+            .from(quotePositions)
             .where(eq(quotePositions.versionId, version.id));
+
+          if (affectedPositions.length > 0) {
+            const positionIds = affectedPositions.map((p) => p.id);
+            await tx
+              .update(quotePositions)
+              .set({ deleted: true, updatedAt: sql`NOW()` })
+              .where(inArray(quotePositions.id, positionIds));
+
+            // 5. Soft delete calculation items for those positions
+            await tx
+              .update(quotePositionCalculationItems)
+              .set({ deleted: true, updatedAt: sql`NOW()` })
+              .where(inArray(quotePositionCalculationItems.quotePositionId, positionIds));
+          }
         }
       }
 
@@ -1809,10 +1888,24 @@ export async function restoreQuote(quoteId: string): Promise<void> {
             .where(eq(quoteVersions.id, version.id));
 
           // 4. Restore all related soft-deleted quote positions for this version
-          await tx
-            .update(quotePositions)
-            .set({ deleted: false, updatedAt: sql`NOW()` })
+          const affectedPositions = await tx
+            .select({ id: quotePositions.id })
+            .from(quotePositions)
             .where(and(eq(quotePositions.versionId, version.id), eq(quotePositions.deleted, true)));
+
+          if (affectedPositions.length > 0) {
+            const positionIds = affectedPositions.map(p => p.id);
+            await tx
+              .update(quotePositions)
+              .set({ deleted: false, updatedAt: sql`NOW()` })
+              .where(inArray(quotePositions.id, positionIds));
+
+            // 5. Restore calculation items for those positions as well
+            await tx
+              .update(quotePositionCalculationItems)
+              .set({ deleted: false, updatedAt: sql`NOW()` })
+              .where(inArray(quotePositionCalculationItems.quotePositionId, positionIds));
+          }
         }
       }
 
@@ -1837,16 +1930,24 @@ export async function softDeleteQuotePosition(positionId: string): Promise<void>
       throw new Error('Position cannot be deleted because it has children');
     }
 
-    // Soft delete the position and use timestamp as position number
-    const timestamp = Math.floor(Date.now() / 1000); // Use timestamp as position number
-    await db
-      .update(quotePositions)
-      .set({ 
-        deleted: true,
-        positionNumber: timestamp, // Use timestamp as position number
-        updatedAt: new Date().toISOString()
-      })
-      .where(eq(quotePositions.id, positionId));
+    // Soft delete the position and its calculation items in a transaction
+    await db.transaction(async (tx) => {
+      const timestamp = Math.floor(Date.now() / 1000); // Use timestamp as position number
+      await tx
+        .update(quotePositions)
+        .set({ 
+          deleted: true,
+          positionNumber: timestamp, // Use timestamp as position number
+          updatedAt: sql`NOW()`
+        })
+        .where(eq(quotePositions.id, positionId));
+
+      // Soft delete related quote_position_calculation_items
+      await tx
+        .update(quotePositionCalculationItems)
+        .set({ deleted: true, updatedAt: sql`NOW()` })
+        .where(eq(quotePositionCalculationItems.quotePositionId, positionId));
+    });
 
   } catch (error) {
     console.error('Error soft deleting quote position:', error);

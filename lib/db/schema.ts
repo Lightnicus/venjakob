@@ -130,6 +130,27 @@ export const blockContent = pgTable(
   }),
 );
 
+// Quote Position Calculation Items table (copied from Article Calculation Items)
+export const quotePositionCalculationItems = pgTable('quote_position_calculation_items', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  quotePositionId: uuid('quote_position_id')
+    .notNull()
+    .references(() => quotePositions.id, { onDelete: 'cascade' }),
+  // snapshot of the article calculation item
+  name: text('name').notNull(),
+  type: articleCalculationItemTypeEnum('type').notNull(),
+  value: numeric('value').notNull(),
+  order: integer('order'),
+  // traceability back to the source article calculation item
+  sourceArticleCalculationItemId: uuid('source_article_calculation_item_id').references(
+    () => articleCalculationItem.id,
+    { onDelete: 'set null' },
+  ),
+  deleted: boolean('deleted').notNull().default(false),
+  createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
+  updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
+});
+
 // Article Calculation Item table
 export const articleCalculationItem = pgTable('article_calculation_item', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -446,6 +467,11 @@ export type InsertQuoteVersion = typeof quoteVersions.$inferInsert;
 
 export type QuotePosition = typeof quotePositions.$inferSelect;
 export type InsertQuotePosition = typeof quotePositions.$inferInsert;
+
+export type QuotePositionCalculationItem =
+  typeof quotePositionCalculationItems.$inferSelect;
+export type InsertQuotePositionCalculationItem =
+  typeof quotePositionCalculationItems.$inferInsert;
 
 export type Block = typeof blocks.$inferSelect;
 export type InsertBlock = typeof blocks.$inferInsert;

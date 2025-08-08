@@ -747,12 +747,29 @@ New articles are initialized with the following calculation items and types:
 - `QuoteVariantWithVersions` - Variant with language and versions (includes both variantDescriptor string and variantNumber integer)
 - `QuoteVersionWithPositions` - Version with positions and counts (versionNumber is integer)
 - `QuotePositionWithDetails` - Position with article or block details
+- `QuotePositionCalculationItem` - Calculation item snapshot attached to a quote position
 - `EditLockError` - Custom error for edit lock conflicts
 
 #### Schema Changes
 - **variantNumber**: Added integer field to `quoteVariants` table alongside existing `variantDescriptor` text field
 - **versionNumber**: Changed from text to integer type in `quoteVersions` table
 - Both number fields are used internally for sorting and calculations, while descriptor fields maintain backward compatibility
+ 
+#### New Table: quote_position_calculation_items
+
+When an article is added as a quote position, its calculation items are snapshotted into `quote_position_calculation_items`:
+
+- `id` (uuid pk)
+- `quotePositionId` (fk -> `quote_positions.id`, onDelete: cascade)
+- `name` (text)
+- `type` (`article_calculation_item_type` enum)
+- `value` (numeric)
+- `order` (int)
+- `sourceArticleCalculationItemId` (uuid fk -> `article_calculation_item.id`, onDelete: set null)
+- `deleted` (boolean, soft delete)
+- `createdAt`, `updatedAt` (string-mode timestamps)
+
+Creation is transactional with the position insert. Soft-deleting a position soft-deletes its calculation items. Bulk soft-delete/restore for variants/quotes also soft-deletes/restores related calculation items.
 
 ### Common Patterns
 
