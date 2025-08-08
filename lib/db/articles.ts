@@ -581,7 +581,7 @@ export async function getArticleList(): Promise<{
     // Fetch all languages for label mapping
     const allLanguages = await db.select().from(languages);
     
-    // Fetch all article content with language info
+    // Fetch all article content with language info (exclude deleted)
     const allArticleContent = await db
       .select({
         articleId: blockContent.articleId,
@@ -589,7 +589,7 @@ export async function getArticleList(): Promise<{
         languageId: blockContent.languageId,
       })
       .from(blockContent)
-      .where(isNull(blockContent.blockId)); // Only article content, not block content
+      .where(and(isNull(blockContent.blockId), eq(blockContent.deleted, false))); // Only article content, not block content
     
     // Get calculation counts and titles for each article
     const articlesWithCounts = await Promise.all(
@@ -597,7 +597,7 @@ export async function getArticleList(): Promise<{
         const [countResult] = await db
           .select({ count: count(articleCalculationItem.id) })
           .from(articleCalculationItem)
-          .where(eq(articleCalculationItem.articleId, article.id));
+          .where(and(eq(articleCalculationItem.articleId, article.id), eq(articleCalculationItem.deleted, false)));
         
         // Get title from blockContent for default language
         let title = '';
@@ -608,7 +608,8 @@ export async function getArticleList(): Promise<{
             .where(
               and(
                 eq(blockContent.articleId, article.id),
-                eq(blockContent.languageId, defaultLanguage.id)
+                eq(blockContent.languageId, defaultLanguage.id),
+                eq(blockContent.deleted, false)
               )
             )
             .limit(1);
@@ -620,10 +621,11 @@ export async function getArticleList(): Promise<{
         
         // Get languages for this article
         const articleContents = allArticleContent.filter(content => content.articleId === article.id);
-        const articleLanguages = articleContents.map(ac => {
-          const lang = allLanguages.find(l => l.id === ac.languageId);
-          return lang;
-        }).filter(lang => lang !== undefined);
+        // Deduplicate by languageId in case historical rows exist
+        const uniqueLanguageIds = Array.from(new Set(articleContents.map(ac => ac.languageId)));
+        const articleLanguages = uniqueLanguageIds
+          .map(languageId => allLanguages.find(l => l.id === languageId))
+          .filter((lang): lang is typeof allLanguages[number] => Boolean(lang));
         
         // Sort languages: default first, then alphabetically by label
         const sortedLanguages = articleLanguages.sort((a, b) => {
