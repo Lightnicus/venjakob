@@ -2,7 +2,9 @@ import React, { useState, useCallback, useMemo, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import KalkulationForm from "./kalkulation-form"
+import { Textarea } from '@/components/ui/textarea'
+import { Button } from '@/components/ui/button'
+import { fetchPositionCalculationItems, updatePositionCalculationItemsAPI } from '@/lib/api/quotes'
 import PlateRichTextEditor from "./plate-rich-text-editor"
 import { type Value } from 'platejs'
 import { plateValueToHtml } from '@/helper/plate-serialization';
@@ -32,6 +34,8 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
   const [previewHtml, setPreviewHtml] = useState<string>("")
   const [originalTitle, setOriginalTitle] = useState(selectedNode?.data?.title || "")
   const [currentTab, setCurrentTab] = useState<string>("eingabe")
+  const [calcItems, setCalcItems] = useState<Array<{ id: string; name: string; type: string; value: string; order: number | null }>>([])
+  const [note, setNote] = useState<string>(selectedNode?.data?.calculationNote || '')
 
   // Update state when selectedNode changes
   React.useEffect(() => {
@@ -39,6 +43,7 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
       const newTitle = selectedNode.data.title || "";
       setTitle(newTitle);
       setOriginalTitle(newTitle);
+      setNote(selectedNode.data.calculationNote || '')
     }
   }, [selectedNode])
 
@@ -125,6 +130,55 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
     }
   }, [positionId, addChange, removeChange, selectedNode])
 
+  // Load calculation items when positionId changes or when switching to kalkulation tab
+  useEffect(() => {
+    const load = async () => {
+      if (!positionId) return;
+      try {
+        const items = await fetchPositionCalculationItems(positionId);
+        setCalcItems(items);
+      } catch (e) {
+        console.error('Error loading calculation items', e);
+      }
+    };
+    if (currentTab === 'kalkulation') {
+      load();
+    }
+  }, [positionId, currentTab])
+
+  const formatUnit = useCallback((type: string) => {
+    if (type === 'time') return 'h';
+    if (type === 'cost') return '€';
+    return '';
+  }, [])
+
+  const handleCalcValueChange = useCallback((id: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newValue = e.target.value;
+    setCalcItems(prev => prev.map(it => it.id === id ? { ...it, value: newValue } : it));
+  }, [])
+
+  const handleCalcSave = useCallback(async () => {
+    if (!positionId) return;
+    try {
+      await updatePositionCalculationItemsAPI(positionId, calcItems.map(it => ({ id: it.id, value: it.value })));
+    } catch (e) {
+      console.error('Error saving calculation items', e);
+    }
+  }, [positionId, calcItems])
+
+  const handleNoteChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newNote = e.target.value;
+    setNote(newNote);
+    if (positionId && addChange && removeChange) {
+      const oldNote = selectedNode?.data?.calculationNote || '';
+      if (newNote !== oldNote) {
+        addChange(positionId, 'calculationNote', oldNote, newNote);
+      } else {
+        removeChange(positionId, 'calculationNote');
+      }
+    }
+  }, [positionId, addChange, removeChange, selectedNode])
+
   // Check if this position has unsaved changes
   const hasChanges = positionId && hasPositionChanges ? hasPositionChanges(positionId) : false;
 
@@ -162,12 +216,59 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
     </form>
   ), [getCurrentTitle, handleTitleChange, getCurrentDescription, handleDescriptionChange, isEditing])
 
-  // Memoize the kalkulation content
+  // Kalkulation content (live data)
   const kalkulationContent = useMemo(() => (
-    <div className="pt-2">
-      <KalkulationForm />
+    <div className="pt-2 w-full max-w-5xl border rounded p-6 bg-white mx-auto mt-4">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-6 items-start">
+        <div className="space-y-0">
+          {calcItems.map(item => (
+            <div key={item.id} className="grid grid-cols-[minmax(200px,auto)_160px] gap-4 items-center mb-4">
+              <label className="flex flex-col gap-1 text-sm font-medium" htmlFor={`ci-${item.id}`}>
+                {item.name} ({formatUnit(item.type)})
+                <Input
+                  id={`ci-${item.id}`}
+                  type="number"
+                  value={item.value}
+                  onChange={handleCalcValueChange(item.id)}
+                  className="w-full"
+                  aria-label={item.name}
+                  tabIndex={0}
+                  min={0}
+                  disabled={!isEditing}
+                />
+              </label>
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-2 h-full">
+          <label htmlFor="bemerkung" className="text-sm font-medium">Bemerkung</label>
+          <Textarea
+            id="bemerkung"
+            value={note}
+            onChange={handleNoteChange}
+            className="min-h-[180px] resize-y h-full"
+            aria-label="Bemerkung"
+            tabIndex={0}
+            disabled={!isEditing}
+          />
+        </div>
+      </div>
+      {isEditing && (
+        <div className="mt-8 flex">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCalcSave}
+            aria-label="Kalkulationsdaten speichern"
+            tabIndex={0}
+            className="flex items-center gap-2"
+          >
+            Kalkulationsdaten speichern
+          </Button>
+        </div>
+      )}
     </div>
-  ), [])
+  ), [calcItems, note, handleCalcValueChange, handleNoteChange, handleCalcSave, isEditing, formatUnit])
 
   // Memoize the preview content
   const previewContent = useMemo(() => (

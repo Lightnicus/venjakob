@@ -410,6 +410,7 @@ export const quotePositions = pgTable(
     articleCost: numeric('article_cost'),
     description: text('description'),
     title: text('title'),
+    calculationNote: text('calculation_note'),
     deleted: boolean('deleted').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'string' })
       .defaultNow()

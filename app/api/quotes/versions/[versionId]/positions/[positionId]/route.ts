@@ -25,6 +25,7 @@ export async function PUT(
       unitPrice,
       totalPrice,
       articleCost,
+      calculationNote,
     } = body;
     
     const updateData: any = {};
@@ -35,6 +36,7 @@ export async function PUT(
     if (unitPrice !== undefined) updateData.unitPrice = unitPrice;
     if (totalPrice !== undefined) updateData.totalPrice = totalPrice;
     if (articleCost !== undefined) updateData.articleCost = articleCost;
+    if (calculationNote !== undefined) updateData.calculationNote = calculationNote;
     
     await updateQuotePosition(positionId, updateData);
     

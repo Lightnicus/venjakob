@@ -249,6 +249,7 @@ export async function saveQuotePosition(
     unitPrice?: string;
     totalPrice?: string;
     articleCost?: string;
+    calculationNote?: string;
   }
 ): Promise<void> {
   const response = await fetch(`/api/quotes/versions/${versionId}/positions/${positionId}`, {
@@ -274,6 +275,7 @@ export async function saveQuotePositions(
     unitPrice?: string;
     totalPrice?: string;
     articleCost?: string;
+    calculationNote?: string;
   }>
 ): Promise<void> {
   const response = await fetch(`/api/quotes/versions/${versionId}/positions/batch`, {
@@ -287,6 +289,27 @@ export async function saveQuotePositions(
     throw new Error('Failed to save quote positions');
   }
 } 
+
+// Fetch calculation items for a position
+export async function fetchPositionCalculationItems(positionId: string): Promise<Array<{ id: string; name: string; type: string; value: string; order: number | null }>> {
+  const response = await fetch(`/api/quotes/positions/${positionId}/calculation-items`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch position calculation items');
+  }
+  return response.json();
+}
+
+// Update calculation items (values) for a position
+export async function updatePositionCalculationItemsAPI(positionId: string, updates: Array<{ id: string; value: string }>): Promise<void> {
+  const response = await fetch(`/api/quotes/positions/${positionId}/calculation-items`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ updates }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update position calculation items');
+  }
+}
 
 // Create a new quote position (for blocks)
 export async function createQuotePosition(

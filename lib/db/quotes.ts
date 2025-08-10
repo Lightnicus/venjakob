@@ -416,6 +416,69 @@ export async function getQuotePositionsByVersion(versionId: string): Promise<Quo
   }
 }
 
+// Fetch calculation items for a quote position
+export async function getPositionCalculationItems(positionId: string): Promise<{
+  id: string;
+  name: string;
+  type: string;
+  value: string;
+  order: number | null;
+}[]> {
+  try {
+    const items = await db
+      .select({
+        id: quotePositionCalculationItems.id,
+        name: quotePositionCalculationItems.name,
+        type: quotePositionCalculationItems.type,
+        value: quotePositionCalculationItems.value,
+        order: quotePositionCalculationItems.order,
+      })
+      .from(quotePositionCalculationItems)
+      .where(and(eq(quotePositionCalculationItems.quotePositionId, positionId), eq(quotePositionCalculationItems.deleted, false)))
+      .orderBy(asc(quotePositionCalculationItems.order), asc(quotePositionCalculationItems.name));
+
+    return items as any;
+  } catch (error) {
+    console.error('Error fetching position calculation items:', error);
+    throw new Error('Failed to fetch position calculation items');
+  }
+}
+
+// Update calculation items for a quote position (editable values only)
+export async function updatePositionCalculationItems(positionId: string, updates: Array<{ id: string; value: string }>): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    // Check lock via version: get version from position
+    const [position] = await db
+      .select({ versionId: quotePositions.versionId })
+      .from(quotePositions)
+      .where(eq(quotePositions.id, positionId));
+
+    if (position?.versionId) {
+      await checkQuoteVersionEditable(position.versionId);
+    }
+
+    await db.transaction(async (tx) => {
+      for (const { id, value } of updates) {
+        await tx
+          .update(quotePositionCalculationItems)
+          .set({ value, updatedAt: sql`NOW()` })
+          .where(and(eq(quotePositionCalculationItems.id, id), eq(quotePositionCalculationItems.quotePositionId, positionId)));
+      }
+    });
+  } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error;
+    }
+    console.error('Error updating position calculation items:', error);
+    throw new Error('Failed to update position calculation items');
+  }
+}
+
 // Create a new quote
 export async function createQuote(
   quoteData: Omit<Quote, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'modifiedBy'>

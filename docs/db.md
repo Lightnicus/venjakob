@@ -771,6 +771,10 @@ When an article is added as a quote position, its calculation items are snapshot
 
 Creation is transactional with the position insert. Soft-deleting a position soft-deletes its calculation items. Bulk soft-delete/restore for variants/quotes also soft-deletes/restores related calculation items.
 
+#### quote_positions: calculation_note
+
+Added `calculation_note` (text) to `quote_positions` to store the user-editable remark shown next to the Kalkulation list in the UI. It is included in standard updates via the existing position update APIs and participates in the lifted state change tracking.
+
 ### Common Patterns
 
 #### Error Handling

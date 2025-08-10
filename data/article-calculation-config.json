@@ -1,48 +1,48 @@
 [
   {
-    "name": "Material EK (€)",
+    "name": "Material EK",
     "type": "cost",
     "value": "0.00",
     "order": 1
   },
   {
-    "name": "Projektierung (h)",
+    "name": "Projektierung",
     "type": "time",
     "value": "0.00",
     "order": 2
   },
   {
-    "name": "m. Konstruktion (h)",
+    "name": "m. Konstruktion",
     "type": "time",
     "value": "0.00",
     "order": 3
   },
   {
-    "name": "e. Konstruktion (h)",
+    "name": "e. Konstruktion",
     "type": "time",
     "value": "0.00",
     "order": 4
   },
   {
-    "name": "Automatisierung (h)",
+    "name": "Automatisierung",
     "type": "time",
     "value": "0.00",
     "order": 5
   },
   {
-    "name": "e. Fertigung (h)",
+    "name": "e. Fertigung",
     "type": "time",
     "value": "0.00",
     "order": 6
   },
   {
-    "name": "Vorfertigung (h)",
+    "name": "Vorfertigung",
     "type": "time",
     "value": "0.00",
     "order": 7
   },
   {
-    "name": "Montage (h)",
+    "name": "Montage",
     "type": "time",
     "value": "0.00",
     "order": 8
