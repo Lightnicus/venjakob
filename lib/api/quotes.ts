@@ -291,7 +291,7 @@ export async function saveQuotePositions(
 } 
 
 // Fetch calculation items for a position
-export async function fetchPositionCalculationItems(positionId: string): Promise<Array<{ id: string; name: string; type: string; value: string; order: number | null }>> {
+export async function fetchPositionCalculationItems(positionId: string): Promise<Array<{ id: string; name: string; type: string; value: string; order: number | null; originalValue: string | null }>> {
   const response = await fetch(`/api/quotes/positions/${positionId}/calculation-items`);
   if (!response.ok) {
     throw new Error('Failed to fetch position calculation items');

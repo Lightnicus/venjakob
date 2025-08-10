@@ -423,6 +423,7 @@ export async function getPositionCalculationItems(positionId: string): Promise<{
   type: string;
   value: string;
   order: number | null;
+  originalValue: string | null;
 }[]> {
   try {
     const items = await db
@@ -432,8 +433,13 @@ export async function getPositionCalculationItems(positionId: string): Promise<{
         type: quotePositionCalculationItems.type,
         value: quotePositionCalculationItems.value,
         order: quotePositionCalculationItems.order,
+        originalValue: articleCalculationItem.value,
       })
       .from(quotePositionCalculationItems)
+      .leftJoin(
+        articleCalculationItem,
+        eq(articleCalculationItem.id, quotePositionCalculationItems.sourceArticleCalculationItemId)
+      )
       .where(and(eq(quotePositionCalculationItems.quotePositionId, positionId), eq(quotePositionCalculationItems.deleted, false)))
       .orderBy(asc(quotePositionCalculationItems.order), asc(quotePositionCalculationItems.name));
 

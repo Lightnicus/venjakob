@@ -34,7 +34,7 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
   const [previewHtml, setPreviewHtml] = useState<string>("")
   const [originalTitle, setOriginalTitle] = useState(selectedNode?.data?.title || "")
   const [currentTab, setCurrentTab] = useState<string>("eingabe")
-  const [calcItems, setCalcItems] = useState<Array<{ id: string; name: string; type: string; value: string; order: number | null; editingValue?: string }>>([])
+  const [calcItems, setCalcItems] = useState<Array<{ id: string; name: string; type: string; value: string; order: number | null; originalValue?: string | null; editingValue?: string }>>([])
   const [note, setNote] = useState<string>(selectedNode?.data?.calculationNote || '')
 
   // Update state when selectedNode changes; prefer unsaved note if available
@@ -145,7 +145,7 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
           const changeKey = `calcItem:${it.id}`;
           const newVal = unsaved && unsaved[changeKey]?.newValue as string | undefined;
           const canonical = newVal ?? it.value;
-          return { ...it, value: canonical, editingValue: toGerman(canonical) };
+          return { ...it, value: canonical, originalValue: it.originalValue, editingValue: toGerman(canonical) };
         });
         setCalcItems(merged);
       } catch (e) {
@@ -268,9 +268,12 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
       <div className="grid grid-cols-1 md:grid-cols-[1fr_320px] gap-6 items-start">
         <div className="space-y-0">
           {calcItems.map(item => (
-            <div key={item.id} className="grid grid-cols-[minmax(200px,auto)_160px] gap-4 items-center mb-4">
+            <div key={item.id} className="grid grid-cols-[minmax(200px,auto)_160px] gap-4 items-start mb-4">
               <label className="flex flex-col gap-1 text-sm font-medium" htmlFor={`ci-${item.id}`}>
                 {item.name} ({formatUnit(item.type)})
+                {item.originalValue != null && (
+                  <span className="text-xs text-gray-500">Original: {(item.originalValue ?? '').toString().replace('.', ',')} {formatUnit(item.type)}</span>
+                )}
                 <Input
                   id={`ci-${item.id}`}
                   type="text"
@@ -301,7 +304,25 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
           />
         </div>
       </div>
-      {/* Saved via central Save */}
+      <div className="mt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setCalcItems(prev => prev.map(it => {
+              const orig = (it.originalValue ?? it.value) as string;
+              const german = (orig ?? '').toString().replace('.', ',');
+              // register change back to original
+              registerCalcChange(it.id, orig, it.value);
+              return { ...it, value: orig, editingValue: german };
+            }));
+          }}
+          disabled={!isEditing}
+          aria-label="Zurücksetzen"
+        >
+          Zurücksetzen
+        </Button>
+      </div>
     </div>
   ), [calcItems, note, handleCalcValueChange, handleNoteChange, isEditing, formatUnit])
 
