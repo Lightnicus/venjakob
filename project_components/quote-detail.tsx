@@ -103,6 +103,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         type: position.articleId ? ('article' as const) : ('textblock' as const),
         description: position.description || '',
         title: position.title || '',
+        calculationNote: (position as any).calculationNote || '',
         children: []
       });
     });
@@ -346,7 +347,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         });
       });
 
-      const filteredPositionUpdates = positionFieldUpdates.filter((u: any) => Object.keys(u).length > 1);
+      // Keep updates that have at least one non-calc field, including calculationNote
+      const filteredPositionUpdates = positionFieldUpdates.filter((u: any) => Object.keys(u).some(k => k !== 'id'));
       if (filteredPositionUpdates.length > 0) {
         await saveQuotePositions(resolvedVersionId, filteredPositionUpdates);
       }

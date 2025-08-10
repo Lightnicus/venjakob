@@ -1841,6 +1841,7 @@ export async function updateQuotePositions(
     unitPrice?: string;
     totalPrice?: string;
     articleCost?: string;
+    calculationNote?: string;
   }>
 ): Promise<void> {
   try {
