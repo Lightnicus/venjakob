@@ -32,6 +32,7 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
 }) => {
   const [title, setTitle] = useState(selectedNode?.data?.title || "")
   const [previewHtml, setPreviewHtml] = useState<string>("")
+  const [quantity, setQuantity] = useState<string>(selectedNode?.data?.quantity || '1')
   const [originalTitle, setOriginalTitle] = useState(selectedNode?.data?.title || "")
   const [currentTab, setCurrentTab] = useState<string>("eingabe")
   const [calcItems, setCalcItems] = useState<Array<{ id: string; name: string; type: string; value: string; order: number | null; originalValue?: string | null; editingValue?: string }>>([])
@@ -46,6 +47,8 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
       const unsaved = positionId && getPositionChanges ? getPositionChanges(positionId) : undefined;
       const noteChange = unsaved && unsaved['calculationNote'];
       setNote((noteChange?.newValue as string) ?? (selectedNode.data.calculationNote || ''));
+      const quantityChange = unsaved && unsaved['quantity'];
+      setQuantity((quantityChange?.newValue as string) ?? (selectedNode.data.quantity || '1'));
     }
   }, [selectedNode, positionId, getPositionChanges])
 
@@ -118,6 +121,21 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
       }
     }
   }, [positionId, addChange, removeChange, originalTitle])
+
+  const handleQuantityChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    // allow empty while typing
+    if (!/^\d*$/.test(raw)) return;
+    setQuantity(raw);
+    if (positionId && addChange && removeChange) {
+      const oldQ = selectedNode?.data?.quantity || '1';
+      if (raw !== oldQ) {
+        addChange(positionId, 'quantity', oldQ, raw);
+      } else {
+        removeChange(positionId, 'quantity');
+      }
+    }
+  }, [positionId, addChange, removeChange, selectedNode])
 
   const handleDescriptionChange = useCallback((content: Value) => {
     if (selectedNode && positionId && addChange && removeChange) {
@@ -231,6 +249,23 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
   // Memoize the form content to prevent unnecessary re-renders
   const formContent = useMemo(() => (
     <form className="space-y-6">
+      <div className="space-y-2">
+        <label htmlFor="input-anzahl" className="text-sm font-medium">
+          Anzahl
+        </label>
+        <Input
+          id="input-anzahl"
+          type="text"
+          inputMode="numeric"
+          pattern="[0-9]*"
+          placeholder="Anzahl eingeben"
+          value={quantity}
+          onChange={handleQuantityChange}
+          className="w-full"
+          aria-label="Anzahl"
+          disabled={!isEditing}
+        />
+      </div>
       <div className="space-y-2">
         <label htmlFor="input-ueberschrift" className="text-sm font-medium">
           Überschrift

@@ -104,6 +104,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         description: position.description || '',
         title: position.title || '',
         calculationNote: (position as any).calculationNote || '',
+        quantity: (position as any).quantity ? String((position as any).quantity) : '1',
         children: []
       });
     });

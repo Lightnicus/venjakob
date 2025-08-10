@@ -11,6 +11,7 @@ export interface MyTreeNodeData {
   description?: string;
   title?: string;
   calculationNote?: string;
+  quantity?: string;
   children?: MyTreeNodeData[];
 }
 
