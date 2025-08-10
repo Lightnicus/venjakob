@@ -311,6 +311,17 @@ export async function updatePositionCalculationItemsAPI(positionId: string, upda
   }
 }
 
+export async function updatePositionCalculationItemsBatchAPI(updates: Array<{ positionId: string; items: Array<{ id: string; value: string }> }>): Promise<void> {
+  const response = await fetch(`/api/quotes/positions/calculation-items/batch`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ updates }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to update calculation items batch');
+  }
+}
+
 // Create a new quote position (for blocks)
 export async function createQuotePosition(
   versionId: string,

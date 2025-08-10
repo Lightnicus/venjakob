@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
 import { Button } from '@/components/ui/button'
-import { fetchPositionCalculationItems, updatePositionCalculationItemsAPI } from '@/lib/api/quotes'
+import { fetchPositionCalculationItems } from '@/lib/api/quotes'
 import PlateRichTextEditor from "./plate-rich-text-editor"
 import { type Value } from 'platejs'
 import { plateValueToHtml } from '@/helper/plate-serialization';
@@ -34,18 +34,20 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
   const [previewHtml, setPreviewHtml] = useState<string>("")
   const [originalTitle, setOriginalTitle] = useState(selectedNode?.data?.title || "")
   const [currentTab, setCurrentTab] = useState<string>("eingabe")
-  const [calcItems, setCalcItems] = useState<Array<{ id: string; name: string; type: string; value: string; order: number | null }>>([])
+  const [calcItems, setCalcItems] = useState<Array<{ id: string; name: string; type: string; value: string; order: number | null; editingValue?: string }>>([])
   const [note, setNote] = useState<string>(selectedNode?.data?.calculationNote || '')
 
-  // Update state when selectedNode changes
+  // Update state when selectedNode changes; prefer unsaved note if available
   React.useEffect(() => {
     if (selectedNode) {
       const newTitle = selectedNode.data.title || "";
       setTitle(newTitle);
       setOriginalTitle(newTitle);
-      setNote(selectedNode.data.calculationNote || '')
+      const unsaved = positionId && getPositionChanges ? getPositionChanges(positionId) : undefined;
+      const noteChange = unsaved && unsaved['calculationNote'];
+      setNote((noteChange?.newValue as string) ?? (selectedNode.data.calculationNote || ''));
     }
-  }, [selectedNode])
+  }, [selectedNode, positionId, getPositionChanges])
 
   // Get current value considering unsaved changes
   const getCurrentTitle = useCallback(() => {
@@ -136,7 +138,16 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
       if (!positionId) return;
       try {
         const items = await fetchPositionCalculationItems(positionId);
-        setCalcItems(items);
+        const toGerman = (v: string) => (v ?? '').toString().replace('.', ',');
+        // Merge unsaved changes
+        const unsaved = getPositionChanges ? getPositionChanges(positionId) : undefined;
+        const merged = items.map(it => {
+          const changeKey = `calcItem:${it.id}`;
+          const newVal = unsaved && unsaved[changeKey]?.newValue as string | undefined;
+          const canonical = newVal ?? it.value;
+          return { ...it, value: canonical, editingValue: toGerman(canonical) };
+        });
+        setCalcItems(merged);
       } catch (e) {
         console.error('Error loading calculation items', e);
       }
@@ -144,7 +155,7 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
     if (currentTab === 'kalkulation') {
       load();
     }
-  }, [positionId, currentTab])
+  }, [positionId, currentTab, getPositionChanges])
 
   const formatUnit = useCallback((type: string) => {
     if (type === 'time') return 'h';
@@ -152,19 +163,54 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
     return '';
   }, [])
 
+  const registerCalcChange = useCallback((id: string, newValue: string, oldValue: string) => {
+    if (positionId && addChange && removeChange) {
+      const key = `calcItem:${id}`;
+      if (newValue !== oldValue) {
+        addChange(positionId, key, oldValue, newValue);
+      } else {
+        removeChange(positionId, key);
+      }
+    }
+  }, [positionId, addChange, removeChange]);
+
+  const parseGermanDecimal = (input: string) => input.replace(',', '.');
+  const clampTwoDecimals = (value: string) => {
+    if (value === '') return '';
+    const num = Number(value);
+    if (Number.isNaN(num) || num < 0) return '';
+    return num.toFixed(2);
+  };
+
+  const isValidGermanInput = (raw: string) => {
+    // Allow digits with optional single comma or dot and up to 2 decimals
+    return /^\d*(?:[\.,]\d{0,2})?$/.test(raw);
+  };
+
   const handleCalcValueChange = useCallback((id: string) => (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value;
-    setCalcItems(prev => prev.map(it => it.id === id ? { ...it, value: newValue } : it));
+    const raw = e.target.value;
+    if (!isValidGermanInput(raw)) return;
+    setCalcItems(prev => prev.map(it => it.id === id ? { ...it, editingValue: raw } : it));
   }, [])
 
-  const handleCalcSave = useCallback(async () => {
-    if (!positionId) return;
-    try {
-      await updatePositionCalculationItemsAPI(positionId, calcItems.map(it => ({ id: it.id, value: it.value })));
-    } catch (e) {
-      console.error('Error saving calculation items', e);
-    }
-  }, [positionId, calcItems])
+  const handleCalcValueBlur = useCallback((id: string) => (e: React.FocusEvent<HTMLInputElement>) => {
+    const raw = e.target.value.trim();
+    setCalcItems(prev => prev.map(it => {
+      if (it.id !== id) return it;
+      const oldCanonical = it.value;
+      const normalized = clampTwoDecimals(parseGermanDecimal(raw));
+      // If empty or invalid, fall back to old value
+      if (normalized === '') {
+        return { ...it, editingValue: it.editingValue ?? '' };
+      }
+      // Update canonical and editing value, and register change
+      registerCalcChange(id, normalized, oldCanonical);
+      const germanDisplay = normalized.replace('.', ',');
+      return { ...it, value: normalized, editingValue: germanDisplay };
+    }));
+  }, [registerCalcChange])
+
+  // No local save; central Save in QuoteDetail handles persistence
 
   const handleNoteChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newNote = e.target.value;
@@ -227,13 +273,15 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
                 {item.name} ({formatUnit(item.type)})
                 <Input
                   id={`ci-${item.id}`}
-                  type="number"
-                  value={item.value}
+                  type="text"
+                  inputMode="decimal"
+                  pattern="[0-9]*[\.,]?[0-9]{0,2}"
+                  value={item.editingValue ?? ''}
                   onChange={handleCalcValueChange(item.id)}
+                  onBlur={handleCalcValueBlur(item.id)}
                   className="w-full"
                   aria-label={item.name}
                   tabIndex={0}
-                  min={0}
                   disabled={!isEditing}
                 />
               </label>
@@ -253,22 +301,9 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
           />
         </div>
       </div>
-      {isEditing && (
-        <div className="mt-8 flex">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCalcSave}
-            aria-label="Kalkulationsdaten speichern"
-            tabIndex={0}
-            className="flex items-center gap-2"
-          >
-            Kalkulationsdaten speichern
-          </Button>
-        </div>
-      )}
+      {/* Saved via central Save */}
     </div>
-  ), [calcItems, note, handleCalcValueChange, handleNoteChange, handleCalcSave, isEditing, formatUnit])
+  ), [calcItems, note, handleCalcValueChange, handleNoteChange, isEditing, formatUnit])
 
   // Memoize the preview content
   const previewContent = useMemo(() => (

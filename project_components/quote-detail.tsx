@@ -16,7 +16,7 @@ import { useTabbedInterface, useTabReload } from '@/project_components/tabbed-in
 import { toast } from 'sonner';
 import { Edit3, Save, RotateCcw, Loader2 } from 'lucide-react';
 import type { MyTreeNodeData } from '@/project_components/custom-node';
-import { fetchCompleteQuoteData, saveQuotePositions, copyQuoteVariantAPI } from '@/lib/api/quotes';
+import { fetchCompleteQuoteData, saveQuotePositions, copyQuoteVariantAPI, updatePositionCalculationItemsBatchAPI } from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { formatGermanDate } from '@/helper/date-formatter';
@@ -324,7 +324,37 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         return;
       }
 
-      await saveQuotePositions(resolvedVersionId, changesToSave);
+      // Split changes into position field updates and calculation item updates
+      const positionFieldUpdates = changesToSave.map((c: any) => {
+        const { id, ...rest } = c;
+        const filtered: any = { id };
+        Object.keys(rest).forEach(k => {
+          if (!k.startsWith('calcItem:')) filtered[k] = (rest as any)[k];
+        });
+        return filtered;
+      });
+
+      const calcItemUpdatesByPosition: Record<string, { positionId: string; items: Array<{ id: string; value: string }> }> = {};
+      changesToSave.forEach((c: any) => {
+        const { id, ...rest } = c;
+        Object.entries(rest).forEach(([key, value]) => {
+          if (key.startsWith('calcItem:')) {
+            const itemId = key.replace('calcItem:', '');
+            if (!calcItemUpdatesByPosition[id]) calcItemUpdatesByPosition[id] = { positionId: id, items: [] };
+            calcItemUpdatesByPosition[id].items.push({ id: itemId, value: String(value) });
+          }
+        });
+      });
+
+      const filteredPositionUpdates = positionFieldUpdates.filter((u: any) => Object.keys(u).length > 1);
+      if (filteredPositionUpdates.length > 0) {
+        await saveQuotePositions(resolvedVersionId, filteredPositionUpdates);
+      }
+
+      const calcItemPayload = Object.values(calcItemUpdatesByPosition).filter(group => group.items.length > 0);
+      if (calcItemPayload.length > 0) {
+        await updatePositionCalculationItemsBatchAPI(calcItemPayload);
+      }
       toast.success('Änderungen wurden erfolgreich gespeichert.');
       
       // Trigger reload for other tabs (like QuotesManagement)
@@ -336,11 +366,15 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           return nodes.map(node => {
             const change = changesToSave.find(c => c.id === node.id);
             if (change) {
-              return {
+              const updated: any = {
                 ...node,
                 title: change.title || node.title,
                 description: change.description || node.description,
               };
+              if ((change as any).calculationNote) {
+                updated.calculationNote = (change as any).calculationNote;
+              }
+              return updated;
             }
             if (node.children) {
               return {

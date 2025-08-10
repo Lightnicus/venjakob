@@ -10,6 +10,7 @@ export interface MyTreeNodeData {
   type?: 'textblock' | 'article';
   description?: string;
   title?: string;
+  calculationNote?: string;
   children?: MyTreeNodeData[];
 }
 

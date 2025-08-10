@@ -479,6 +479,49 @@ export async function updatePositionCalculationItems(positionId: string, updates
   }
 }
 
+// Batch update calculation items across multiple positions, enforcing edit locks per version
+export async function updatePositionCalculationItemsBatch(payload: Array<{ positionId: string; items: Array<{ id: string; value: string }> }>): Promise<void> {
+  try {
+    const user = await getCurrentUser();
+    if (!user) {
+      throw new Error('Benutzer nicht authentifiziert');
+    }
+
+    if (!payload || payload.length === 0) {
+      return;
+    }
+
+    // Resolve all involved versionIds to check locks once per version
+    const positionIds = payload.map(p => p.positionId);
+    const positionsVersions = await db
+      .select({ id: quotePositions.id, versionId: quotePositions.versionId })
+      .from(quotePositions)
+      .where(inArray(quotePositions.id, positionIds));
+
+    const uniqueVersionIds = Array.from(new Set(positionsVersions.map(p => p.versionId))).filter(Boolean) as string[];
+    for (const versionId of uniqueVersionIds) {
+      await checkQuoteVersionEditable(versionId);
+    }
+
+    await db.transaction(async (tx) => {
+      for (const group of payload) {
+        for (const { id, value } of group.items) {
+          await tx
+            .update(quotePositionCalculationItems)
+            .set({ value, updatedAt: sql`NOW()` })
+            .where(and(eq(quotePositionCalculationItems.id, id), eq(quotePositionCalculationItems.quotePositionId, group.positionId)));
+        }
+      }
+    });
+  } catch (error) {
+    if (error instanceof EditLockError) {
+      throw error;
+    }
+    console.error('Error updating calculation items batch:', error);
+    throw new Error('Failed to update calculation items batch');
+  }
+}
+
 // Create a new quote
 export async function createQuote(
   quoteData: Omit<Quote, 'id' | 'createdAt' | 'updatedAt' | 'createdBy' | 'modifiedBy'>
