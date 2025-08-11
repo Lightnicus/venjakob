@@ -16,7 +16,7 @@ import { useTabbedInterface, useTabReload } from '@/project_components/tabbed-in
 import { toast } from 'sonner';
 import { Edit3, Save, RotateCcw, Loader2, Calculator } from 'lucide-react';
 import type { MyTreeNodeData } from '@/project_components/custom-node';
-import { fetchCompleteQuoteData, saveQuotePositions, copyQuoteVariantAPI, updatePositionCalculationItemsBatchAPI, saveQuoteVersionPricing } from '@/lib/api/quotes';
+import { fetchCompleteQuoteData, saveQuotePositions, copyQuoteVariantAPI, updatePositionCalculationItemsBatchAPI, saveQuoteVersionPricing, saveQuoteVariantDescriptor } from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { formatGermanDate } from '@/helper/date-formatter';
@@ -47,6 +47,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   const [treeData, setTreeData] = useState<MyTreeNodeData[]>([]);
   const [offerPropsData, setOfferPropsData] = useState<any>(null);
   const [offerPropsDirty, setOfferPropsDirty] = useState(false);
+  const [remarkDirty, setRemarkDirty] = useState(false);
   const [pendingPricing, setPendingPricing] = useState<null | {
     showUnitPrices: boolean;
     calcTotal: boolean;
@@ -332,8 +333,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       // Get changes from the interactive split panel
       const changesToSave = getChangesForSave();
       const hasPricingChanges = offerPropsDirty && pendingPricing;
+      const hasRemarkChange = remarkDirty && typeof offerPropsData?.bemerkung === 'string';
       
-      if (changesToSave.length === 0 && !hasPricingChanges) {
+      if (changesToSave.length === 0 && !hasPricingChanges && !hasRemarkChange) {
         toast('Keine Änderungen zum Speichern vorhanden.');
         return;
       }
@@ -396,6 +398,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         } catch (e) {
           throw e;
         }
+      }
+      // Save remark (variant descriptor) if changed
+      if (hasRemarkChange && resolvedVariantId) {
+        await saveQuoteVariantDescriptor(resolvedVariantId, String(offerPropsData?.bemerkung || ''));
+        setRemarkDirty(false);
       }
       // If totals-affecting fields were saved and calcTotal is on, mark pricing stale locally before refresh
       const calcOn = Boolean((offerPropsData as any)?.preis?.calcTotal);
@@ -491,6 +498,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     };
     setPendingPricing(payload);
     setOfferPropsDirty(true);
+    if (typeof updated?.bemerkung === 'string') {
+      setRemarkDirty(true);
+    }
   }, [offerPropsData]);
 
   // Recalculate click from calculator icon (only when stale)

@@ -1,5 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getQuoteVariantById, softDeleteQuoteVariant, copyQuoteVariant } from '@/lib/db/quotes';
+import { db } from '@/lib/db';
+import { quoteVariants } from '@/lib/db/schema';
+import { eq, sql } from 'drizzle-orm';
+import { getCurrentUser } from '@/lib/auth/server';
 
 export async function GET(
   request: NextRequest,
@@ -73,3 +77,39 @@ export async function POST(
     );
   }
 } 
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ variantId: string }> }
+) {
+  try {
+    const { variantId } = await params;
+    const body = await request.json();
+    const { variantDescriptor } = body || {};
+
+    if (!variantId) {
+      return NextResponse.json({ error: 'Varianten-ID ist erforderlich' }, { status: 400 });
+    }
+    if (typeof variantDescriptor !== 'string') {
+      return NextResponse.json({ error: 'variantDescriptor ist erforderlich' }, { status: 400 });
+    }
+
+    const user = await getCurrentUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Benutzer nicht authentifiziert' }, { status: 401 });
+    }
+
+    await db
+      .update(quoteVariants)
+      .set({ variantDescriptor, updatedAt: sql`NOW()`, modifiedBy: user.dbUser.id })
+      .where(eq(quoteVariants.id, variantId));
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    console.error('Error updating variant descriptor:', error);
+    return NextResponse.json(
+      { error: 'Fehler beim Aktualisieren der Variante' },
+      { status: 500 }
+    );
+  }
+}

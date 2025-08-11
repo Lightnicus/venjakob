@@ -204,6 +204,21 @@ export async function fetchVariantById(variantId: string): Promise<any | null> {
   return response.json();
 }
 
+// Update quote variant descriptor (Bemerkung)
+export async function saveQuoteVariantDescriptor(
+  variantId: string,
+  variantDescriptor: string
+): Promise<void> {
+  const response = await fetch(`/api/quotes/variants/${variantId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ variantDescriptor }),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to save variant descriptor');
+  }
+}
+
 // Fetch version by ID
 export async function fetchVersionById(versionId: string): Promise<any | null> {
   const response = await fetch(`/api/quotes/versions/${versionId}`);
