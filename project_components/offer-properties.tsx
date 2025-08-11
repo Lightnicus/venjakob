@@ -44,56 +44,58 @@ const OfferProperties: React.FC<OfferPropertiesProps> = ({
   onChange,
   isEditing = false,
 }) => {
-  const [showUnitPrices, setShowUnitPrices] = React.useState(preis.showUnitPrices);
-  const [calcTotal, setCalcTotal] = React.useState(preis.calcTotal);
-  const [total, setTotal] = React.useState(preis.total);
-  const [discount, setDiscount] = React.useState(preis.discount);
-  const [discountPercent, setDiscountPercent] = React.useState(preis.discountPercent);
-  const [discountValue, setDiscountValue] = React.useState(preis.discountValue);
-  const [remark, setRemark] = React.useState(bemerkung);
-  const [autoTotal, setAutoTotal] = React.useState<number>(preis.autoTotal || 0);
-  const [calculationStale] = React.useState<boolean>(preis.calculationStale || false);
-
-  React.useEffect(() => {
-    if (onChange) {
-      onChange({
-        kunde,
-        empfaenger,
-        preis: {
-          showUnitPrices,
-          calcTotal,
-          total,
-          discount,
-          discountPercent,
-          discountValue,
-          autoTotal,
-          calculationStale,
-        },
-        bemerkung: remark,
-      });
-    }
-    // eslint-disable-next-line
-  }, [showUnitPrices, calcTotal, total, discount, discountPercent, discountValue, remark]);
-
-  const handleShowUnitPrices = () => {
-    setShowUnitPrices(v => {
-      const next = !v;
-      if (next) setCalcTotal(true);
-      return next;
+  const updatePreis = (partial: Partial<OfferPropertiesProps['preis']>) => {
+    onChange?.({
+      kunde,
+      empfaenger,
+      preis: { ...preis, ...partial },
+      bemerkung,
     });
   };
-  const handleCalcTotal = () => {
-    if (showUnitPrices) return; // disabled when unit prices are shown
-    setCalcTotal(v => !v);
-  };
-  const handleTotalChange = (e: React.ChangeEvent<HTMLInputElement>) => setTotal(Number(e.target.value));
-  const handleDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => setDiscount(Number(e.target.value));
-  const handleDiscountType = () => setDiscountPercent(v => !v);
-  const handleDiscountValue = (e: React.ChangeEvent<HTMLInputElement>) => setDiscountValue(Number(e.target.value));
-  const handleRemark = (e: React.ChangeEvent<HTMLTextAreaElement>) => setRemark(e.target.value);
 
-  const displayedTotal = calcTotal ? autoTotal : total;
-  const calcDiscount = () => discountPercent ? displayedTotal * (discountValue / 100) : discount;
+  const updateBemerkung = (next: string) => {
+    onChange?.({
+      kunde,
+      empfaenger,
+      preis,
+      bemerkung: next,
+    });
+  };
+
+  const handleShowUnitPrices = () => {
+    const next = !preis.showUnitPrices;
+    updatePreis({ showUnitPrices: next, calcTotal: next ? true : preis.calcTotal });
+  };
+
+  const handleCalcTotal = () => {
+    if (preis.showUnitPrices) return; // disabled when unit prices are shown
+    updatePreis({ calcTotal: !preis.calcTotal });
+  };
+
+  const handleTotalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    if (Number.isNaN(value)) return;
+    updatePreis({ total: value });
+  };
+
+  const handleDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    if (Number.isNaN(value)) return;
+    updatePreis({ discount: value });
+  };
+
+  const handleDiscountType = () => updatePreis({ discountPercent: !preis.discountPercent });
+
+  const handleDiscountValue = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = Number(e.target.value);
+    if (Number.isNaN(value)) return;
+    updatePreis({ discountValue: value });
+  };
+
+  const handleRemark = (e: React.ChangeEvent<HTMLTextAreaElement>) => updateBemerkung(e.target.value);
+
+  const displayedTotal = preis.calcTotal ? (preis.autoTotal || 0) : preis.total;
+  const calcDiscount = () => (preis.discountPercent ? displayedTotal * (preis.discountValue / 100) : preis.discount);
   const totalWithDiscount = Math.max(0, displayedTotal - calcDiscount());
 
   return (
@@ -121,61 +123,61 @@ const OfferProperties: React.FC<OfferPropertiesProps> = ({
       <section className="border rounded p-4 flex flex-col gap-3" aria-label="Preis">
         <div className="text-lg font-bold border-b pb-1 mb-2">Preis</div>
         <div className="flex items-center gap-2 text-sm">
-          <Checkbox id="einzelpreise" checked={showUnitPrices} onCheckedChange={handleShowUnitPrices} tabIndex={0} aria-label="Einzelpreise anzeigen" disabled={!isEditing} />
+          <Checkbox id="einzelpreise" checked={preis.showUnitPrices} onCheckedChange={handleShowUnitPrices} tabIndex={0} aria-label="Einzelpreise anzeigen" disabled={!isEditing} />
           <Label htmlFor="einzelpreise">Einzelpreise anzeigen</Label>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Checkbox id="gesamtpreis-kalkulieren" checked={calcTotal} onCheckedChange={handleCalcTotal} tabIndex={0} aria-label="Gesamtpreis kalkulieren" disabled={showUnitPrices || !isEditing} />
+          <Checkbox id="gesamtpreis-kalkulieren" checked={preis.calcTotal} onCheckedChange={handleCalcTotal} tabIndex={0} aria-label="Gesamtpreis kalkulieren" disabled={preis.showUnitPrices || !isEditing} />
           <Label htmlFor="gesamtpreis-kalkulieren">Gesamtpreis kalkulieren</Label>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Label htmlFor="gesamtpreis" className="w-32">Gesamtpreis</Label>
-          <Input id="gesamtpreis" type="number" value={displayedTotal} onChange={handleTotalChange} tabIndex={0} aria-label="Gesamtpreis" className={calcTotal ? 'w-40 bg-gray-200' : 'w-40'} min={0} disabled={calcTotal || !isEditing} />
+          <Input id="gesamtpreis" type="number" value={displayedTotal} onChange={handleTotalChange} tabIndex={0} aria-label="Gesamtpreis" className={preis.calcTotal ? 'w-40 bg-gray-200' : 'w-40'} min={0} disabled={preis.calcTotal || !isEditing} />
           <span>€</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Label className="w-32">Rabatt</Label>
           <Input
             type="number"
-            value={discount}
+            value={preis.discount}
             onChange={handleDiscountChange}
             tabIndex={0}
             aria-label="Rabatt Betrag"
-            className={(!isEditing || discountPercent) ? 'w-24 bg-gray-200' : 'w-24'}
+            className={(!isEditing || preis.discountPercent) ? 'w-24 bg-gray-200' : 'w-24'}
             min={0}
-            disabled={!isEditing || discountPercent}
+            disabled={!isEditing || preis.discountPercent}
           />
           <span>Betrag</span>
           <Switch
-            checked={discountPercent}
+            checked={preis.discountPercent}
             onCheckedChange={handleDiscountType}
             tabIndex={0}
             aria-label="Rabatt in Prozent umschalten"
             disabled={!isEditing}
           />
-          <span className={discountPercent ? 'text-black' : 'text-gray-400'}>Prozent</span>
+          <span className={preis.discountPercent ? 'text-black' : 'text-gray-400'}>Prozent</span>
           <Input
             type="number"
-            value={discountValue}
+            value={preis.discountValue}
             onChange={handleDiscountValue}
-            disabled={!discountPercent || !isEditing}
+            disabled={!preis.discountPercent || !isEditing}
             tabIndex={0}
             aria-label="Rabatt Prozent"
-            className={discountPercent && isEditing ? 'w-16' : 'w-16 bg-gray-200'}
+            className={preis.discountPercent && isEditing ? 'w-16' : 'w-16 bg-gray-200'}
             min={0}
             max={100}
           />
           <span>%</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Label htmlFor="gesamtpreisRabatt" className="w-32">Gesamtpreis inkl. Rabatt</Label>
-          <Input id="gesamtpreisRabatt" type="text" value={totalWithDiscount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })} readOnly tabIndex={0} aria-label="Gesamtpreis inkl. Rabatt" className="w-40" />
+          <Label className="w-32">Gesamtpreis inkl. Rabatt</Label>
+          <div className="w-40 px-3 py-2 text-right font-medium">{totalWithDiscount.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' })}</div>
         </div>
       </section>
       {/* Bemerkung */}
       <section className="border rounded p-4 flex flex-col gap-3" aria-label="Bemerkung">
         <div className="text-lg font-bold border-b pb-1 mb-2">Bemerkung</div>
-        <Textarea value={remark} onChange={handleRemark} className="min-h-[120px] resize-y" tabIndex={0} aria-label="Bemerkung" />
+        <Textarea value={bemerkung} onChange={handleRemark} className="min-h-[120px] resize-y" tabIndex={0} aria-label="Bemerkung" />
       </section>
     </div>
   );

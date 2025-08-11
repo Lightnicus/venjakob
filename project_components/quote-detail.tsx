@@ -331,8 +331,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     try {
       // Get changes from the interactive split panel
       const changesToSave = getChangesForSave();
+      const hasPricingChanges = offerPropsDirty && pendingPricing;
       
-      if (changesToSave.length === 0) {
+      if (changesToSave.length === 0 && !hasPricingChanges) {
         toast('Keine Änderungen zum Speichern vorhanden.');
         return;
       }
@@ -467,9 +468,19 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
 
   // Handle pricing form changes (batched into Save)
   const handleOfferPropsChange = useCallback((updated: any) => {
+    // Optimistic local update so child inputs stay editable
+    setOfferPropsData((prev: any) => {
+      if (!prev) return updated;
+      return {
+        ...prev,
+        preis: { ...(prev?.preis || {}), ...(updated?.preis || {}) },
+        bemerkung: typeof updated?.bemerkung === 'string' ? updated.bemerkung : prev?.bemerkung,
+      };
+    });
+
     const p = updated?.preis || {};
     const current = offerPropsData?.preis || {};
-    // Compute pending payload
+    // Compute pending payload for save
     const payload = {
       showUnitPrices: Boolean(p.showUnitPrices),
       calcTotal: Boolean(p.calcTotal),

@@ -457,6 +457,41 @@ All management components follow the same implementation pattern:
 3. **Error Handling**: Implement consistent error handling across components
 4. **Performance**: Avoid unnecessary re-renders with proper state management
 
+### Controlled Form Pattern (OfferProperties)
+
+For simple forms that should mirror server/parent state exactly, use a controlled component without local `useState`.
+
+Key rules:
+- Derive all render values from props.
+- Emit full payload via `onChange` with shallow merges.
+- Do not store derived values (compute in render).
+- Keep toggle business rules in handlers while avoiding side effects elsewhere.
+
+Minimal example based on `OfferProperties`:
+
+```tsx
+type Preis = OfferPropertiesProps['preis'];
+
+const updatePreis = (partial: Partial<Preis>) =>
+  onChange?.({ kunde, empfaenger, preis: { ...preis, ...partial }, bemerkung });
+
+const handleShowUnitPrices = () => {
+  const next = !preis.showUnitPrices;
+  updatePreis({ showUnitPrices: next, calcTotal: next ? true : preis.calcTotal });
+};
+
+const displayedTotal = preis.calcTotal ? (preis.autoTotal || 0) : preis.total;
+const discountAmount = preis.discountPercent
+  ? displayedTotal * (preis.discountValue / 100)
+  : preis.discount;
+const totalWithDiscount = Math.max(0, displayedTotal - discountAmount);
+```
+
+Benefits:
+- Single source of truth in parent/server state
+- No sync effects between props and local state
+- Predictable UI derived from current props
+
 ## Table Action Components
 
 ### TableActionButton & TableActionsCell

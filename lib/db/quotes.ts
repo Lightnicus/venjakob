@@ -286,7 +286,10 @@ export async function getQuoteVariantsByQuote(quoteId: string): Promise<QuoteVar
       .from(quoteVariants)
       .leftJoin(languages, eq(quoteVariants.languageId, languages.id))
       .where(and(eq(quoteVariants.quoteId, quoteId), eq(quoteVariants.deleted, false)))
-      .orderBy(quoteVariants.isDefault ? desc(quoteVariants.isDefault) : asc(quoteVariants.variantNumber));
+      .orderBy(
+        desc(quoteVariants.isDefault),
+        asc(quoteVariants.variantNumber)
+      );
 
     // Get versions for each variant
     const variantsWithVersions = await Promise.all(
@@ -2119,13 +2122,27 @@ export async function softDeleteQuoteVariant(variantId: string): Promise<void> {
           .where(eq(quoteVersions.id, version.id));
 
         // 3. Soft delete all related quote positions for this version
-        await tx
-          .update(quotePositions)
-          .set({ 
-            deleted: true, 
-            updatedAt: sql`NOW()`
-          })
+        const affectedPositions = await tx
+          .select({ id: quotePositions.id })
+          .from(quotePositions)
           .where(eq(quotePositions.versionId, version.id));
+
+        if (affectedPositions.length > 0) {
+          const positionIds = affectedPositions.map((p) => p.id);
+          await tx
+            .update(quotePositions)
+            .set({ 
+              deleted: true, 
+              updatedAt: sql`NOW()`
+            })
+            .where(inArray(quotePositions.id, positionIds));
+
+          // 4. Soft delete calculation items for those positions
+          await tx
+            .update(quotePositionCalculationItems)
+            .set({ deleted: true, updatedAt: sql`NOW()` })
+            .where(inArray(quotePositionCalculationItems.quotePositionId, positionIds));
+        }
       }
 
       // TODO: Add audit trail when audit operations are implemented for quote variants
