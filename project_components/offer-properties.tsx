@@ -28,9 +28,12 @@ export type OfferPropertiesProps = {
     discount: number;
     discountPercent: boolean;
     discountValue: number;
+    autoTotal?: number;
+    calculationStale?: boolean;
   };
   bemerkung: string;
   onChange?: (data: OfferPropertiesProps) => void;
+  isEditing?: boolean;
 };
 
 const OfferProperties: React.FC<OfferPropertiesProps> = ({
@@ -38,7 +41,8 @@ const OfferProperties: React.FC<OfferPropertiesProps> = ({
   empfaenger,
   preis,
   bemerkung,
-  onChange
+  onChange,
+  isEditing = false,
 }) => {
   const [showUnitPrices, setShowUnitPrices] = React.useState(preis.showUnitPrices);
   const [calcTotal, setCalcTotal] = React.useState(preis.calcTotal);
@@ -47,6 +51,8 @@ const OfferProperties: React.FC<OfferPropertiesProps> = ({
   const [discountPercent, setDiscountPercent] = React.useState(preis.discountPercent);
   const [discountValue, setDiscountValue] = React.useState(preis.discountValue);
   const [remark, setRemark] = React.useState(bemerkung);
+  const [autoTotal, setAutoTotal] = React.useState<number>(preis.autoTotal || 0);
+  const [calculationStale] = React.useState<boolean>(preis.calculationStale || false);
 
   React.useEffect(() => {
     if (onChange) {
@@ -60,6 +66,8 @@ const OfferProperties: React.FC<OfferPropertiesProps> = ({
           discount,
           discountPercent,
           discountValue,
+          autoTotal,
+          calculationStale,
         },
         bemerkung: remark,
       });
@@ -67,16 +75,26 @@ const OfferProperties: React.FC<OfferPropertiesProps> = ({
     // eslint-disable-next-line
   }, [showUnitPrices, calcTotal, total, discount, discountPercent, discountValue, remark]);
 
-  const handleShowUnitPrices = () => setShowUnitPrices(v => !v);
-  const handleCalcTotal = () => setCalcTotal(v => !v);
+  const handleShowUnitPrices = () => {
+    setShowUnitPrices(v => {
+      const next = !v;
+      if (next) setCalcTotal(true);
+      return next;
+    });
+  };
+  const handleCalcTotal = () => {
+    if (showUnitPrices) return; // disabled when unit prices are shown
+    setCalcTotal(v => !v);
+  };
   const handleTotalChange = (e: React.ChangeEvent<HTMLInputElement>) => setTotal(Number(e.target.value));
   const handleDiscountChange = (e: React.ChangeEvent<HTMLInputElement>) => setDiscount(Number(e.target.value));
   const handleDiscountType = () => setDiscountPercent(v => !v);
   const handleDiscountValue = (e: React.ChangeEvent<HTMLInputElement>) => setDiscountValue(Number(e.target.value));
   const handleRemark = (e: React.ChangeEvent<HTMLTextAreaElement>) => setRemark(e.target.value);
 
-  const calcDiscount = () => discountPercent ? total * (discountValue / 100) : discount;
-  const totalWithDiscount = Math.max(0, total - calcDiscount());
+  const displayedTotal = calcTotal ? autoTotal : total;
+  const calcDiscount = () => discountPercent ? displayedTotal * (discountValue / 100) : discount;
+  const totalWithDiscount = Math.max(0, displayedTotal - calcDiscount());
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6">
@@ -103,25 +121,50 @@ const OfferProperties: React.FC<OfferPropertiesProps> = ({
       <section className="border rounded p-4 flex flex-col gap-3" aria-label="Preis">
         <div className="text-lg font-bold border-b pb-1 mb-2">Preis</div>
         <div className="flex items-center gap-2 text-sm">
-          <Checkbox id="einzelpreise" checked={showUnitPrices} onCheckedChange={handleShowUnitPrices} tabIndex={0} aria-label="Einzelpreise anzeigen" />
+          <Checkbox id="einzelpreise" checked={showUnitPrices} onCheckedChange={handleShowUnitPrices} tabIndex={0} aria-label="Einzelpreise anzeigen" disabled={!isEditing} />
           <Label htmlFor="einzelpreise">Einzelpreise anzeigen</Label>
         </div>
         <div className="flex items-center gap-2 text-sm">
-          <Checkbox id="gesamtpreis-kalkulieren" checked={calcTotal} onCheckedChange={handleCalcTotal} tabIndex={0} aria-label="Gesamtpreis kalkulieren" />
+          <Checkbox id="gesamtpreis-kalkulieren" checked={calcTotal} onCheckedChange={handleCalcTotal} tabIndex={0} aria-label="Gesamtpreis kalkulieren" disabled={showUnitPrices || !isEditing} />
           <Label htmlFor="gesamtpreis-kalkulieren">Gesamtpreis kalkulieren</Label>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Label htmlFor="gesamtpreis" className="w-32">Gesamtpreis</Label>
-          <Input id="gesamtpreis" type="number" value={total} onChange={handleTotalChange} tabIndex={0} aria-label="Gesamtpreis" className="w-40" min={0} />
+          <Input id="gesamtpreis" type="number" value={displayedTotal} onChange={handleTotalChange} tabIndex={0} aria-label="Gesamtpreis" className={calcTotal ? 'w-40 bg-gray-200' : 'w-40'} min={0} disabled={calcTotal || !isEditing} />
           <span>€</span>
         </div>
         <div className="flex items-center gap-2 text-sm">
           <Label className="w-32">Rabatt</Label>
-          <Input type="number" value={discountPercent ? discountValue : discount} onChange={discountPercent ? handleDiscountValue : handleDiscountChange} tabIndex={0} aria-label="Rabatt" className="w-24" min={0} />
+          <Input
+            type="number"
+            value={discount}
+            onChange={handleDiscountChange}
+            tabIndex={0}
+            aria-label="Rabatt Betrag"
+            className={(!isEditing || discountPercent) ? 'w-24 bg-gray-200' : 'w-24'}
+            min={0}
+            disabled={!isEditing || discountPercent}
+          />
           <span>Betrag</span>
-          <Switch checked={discountPercent} onCheckedChange={handleDiscountType} tabIndex={0} aria-label="Rabatt in Prozent umschalten" />
+          <Switch
+            checked={discountPercent}
+            onCheckedChange={handleDiscountType}
+            tabIndex={0}
+            aria-label="Rabatt in Prozent umschalten"
+            disabled={!isEditing}
+          />
           <span className={discountPercent ? 'text-black' : 'text-gray-400'}>Prozent</span>
-          <Input type="number" value={discountValue} onChange={handleDiscountValue} disabled={!discountPercent} tabIndex={0} aria-label="Rabatt Prozent" className={discountPercent ? 'w-16' : 'w-16 bg-gray-200'} min={0} max={100} />
+          <Input
+            type="number"
+            value={discountValue}
+            onChange={handleDiscountValue}
+            disabled={!discountPercent || !isEditing}
+            tabIndex={0}
+            aria-label="Rabatt Prozent"
+            className={discountPercent && isEditing ? 'w-16' : 'w-16 bg-gray-200'}
+            min={0}
+            max={100}
+          />
           <span>%</span>
         </div>
         <div className="flex items-center gap-2 text-sm">

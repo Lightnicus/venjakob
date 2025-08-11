@@ -30,6 +30,10 @@ interface InteractiveSplitPanelProps {
   getPositionChanges?: (positionId: string) => { [field: string]: { oldValue: any; newValue: any } };
   onRefreshRequested?: () => void;
   languageId: string;
+  calcTotal?: boolean;
+  calculationStale?: boolean;
+  onRecalculate?: () => Promise<void> | void;
+  finalTotalWithDiscount?: number;
 }
 
 const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({ 
@@ -42,7 +46,11 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   hasPositionChanges,
   getPositionChanges,
   onRefreshRequested,
-  languageId
+  languageId,
+  calcTotal = false,
+  calculationStale = false,
+  onRecalculate,
+  finalTotalWithDiscount,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | undefined>(undefined);
@@ -480,19 +488,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
             </>
           )}
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right font-semibold text-lg text-gray-800 dark:text-gray-100 select-none" aria-label="Gesamtpreis nach Rabatt">
-            Gesamtpreis nach Rabatt: <span className="text-green-600 dark:text-green-400">95.000&nbsp;€</span>
-          </div>
-          <a
-            href="#"
-            tabIndex={0}
-            aria-label="Kalkulation öffnen"
-            className="ml-2 text-gray-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-          >
-            <Calculator className="w-5 h-5 inline" />
-          </a>
-        </div>
+        {/* Price summary removed; now displayed above tabs in QuoteDetail */}
       </div>
       <div className="flex h-full w-full border rounded-md overflow-hidden">
         {/* Left Panel - Tree View */}

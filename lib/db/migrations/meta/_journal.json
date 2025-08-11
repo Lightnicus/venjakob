@@ -225,6 +225,13 @@
       "when": 1754638590298,
       "tag": "0031_simple_mulholland_black",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1754824516191,
+      "tag": "0032_giant_sentry",
+      "breakpoints": true
     }
   ]
 }

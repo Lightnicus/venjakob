@@ -322,6 +322,38 @@ export async function updatePositionCalculationItemsBatchAPI(updates: Array<{ po
   }
 }
 
+// Update pricing for a quote version (batch into save flow: call once on save)
+export async function saveQuoteVersionPricing(
+  versionId: string,
+  pricing: {
+    showUnitPrices: boolean;
+    calcTotal: boolean;
+    discountPercent: boolean;
+    discountValue: number;
+    discountAmount: number;
+    totalPrice?: number; // used when calcTotal=false
+  }
+): Promise<{
+  showUnitPrices: boolean;
+  calcTotal: boolean;
+  discountPercent: boolean;
+  discountValue: number;
+  discountAmount: number;
+  totalPrice: number;
+  autoTotal: number;
+  calculationStale: boolean;
+}> {
+  const response = await fetch(`/api/quotes/versions/${versionId}/pricing`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(pricing),
+  });
+  if (!response.ok) {
+    throw new Error('Failed to save quote version pricing');
+  }
+  return response.json();
+}
+
 // Create a new quote position (for blocks)
 export async function createQuotePosition(
   versionId: string,

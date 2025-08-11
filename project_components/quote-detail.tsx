@@ -14,9 +14,9 @@ import {
 } from '@/components/ui/select';
 import { useTabbedInterface, useTabReload } from '@/project_components/tabbed-interface-provider';
 import { toast } from 'sonner';
-import { Edit3, Save, RotateCcw, Loader2 } from 'lucide-react';
+import { Edit3, Save, RotateCcw, Loader2, Calculator } from 'lucide-react';
 import type { MyTreeNodeData } from '@/project_components/custom-node';
-import { fetchCompleteQuoteData, saveQuotePositions, copyQuoteVariantAPI, updatePositionCalculationItemsBatchAPI } from '@/lib/api/quotes';
+import { fetchCompleteQuoteData, saveQuotePositions, copyQuoteVariantAPI, updatePositionCalculationItemsBatchAPI, saveQuoteVersionPricing } from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { formatGermanDate } from '@/helper/date-formatter';
@@ -46,6 +46,15 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   // Data State
   const [treeData, setTreeData] = useState<MyTreeNodeData[]>([]);
   const [offerPropsData, setOfferPropsData] = useState<any>(null);
+  const [offerPropsDirty, setOfferPropsDirty] = useState(false);
+  const [pendingPricing, setPendingPricing] = useState<null | {
+    showUnitPrices: boolean;
+    calcTotal: boolean;
+    discountPercent: boolean;
+    discountValue: number;
+    discountAmount: number;
+    totalPrice?: number;
+  }>(null);
 
   // Loading States
   const [loadingPositions, setLoadingPositions] = useState(false);
@@ -185,6 +194,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       // Set offer properties data
       if (completeData.offerPropsData) {
         setOfferPropsData(completeData.offerPropsData);
+        setOfferPropsDirty(false);
+        setPendingPricing(null);
       }
       
     } catch (error) {
@@ -287,7 +298,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   const handleEditClick = async () => {
     if (isEditing) {
       // Save logic here
-      if (hasUnsavedChanges) {
+      if (hasUnsavedChanges || offerPropsDirty) {
         await handleSaveChanges();
       } else {
         toast('Keine Änderungen zum Speichern vorhanden.');
@@ -358,10 +369,54 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       if (calcItemPayload.length > 0) {
         await updatePositionCalculationItemsBatchAPI(calcItemPayload);
       }
+      // Save pricing if changed
+      if (offerPropsDirty && pendingPricing) {
+        try {
+          const pricingResp = await saveQuoteVersionPricing(resolvedVersionId, pendingPricing);
+          setOfferPropsData((prev: any) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              preis: {
+                ...prev.preis,
+                showUnitPrices: pricingResp.showUnitPrices,
+                calcTotal: pricingResp.calcTotal,
+                discountPercent: pricingResp.discountPercent,
+                discountValue: pricingResp.discountValue,
+                discount: pricingResp.discountAmount,
+                total: pricingResp.totalPrice,
+                autoTotal: pricingResp.autoTotal,
+                calculationStale: pricingResp.calculationStale,
+              },
+            };
+          });
+          setOfferPropsDirty(false);
+          setPendingPricing(null);
+        } catch (e) {
+          throw e;
+        }
+      }
+      // If totals-affecting fields were saved and calcTotal is on, mark pricing stale locally before refresh
+      const calcOn = Boolean((offerPropsData as any)?.preis?.calcTotal);
+      if (calcOn) {
+        const affectedTotals = filteredPositionUpdates.some((u: any) => 'quantity' in u || 'unitPrice' in u || 'totalPrice' in u);
+        if (affectedTotals) {
+          setOfferPropsData((prev: any) => prev ? {
+            ...prev,
+            preis: {
+              ...prev.preis,
+              calculationStale: true,
+            }
+          } : prev);
+        }
+      }
+
       toast.success('Änderungen wurden erfolgreich gespeichert.');
       
       // Trigger reload for other tabs (like QuotesManagement)
       triggerReload();
+      // Refresh this tab's pricing snapshot so server-side staleness reflects saved quantities
+      await loadQuoteVersionData();
       
       // Update tree data with saved values
       setTreeData(prevData => {
@@ -409,6 +464,57 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       setIsSaving(false);
     }
   };
+
+  // Handle pricing form changes (batched into Save)
+  const handleOfferPropsChange = useCallback((updated: any) => {
+    const p = updated?.preis || {};
+    const current = offerPropsData?.preis || {};
+    // Compute pending payload
+    const payload = {
+      showUnitPrices: Boolean(p.showUnitPrices),
+      calcTotal: Boolean(p.calcTotal),
+      discountPercent: Boolean(p.discountPercent),
+      discountValue: Number(p.discountValue || 0),
+      discountAmount: Number((p.discount ?? current.discount) || 0),
+      totalPrice: !p.calcTotal ? Number(p.total || 0) : undefined,
+    };
+    setPendingPricing(payload);
+    setOfferPropsDirty(true);
+  }, [offerPropsData]);
+
+  // Recalculate click from calculator icon (only when stale)
+  const handleRecalculateClick = useCallback(async () => {
+    if (!resolvedVersionId) return;
+    try {
+      setIsSaving(true);
+      const current = offerPropsData?.preis || {};
+      const payload = {
+        showUnitPrices: Boolean(current.showUnitPrices),
+        calcTotal: true,
+        discountPercent: Boolean(current.discountPercent),
+        discountValue: Number(current.discountValue || 0),
+        discountAmount: Number(current.discount || 0),
+      };
+      const resp = await saveQuoteVersionPricing(resolvedVersionId, payload);
+      setOfferPropsData((prev: any) => prev ? {
+        ...prev,
+        preis: {
+          ...prev.preis,
+          calcTotal: true,
+          total: resp.totalPrice,
+          autoTotal: resp.autoTotal,
+          calculationStale: false,
+        }
+      } : prev);
+      triggerReload();
+      toast.success('Gesamtpreis neu berechnet.');
+    } catch (e) {
+      console.error(e);
+      toast.error('Fehler bei der Neuberechnung.');
+    } finally {
+      setIsSaving(false);
+    }
+  }, [resolvedVersionId, offerPropsData, triggerReload]);
 
   return (
     <div className="w-full h-full flex flex-col">
@@ -492,6 +598,102 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
             )}
           </Button>
         </div>
+        {/* Global price summary + recalc button */}
+        <div className="mt-2 flex items-center justify-end gap-4">
+          <div className="text-right font-semibold text-lg text-gray-800 dark:text-gray-100 select-none" aria-label="Gesamtpreis nach Rabatt">
+            Gesamtpreis nach Rabatt:{' '}
+            <span className="text-green-600 dark:text-green-400">
+              {(() => {
+                const p = (offerPropsData as any)?.preis;
+                if (!p) return '—';
+                const base = Number(p.calcTotal ? p.autoTotal ?? 0 : p.total ?? 0);
+                const rabatt = p.discountPercent ? base * (Number(p.discountValue || 0) / 100) : Number(p.discount || 0);
+                const finalVal = Math.max(0, base - rabatt);
+                return finalVal.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+              })()}
+            </span>
+          </div>
+          <div
+            tabIndex={0}
+            aria-label={(() => {
+              const p = (offerPropsData as any)?.preis;
+              const calcOn = Boolean(p?.calcTotal);
+              const stale = (() => {
+                if (!calcOn) return false;
+                const serverStale = Boolean(p?.calculationStale);
+                // reuse the same local stale checks
+                const localDiscountDirty = offerPropsDirty && pendingPricing && p && (
+                  Boolean(pendingPricing.discountPercent) !== Boolean(p.discountPercent) ||
+                  Number(pendingPricing.discountValue || 0) !== Number(p.discountValue || 0) ||
+                  Number(pendingPricing.discountAmount || 0) !== Number(p.discount || 0)
+                );
+                if (localDiscountDirty) return true;
+                const hasPricingChangeInTree = (() => {
+                  const hasChange = (nodes: any[]): boolean => {
+                    for (const n of nodes || []) {
+                      if (hasPositionChanges && hasPositionChanges(n.id)) {
+                        const ch = getPositionChanges ? getPositionChanges(n.id) : undefined;
+                        if (ch && (ch['quantity'] || ch['unitPrice'])) return true;
+                      }
+                      if (n.children && n.children.length > 0) {
+                        if (hasChange(n.children)) return true;
+                      }
+                    }
+                    return false;
+                  };
+                  return hasChange(treeData as any);
+                })();
+                return serverStale || hasPricingChangeInTree;
+              })();
+              return calcOn ? (stale ? 'Neu berechnen' : 'Aktualisierung nicht erforderlich') : 'Kalkulation deaktiviert';
+            })()}
+            title={(() => {
+              const p = (offerPropsData as any)?.preis;
+              const calcOn = Boolean(p?.calcTotal);
+              const stale = Boolean(p?.calculationStale);
+              return calcOn ? (stale ? 'Neu berechnen' : 'Aktualisierung nicht erforderlich') : 'Kalkulation deaktiviert';
+            })()}
+            className={(() => {
+              const p = (offerPropsData as any)?.preis;
+              const calcOn = Boolean(p?.calcTotal);
+              const stale = (() => {
+                if (!calcOn) return false;
+                const serverStale = Boolean(p?.calculationStale);
+                const localDiscountDirty = offerPropsDirty && pendingPricing && p && (
+                  Boolean(pendingPricing.discountPercent) !== Boolean(p.discountPercent) ||
+                  Number(pendingPricing.discountValue || 0) !== Number(p.discountValue || 0) ||
+                  Number(pendingPricing.discountAmount || 0) !== Number(p.discount || 0)
+                );
+                if (localDiscountDirty) return true;
+                const hasPricingChangeInTree = (() => {
+                  const hasChange = (nodes: any[]): boolean => {
+                    for (const n of nodes || []) {
+                      if (hasPositionChanges && hasPositionChanges(n.id)) {
+                        const ch = getPositionChanges ? getPositionChanges(n.id) : undefined;
+                        if (ch && (ch['quantity'] || ch['unitPrice'])) return true;
+                      }
+                      if (n.children && n.children.length > 0) {
+                        if (hasChange(n.children)) return true;
+                      }
+                    }
+                    return false;
+                  };
+                  return hasChange(treeData as any);
+                })();
+                return serverStale || hasPricingChangeInTree;
+              })();
+              return 'ml-2 transition-colors ' + (!calcOn ? 'text-gray-300' : (stale ? 'text-yellow-500 cursor-pointer hover:text-yellow-600' : 'text-green-600'));
+            })()}
+            onClick={() => {
+              const p = (offerPropsData as any)?.preis;
+              if (!p?.calcTotal) return;
+              // Recompute totals on click
+              handleRecalculateClick();
+            }}
+          >
+            <Calculator className="w-5 h-5" />
+          </div>
+        </div>
       </div>
       <Tabs
         value={tab}
@@ -550,6 +752,49 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
                 }
               }}
               languageId={variantLanguageId}
+              calcTotal={Boolean((offerPropsData as any)?.preis?.calcTotal)}
+              calculationStale={(() => {
+                const serverStale = Boolean((offerPropsData as any)?.preis?.calculationStale);
+                const calcOn = Boolean((offerPropsData as any)?.preis?.calcTotal);
+                if (!calcOn) return false;
+                // Consider local discount edits as stale as well
+                if (offerPropsDirty && pendingPricing && offerPropsData?.preis) {
+                  const p = pendingPricing;
+                  const curr = offerPropsData.preis;
+                  const discountDirty = (
+                    Boolean(p.discountPercent) !== Boolean(curr.discountPercent) ||
+                    Number(p.discountValue || 0) !== Number(curr.discountValue || 0) ||
+                    Number(p.discountAmount || 0) !== Number(curr.discount || 0)
+                  );
+                  if (discountDirty) return true;
+                }
+                // Consider unsaved position quantity/unit price changes as stale as well
+                const hasPricingChangeInTree = (() => {
+                  const hasChange = (nodes: any[]): boolean => {
+                    for (const n of nodes || []) {
+                      if (hasPositionChanges && hasPositionChanges(n.id)) {
+                        const ch = getPositionChanges ? getPositionChanges(n.id) : undefined;
+                        if (ch && (ch['quantity'] || ch['unitPrice'])) return true;
+                      }
+                      if (n.children && n.children.length > 0) {
+                        if (hasChange(n.children)) return true;
+                      }
+                    }
+                    return false;
+                  };
+                  return hasChange(treeData as any);
+                })();
+                if (hasPricingChangeInTree) return true;
+                return serverStale;
+              })()}
+              finalTotalWithDiscount={(() => {
+                const p = (offerPropsData as any)?.preis;
+                if (!p) return undefined;
+                const base = Number(p.calcTotal ? p.autoTotal ?? 0 : p.total ?? 0);
+                const discount = p.discountPercent ? base * (Number(p.discountValue || 0) / 100) : Number(p.discount || 0);
+                return Math.max(0, base - discount);
+              })()}
+              onRecalculate={handleRecalculateClick}
             />
           )}
         </TabsContent>
@@ -558,7 +803,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           className="flex-1 overflow-auto flex items-center justify-center"
         >
           {offerPropsData ? (
-            <OfferProperties {...offerPropsData} />
+            <OfferProperties {...offerPropsData} onChange={handleOfferPropsChange} isEditing={isEditing} />
           ) : (
             <LoadingIndicator text="Lade Angebotseigenschaften..." variant="centered" />
           )}

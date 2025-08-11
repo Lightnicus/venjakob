@@ -368,6 +368,12 @@ export const quoteVersions = pgTable(
       .notNull()
       .default(false),
     totalPrice: numeric('total_price'),
+    // Pricing configuration fields
+    pricingShowUnitPrices: boolean('pricing_show_unit_prices').notNull().default(false),
+    pricingCalcTotal: boolean('pricing_calc_total').notNull().default(true),
+    pricingDiscountPercent: boolean('pricing_discount_percent').notNull().default(false),
+    pricingDiscountValue: numeric('pricing_discount_value'),
+    pricingDiscountAmount: numeric('pricing_discount_amount'),
     isLatest: boolean('is_latest').notNull().default(false),
     blocked: timestamp('blocked', { mode: 'string' }),
     blockedBy: uuid('blocked_by').references(() => users.id),

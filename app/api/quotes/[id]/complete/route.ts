@@ -52,6 +52,27 @@ export async function GET(
     // Step 3: Build mapped offer properties data
     let offerPropsData = null;
     if (quoteData && variantData) {
+      // Compute autoTotal from non-deleted article positions
+      const autoTotal = (positionsData || [])
+        .filter((p: any) => !p.deleted && p.articleId)
+        .reduce((sum: number, p: any) => {
+          const q = Number(p.quantity || 0);
+          const u = Number(p.unitPrice || 0);
+          return sum + q * u;
+        }, 0);
+
+      // Pricing fields from version (may be undefined for legacy versions)
+      const v: any = versionData || {};
+      const pricingShowUnitPrices = Boolean(v.pricingShowUnitPrices);
+      const pricingCalcTotal = v.pricingCalcTotal !== undefined ? Boolean(v.pricingCalcTotal) : false;
+      const pricingDiscountPercent = Boolean(v.pricingDiscountPercent);
+      const pricingDiscountValue = Number(v.pricingDiscountValue || 0);
+      const pricingDiscountAmount = Number(v.pricingDiscountAmount || 0);
+      const total = Number(v.totalPrice || 0);
+      // Staleness is based on base total delta; discount is user-level but impacts final shown price.
+      // Server staleness remains tied to base total only; client augments for discount diffs.
+      const calculationStale = pricingCalcTotal === true && total !== autoTotal;
+
       offerPropsData = {
         kunde: {
           id: quoteData.salesOpportunity?.client?.foreignId || '',
@@ -68,12 +89,14 @@ export async function GET(
           email: quoteData.salesOpportunity?.contactPerson?.email || ''
         },
         preis: {
-          showUnitPrices: false,
-          calcTotal: false,
-          total: 0,
-          discount: 0,
-          discountPercent: false,
-          discountValue: 0
+          showUnitPrices: pricingShowUnitPrices,
+          calcTotal: pricingCalcTotal,
+          total,
+          discount: pricingDiscountAmount, // legacy prop retained for compatibility
+          discountPercent: pricingDiscountPercent,
+          discountValue: pricingDiscountValue,
+          autoTotal,
+          calculationStale
         },
         bemerkung: variantData.variantDescriptor || ''
       };
