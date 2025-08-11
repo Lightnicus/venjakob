@@ -417,6 +417,9 @@ export const quotePositions = pgTable(
     description: text('description'),
     title: text('title'),
     calculationNote: text('calculation_note'),
+    // New flags: whether the position is optional and whether a page break should be inserted above it
+    isOption: boolean('is_option').notNull().default(false),
+    pageBreakAbove: boolean('page_break_above').notNull().default(false),
     deleted: boolean('deleted').notNull().default(false),
     createdAt: timestamp('created_at', { mode: 'string' })
       .defaultNow()

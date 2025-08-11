@@ -33,6 +33,13 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
   const [title, setTitle] = useState(selectedNode?.data?.title || "")
   const [previewHtml, setPreviewHtml] = useState<string>("")
   const [quantity, setQuantity] = useState<string>(selectedNode?.data?.quantity || '1')
+  const [unitPriceDisplay, setUnitPriceDisplay] = useState<string>(() => {
+    const p = selectedNode?.data?.unitPrice as string | undefined;
+    if (!p) return '';
+    return (p ?? '').toString().replace('.', ',');
+  })
+  const [isOptionChecked, setIsOptionChecked] = useState<boolean>(Boolean(selectedNode?.data?.isOption))
+  const [pageBreakAboveChecked, setPageBreakAboveChecked] = useState<boolean>(Boolean(selectedNode?.data?.pageBreakAbove))
   const [originalTitle, setOriginalTitle] = useState(selectedNode?.data?.title || "")
   const [currentTab, setCurrentTab] = useState<string>("eingabe")
   const [calcItems, setCalcItems] = useState<Array<{ id: string; name: string; type: string; value: string; order: number | null; originalValue?: string | null; editingValue?: string }>>([])
@@ -49,6 +56,13 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
       setNote((noteChange?.newValue as string) ?? (selectedNode.data.calculationNote || ''));
       const quantityChange = unsaved && unsaved['quantity'];
       setQuantity((quantityChange?.newValue as string) ?? (selectedNode.data.quantity || '1'));
+      const unitPriceChange = unsaved && (unsaved['unitPrice'] as any);
+      const baseUnitPrice: string = (unitPriceChange?.newValue as string) ?? (selectedNode.data.unitPrice ?? '');
+      setUnitPriceDisplay(baseUnitPrice ? baseUnitPrice.toString().replace('.', ',') : '');
+      const isOptionChange = unsaved && (unsaved['isOption'] as any);
+      setIsOptionChecked((isOptionChange?.newValue as boolean) ?? Boolean(selectedNode.data.isOption));
+      const pbChange = unsaved && (unsaved['pageBreakAbove'] as any);
+      setPageBreakAboveChecked((pbChange?.newValue as boolean) ?? Boolean(selectedNode.data.pageBreakAbove));
     }
   }, [selectedNode, positionId, getPositionChanges])
 
@@ -133,6 +147,57 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
         addChange(positionId, 'quantity', oldQ, raw);
       } else {
         removeChange(positionId, 'quantity');
+      }
+    }
+  }, [positionId, addChange, removeChange, selectedNode])
+
+  const handleUnitPriceChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    if (!isValidGermanInput(raw)) return;
+    setUnitPriceDisplay(raw);
+  }, [])
+
+  const handleUnitPriceBlur = useCallback((e: React.FocusEvent<HTMLInputElement>) => {
+    const raw = e.target.value.trim();
+    const normalized = clampTwoDecimals(parseGermanDecimal(raw));
+    const fallbackOld = (selectedNode?.data?.unitPrice ?? '') as string;
+    if (normalized === '') {
+      setUnitPriceDisplay(fallbackOld ? fallbackOld.toString().replace('.', ',') : '');
+      return;
+    }
+    if (positionId && addChange && removeChange) {
+      const oldUnit = (selectedNode?.data?.unitPrice ?? '') as string;
+      if (normalized !== oldUnit) {
+        addChange(positionId, 'unitPrice', oldUnit, normalized);
+      } else {
+        removeChange(positionId, 'unitPrice');
+      }
+    }
+    setUnitPriceDisplay(normalized.replace('.', ','));
+  }, [positionId, addChange, removeChange, selectedNode])
+
+  const handleIsOptionChange = useCallback((checked: boolean | string) => {
+    const next = Boolean(checked === 'indeterminate' ? false : checked);
+    setIsOptionChecked(next);
+    if (positionId && addChange && removeChange) {
+      const oldVal = Boolean(selectedNode?.data?.isOption);
+      if (next !== oldVal) {
+        addChange(positionId, 'isOption', oldVal, next);
+      } else {
+        removeChange(positionId, 'isOption');
+      }
+    }
+  }, [positionId, addChange, removeChange, selectedNode])
+
+  const handlePageBreakAboveChange = useCallback((checked: boolean | string) => {
+    const next = Boolean(checked === 'indeterminate' ? false : checked);
+    setPageBreakAboveChecked(next);
+    if (positionId && addChange && removeChange) {
+      const oldVal = Boolean(selectedNode?.data?.pageBreakAbove);
+      if (next !== oldVal) {
+        addChange(positionId, 'pageBreakAbove', oldVal, next);
+      } else {
+        removeChange(positionId, 'pageBreakAbove');
       }
     }
   }, [positionId, addChange, removeChange, selectedNode])
@@ -250,23 +315,6 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
   const formContent = useMemo(() => (
     <form className="space-y-6">
       <div className="space-y-2">
-        <label htmlFor="input-anzahl" className="text-sm font-medium">
-          Anzahl
-        </label>
-        <Input
-          id="input-anzahl"
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          placeholder="Anzahl eingeben"
-          value={quantity}
-          onChange={handleQuantityChange}
-          className="w-full"
-          aria-label="Anzahl"
-          disabled={!isEditing}
-        />
-      </div>
-      <div className="space-y-2">
         <label htmlFor="input-ueberschrift" className="text-sm font-medium">
           Überschrift
         </label>
@@ -281,6 +329,65 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
           disabled={!isEditing}
         />
       </div>
+      <fieldset className="border rounded p-4">
+        <legend className="px-1 text-sm text-gray-700">Preis</legend>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="space-y-1 w-28">
+            <label htmlFor="input-anzahl" className="text-sm font-medium">Anzahl</label>
+            <Input
+              id="input-anzahl"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="Anzahl eingeben"
+              value={quantity}
+              onChange={handleQuantityChange}
+              className="w-full"
+              aria-label="Anzahl"
+              disabled={!isEditing}
+            />
+          </div>
+          <div className="space-y-1 min-w-64">
+            <label htmlFor="input-einzelpreis" className="text-sm font-medium">Einzelpreis</label>
+            <Input
+              id="input-einzelpreis"
+              type="text"
+              inputMode="decimal"
+              pattern="[0-9]*[\.,]?[0-9]{0,2}"
+              value={unitPriceDisplay}
+              onChange={handleUnitPriceChange}
+              onBlur={handleUnitPriceBlur}
+              className="w-full"
+              aria-label="Einzelpreis"
+              disabled={!isEditing}
+            />
+          </div>
+          <div className="flex items-center gap-2 mt-6">
+            <input
+              id="checkbox-ist-option"
+              type="checkbox"
+              className="size-4 rounded border"
+              checked={isOptionChecked}
+              onChange={(e) => handleIsOptionChange(e.target.checked)}
+              disabled={!isEditing}
+              aria-label="Ist Option"
+            />
+            <label htmlFor="checkbox-ist-option" className="text-sm">Ist Option</label>
+          </div>
+          <div className="flex items-center gap-2 mt-6">
+            <input
+              id="checkbox-page-break-above"
+              type="checkbox"
+              className="size-4 rounded border"
+              checked={pageBreakAboveChecked}
+              onChange={(e) => handlePageBreakAboveChange(e.target.checked)}
+              disabled={!isEditing}
+              aria-label="Seitenumbruch oberhalb"
+            />
+            <label htmlFor="checkbox-page-break-above" className="text-sm">Seitenumbruch oberhalb</label>
+          </div>
+        </div>
+      </fieldset>
       <div className="space-y-2">
         <label htmlFor="editor-beschreibung" className="text-sm font-medium">
           Beschreibung
@@ -295,7 +402,7 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
         />
       </div>
     </form>
-  ), [getCurrentTitle, handleTitleChange, getCurrentDescription, handleDescriptionChange, isEditing])
+  ), [quantity, unitPriceDisplay, isOptionChecked, pageBreakAboveChecked, handleQuantityChange, handleUnitPriceChange, handleUnitPriceBlur, handleIsOptionChange, handlePageBreakAboveChange, getCurrentTitle, handleTitleChange, getCurrentDescription, handleDescriptionChange, isEditing])
 
   // Kalkulation content (live data)
   const kalkulationContent = useMemo(() => (

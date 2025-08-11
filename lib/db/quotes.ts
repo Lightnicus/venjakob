@@ -980,6 +980,9 @@ export async function addAsPosition(
             articleCost: null,
             description: null,
             title: null,
+            // Defaults for flags on article positions
+            isOption: false,
+            pageBreakAbove: false,
           })
           .returning();
 
@@ -1020,6 +1023,12 @@ export async function addAsPosition(
           articleCost: null,
           description: null,
           title: null,
+          // For block positions: default isOption=false, page break copied from source block
+          isOption: false,
+          pageBreakAbove: (await (async () => {
+            const [blk] = await db.select().from(blocks).where(eq(blocks.id, blockId));
+            return blk?.pageBreakAbove ?? false;
+          })()),
         })
         .returning();
       return newPosition;
@@ -1304,6 +1313,8 @@ export async function addQuotePositionWithHierarchyForArticle(
           articleCost: null,
           description: articleContentData?.content || null,
           title: articleContentData?.title || null,
+            isOption: false,
+            pageBreakAbove: false,
         })
         .returning();
 
@@ -1856,6 +1867,8 @@ export async function updateQuotePositions(
     totalPrice?: string;
     articleCost?: string;
     calculationNote?: string;
+    isOption?: boolean;
+    pageBreakAbove?: boolean;
   }>
 ): Promise<void> {
   try {

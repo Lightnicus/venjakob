@@ -265,6 +265,8 @@ export async function saveQuotePosition(
     totalPrice?: string;
     articleCost?: string;
     calculationNote?: string;
+    isOption?: boolean;
+    pageBreakAbove?: boolean;
   }
 ): Promise<void> {
   const response = await fetch(`/api/quotes/versions/${versionId}/positions/${positionId}`, {
@@ -291,6 +293,8 @@ export async function saveQuotePositions(
     totalPrice?: string;
     articleCost?: string;
     calculationNote?: string;
+    isOption?: boolean;
+    pageBreakAbove?: boolean;
   }>
 ): Promise<void> {
   const response = await fetch(`/api/quotes/versions/${versionId}/positions/batch`, {

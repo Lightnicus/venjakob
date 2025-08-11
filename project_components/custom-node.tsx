@@ -12,6 +12,9 @@ export interface MyTreeNodeData {
   title?: string;
   calculationNote?: string;
   quantity?: string;
+  unitPrice?: string | null;
+  isOption?: boolean;
+  pageBreakAbove?: boolean;
   children?: MyTreeNodeData[];
 }
 

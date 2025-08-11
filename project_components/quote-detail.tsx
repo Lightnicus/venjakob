@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import InteractiveSplitPanel from '@/project_components/interactive-split-panel';
 import OfferProperties from '@/project_components/offer-properties';
@@ -12,11 +12,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useTabbedInterface, useTabReload } from '@/project_components/tabbed-interface-provider';
+import {
+  useTabbedInterface,
+  useTabReload,
+} from '@/project_components/tabbed-interface-provider';
 import { toast } from 'sonner';
 import { Edit3, Save, RotateCcw, Loader2, Calculator } from 'lucide-react';
 import type { MyTreeNodeData } from '@/project_components/custom-node';
-import { fetchCompleteQuoteData, saveQuotePositions, copyQuoteVariantAPI, updatePositionCalculationItemsBatchAPI, saveQuoteVersionPricing, saveQuoteVariantDescriptor } from '@/lib/api/quotes';
+import {
+  fetchCompleteQuoteData,
+  saveQuotePositions,
+  copyQuoteVariantAPI,
+  updatePositionCalculationItemsBatchAPI,
+  saveQuoteVersionPricing,
+  saveQuoteVariantDescriptor,
+} from '@/lib/api/quotes';
 import type { QuotePositionWithDetails } from '@/lib/db/quotes';
 import { useUnsavedChanges } from '@/hooks/use-unsaved-changes';
 import { formatGermanDate } from '@/helper/date-formatter';
@@ -65,8 +75,12 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   const [isCopyingVariant, setIsCopyingVariant] = useState(false);
 
   // Resolved IDs
-  const [resolvedVariantId, setResolvedVariantId] = useState<string | undefined>(variantId);
-  const [resolvedVersionId, setResolvedVersionId] = useState<string | undefined>(versionId);
+  const [resolvedVariantId, setResolvedVariantId] = useState<
+    string | undefined
+  >(variantId);
+  const [resolvedVersionId, setResolvedVersionId] = useState<
+    string | undefined
+  >(versionId);
 
   // Display Data
   const [quoteNumber, setQuoteNumber] = useState<string>('');
@@ -74,7 +88,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   const [versionNumber, setVersionNumber] = useState<string>('');
 
   // Variant Configuration
-  const [variantLanguageId, setVariantLanguageId] = useState<string | undefined>(undefined);
+  const [variantLanguageId, setVariantLanguageId] = useState<
+    string | undefined
+  >(undefined);
 
   // Metadata
   const [lastChangedInfo, setLastChangedInfo] = useState<{
@@ -83,7 +99,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   } | null>(null);
 
   const { openNewTab } = useTabbedInterface();
-  
+
   // Set up reload functionality for quotes - triggers reload in other tabs (like QuotesManagement)
   const { triggerReload } = useTabReload('quotes', () => {});
 
@@ -104,28 +120,36 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   ): MyTreeNodeData[] => {
     // Create a map of position ID to position node
     const positionMap = new Map<string, MyTreeNodeData>();
-    
+
     // First pass: create all nodes
     positions.forEach(position => {
       positionMap.set(position.id, {
         id: position.id,
         name: position.title || position.description || 'Unnamed Position',
-        type: position.articleId ? ('article' as const) : ('textblock' as const),
+        type: position.articleId
+          ? ('article' as const)
+          : ('textblock' as const),
         description: position.description || '',
         title: position.title || '',
         calculationNote: (position as any).calculationNote || '',
-        quantity: (position as any).quantity ? String((position as any).quantity) : '1',
-        children: []
+        quantity: (position as any).quantity
+          ? String((position as any).quantity)
+          : '1',
+        // pass through pricing and flags for right panel editors
+        unitPrice: (position as any).unitPrice ?? null,
+        isOption: (position as any).isOption ?? false,
+        pageBreakAbove: (position as any).pageBreakAbove ?? false,
+        children: [],
       });
     });
-    
+
     // Second pass: build the tree structure
     const rootNodes: MyTreeNodeData[] = [];
-    
+
     positions.forEach(position => {
       const node = positionMap.get(position.id);
       if (!node) return;
-      
+
       if (position.quotePositionParentId) {
         // This is a child node
         const parentNode = positionMap.get(position.quotePositionParentId);
@@ -140,7 +164,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         rootNodes.push(node);
       }
     });
-    
+
     return rootNodes;
   };
 
@@ -152,30 +176,37 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       setLoadingIds(true);
       setLoadingDisplayData(true);
       setLoadingPositions(true);
-      
+
       // Fetch all data in one consolidated API call
-      const completeData = await fetchCompleteQuoteData(quoteId, variantId, versionId);
-      
+      const completeData = await fetchCompleteQuoteData(
+        quoteId,
+        variantId,
+        versionId,
+      );
+
       // Update resolved IDs
       setResolvedVariantId(completeData.resolvedVariantId || undefined);
       setResolvedVersionId(completeData.resolvedVersionId || undefined);
-      
+
       // Update display data
       if (completeData.quote) {
         setQuoteNumber(completeData.quote.quoteNumber || '');
       }
-      
+
       if (completeData.variant) {
         setVariantNumber(completeData.variant.variantNumber?.toString() || '');
         setVariantLanguageId(completeData.variant.languageId);
       }
-      
+
       if (completeData.version) {
         setVersionNumber(completeData.version.versionNumber?.toString() || '');
       }
-      
+
       // Set last changed information from version data
-      if (completeData.version?.modifiedByUserName && completeData.version?.updatedAt) {
+      if (
+        completeData.version?.modifiedByUserName &&
+        completeData.version?.updatedAt
+      ) {
         setLastChangedInfo({
           userName: completeData.version.modifiedByUserName,
           timestamp: completeData.version.updatedAt,
@@ -183,22 +214,23 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       } else {
         setLastChangedInfo(null);
       }
-      
+
       // Update positions tree data
       if (completeData.positions) {
-        const transformedData = transformPositionsToTreeData(completeData.positions);
+        const transformedData = transformPositionsToTreeData(
+          completeData.positions,
+        );
         setTreeData(transformedData);
       } else {
         setTreeData([]);
       }
-      
+
       // Set offer properties data
       if (completeData.offerPropsData) {
         setOfferPropsData(completeData.offerPropsData);
         setOfferPropsDirty(false);
         setPendingPricing(null);
       }
-      
     } catch (error) {
       console.error('Error fetching complete quote data:', error);
       toast.error('Fehler beim Laden der Angebotsdaten');
@@ -210,18 +242,16 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     }
   }, [quoteId, variantId, versionId]);
 
-
-
   const formatLastChangedText = () => {
     if (!lastChangedInfo) return null;
-    
+
     const { userName, timestamp } = lastChangedInfo;
     const userNameDisplay = userName || 'Unbekannt';
-    
+
     if (!timestamp) {
       return `Zuletzt geändert von ${userNameDisplay}`;
     }
-    
+
     const formattedDate = formatGermanDate(timestamp);
     return `Zuletzt geändert am ${formattedDate} von ${userNameDisplay}`;
   };
@@ -233,29 +263,37 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
   // Focused data refresh function for EditLockButton
   const loadQuoteVersionData = useCallback(async () => {
     if (!quoteId || !resolvedVersionId) return;
-    
+
     try {
-      const completeData = await fetchCompleteQuoteData(quoteId, variantId, resolvedVersionId);
-      
+      const completeData = await fetchCompleteQuoteData(
+        quoteId,
+        variantId,
+        resolvedVersionId,
+      );
+
       // Update only version-specific data
       if (completeData.version) {
         setVersionNumber(completeData.version.versionNumber || '');
       }
-      
+
       // Update positions tree data
       if (completeData.positions) {
-        const transformedData = transformPositionsToTreeData(completeData.positions);
+        const transformedData = transformPositionsToTreeData(
+          completeData.positions,
+        );
         setTreeData(transformedData);
       }
-      
+
       // Update last changed info
-      if (completeData.version?.modifiedByUserName && completeData.version?.updatedAt) {
+      if (
+        completeData.version?.modifiedByUserName &&
+        completeData.version?.updatedAt
+      ) {
         setLastChangedInfo({
           userName: completeData.version.modifiedByUserName,
           timestamp: completeData.version.updatedAt,
         });
       }
-      
     } catch (error) {
       console.error('Error refreshing quote version data:', error);
       throw error; // Let EditLockButton handle the error
@@ -271,19 +309,27 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
     setIsCopyingVariant(true);
     try {
       const copiedVariant = await copyQuoteVariantAPI(resolvedVariantId);
-      
+
       // Trigger reload for other tabs (like QuotesManagement) since we created a new variant
       triggerReload();
-      
+
       // Open new tab with copied variant
       openNewTab({
         id: `variant-${copiedVariant.id}`,
         title: `${title} - Variante ${copiedVariant.variantNumber}`,
-        content: <QuoteDetail title={title} quoteId={quoteId} variantId={copiedVariant.id} />,
-        closable: true
+        content: (
+          <QuoteDetail
+            title={title}
+            quoteId={quoteId}
+            variantId={copiedVariant.id}
+          />
+        ),
+        closable: true,
       });
 
-      toast.success(`Variante "${title} - ${copiedVariant.variantNumber}" wurde kopiert`);
+      toast.success(
+        `Variante "${title} - ${copiedVariant.variantNumber}" wurde kopiert`,
+      );
     } catch (error) {
       console.error('Error copying variant:', error);
       toast.error('Fehler beim Kopieren der Variante');
@@ -333,9 +379,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       // Get changes from the interactive split panel
       const changesToSave = getChangesForSave();
       const hasPricingChanges = offerPropsDirty && pendingPricing;
-      const hasRemarkChange = remarkDirty && typeof offerPropsData?.bemerkung === 'string';
-      
-      if (changesToSave.length === 0 && !hasPricingChanges && !hasRemarkChange) {
+      const hasRemarkChange =
+        remarkDirty && typeof offerPropsData?.bemerkung === 'string';
+
+      if (
+        changesToSave.length === 0 &&
+        !hasPricingChanges &&
+        !hasRemarkChange
+      ) {
         toast('Keine Änderungen zum Speichern vorhanden.');
         return;
       }
@@ -350,32 +401,46 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         return filtered;
       });
 
-      const calcItemUpdatesByPosition: Record<string, { positionId: string; items: Array<{ id: string; value: string }> }> = {};
+      const calcItemUpdatesByPosition: Record<
+        string,
+        { positionId: string; items: Array<{ id: string; value: string }> }
+      > = {};
       changesToSave.forEach((c: any) => {
         const { id, ...rest } = c;
         Object.entries(rest).forEach(([key, value]) => {
           if (key.startsWith('calcItem:')) {
             const itemId = key.replace('calcItem:', '');
-            if (!calcItemUpdatesByPosition[id]) calcItemUpdatesByPosition[id] = { positionId: id, items: [] };
-            calcItemUpdatesByPosition[id].items.push({ id: itemId, value: String(value) });
+            if (!calcItemUpdatesByPosition[id])
+              calcItemUpdatesByPosition[id] = { positionId: id, items: [] };
+            calcItemUpdatesByPosition[id].items.push({
+              id: itemId,
+              value: String(value),
+            });
           }
         });
       });
 
       // Keep updates that have at least one non-calc field, including calculationNote
-      const filteredPositionUpdates = positionFieldUpdates.filter((u: any) => Object.keys(u).some(k => k !== 'id'));
+      const filteredPositionUpdates = positionFieldUpdates.filter((u: any) =>
+        Object.keys(u).some(k => k !== 'id'),
+      );
       if (filteredPositionUpdates.length > 0) {
         await saveQuotePositions(resolvedVersionId, filteredPositionUpdates);
       }
 
-      const calcItemPayload = Object.values(calcItemUpdatesByPosition).filter(group => group.items.length > 0);
+      const calcItemPayload = Object.values(calcItemUpdatesByPosition).filter(
+        group => group.items.length > 0,
+      );
       if (calcItemPayload.length > 0) {
         await updatePositionCalculationItemsBatchAPI(calcItemPayload);
       }
       // Save pricing if changed
       if (offerPropsDirty && pendingPricing) {
         try {
-          const pricingResp = await saveQuoteVersionPricing(resolvedVersionId, pendingPricing);
+          const pricingResp = await saveQuoteVersionPricing(
+            resolvedVersionId,
+            pendingPricing,
+          );
           setOfferPropsData((prev: any) => {
             if (!prev) return prev;
             return {
@@ -401,31 +466,40 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
       }
       // Save remark (variant descriptor) if changed
       if (hasRemarkChange && resolvedVariantId) {
-        await saveQuoteVariantDescriptor(resolvedVariantId, String(offerPropsData?.bemerkung || ''));
+        await saveQuoteVariantDescriptor(
+          resolvedVariantId,
+          String(offerPropsData?.bemerkung || ''),
+        );
         setRemarkDirty(false);
       }
       // If totals-affecting fields were saved and calcTotal is on, mark pricing stale locally before refresh
       const calcOn = Boolean((offerPropsData as any)?.preis?.calcTotal);
       if (calcOn) {
-        const affectedTotals = filteredPositionUpdates.some((u: any) => 'quantity' in u || 'unitPrice' in u || 'totalPrice' in u);
+        const affectedTotals = filteredPositionUpdates.some(
+          (u: any) => 'quantity' in u || 'unitPrice' in u || 'totalPrice' in u,
+        );
         if (affectedTotals) {
-          setOfferPropsData((prev: any) => prev ? {
-            ...prev,
-            preis: {
-              ...prev.preis,
-              calculationStale: true,
-            }
-          } : prev);
+          setOfferPropsData((prev: any) =>
+            prev
+              ? {
+                  ...prev,
+                  preis: {
+                    ...prev.preis,
+                    calculationStale: true,
+                  },
+                }
+              : prev,
+          );
         }
       }
 
       toast.success('Änderungen wurden erfolgreich gespeichert.');
-      
+
       // Trigger reload for other tabs (like QuotesManagement)
       triggerReload();
       // Refresh this tab's pricing snapshot so server-side staleness reflects saved quantities
       await loadQuoteVersionData();
-      
+
       // Update tree data with saved values
       setTreeData(prevData => {
         const updateNode = (nodes: MyTreeNodeData[]): MyTreeNodeData[] => {
@@ -453,12 +527,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         };
         return updateNode([...prevData]);
       });
-      
+
       clearAllChanges();
-      
     } catch (error: any) {
       console.error('Error saving changes:', error);
-      
+
       // Handle edit lock errors
       if (error.response?.data?.type === 'EDIT_LOCK_ERROR') {
         toast.error(`Fehler beim Speichern: ${error.response.data.error}`);
@@ -466,42 +539,50 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         setIsEditing(false);
         return;
       }
-      
-      toast.error('Fehler beim Speichern der Änderungen. Bitte versuchen Sie es erneut.');
+
+      toast.error(
+        'Fehler beim Speichern der Änderungen. Bitte versuchen Sie es erneut.',
+      );
     } finally {
       setIsSaving(false);
     }
   };
 
   // Handle pricing form changes (batched into Save)
-  const handleOfferPropsChange = useCallback((updated: any) => {
-    // Optimistic local update so child inputs stay editable
-    setOfferPropsData((prev: any) => {
-      if (!prev) return updated;
-      return {
-        ...prev,
-        preis: { ...(prev?.preis || {}), ...(updated?.preis || {}) },
-        bemerkung: typeof updated?.bemerkung === 'string' ? updated.bemerkung : prev?.bemerkung,
-      };
-    });
+  const handleOfferPropsChange = useCallback(
+    (updated: any) => {
+      // Optimistic local update so child inputs stay editable
+      setOfferPropsData((prev: any) => {
+        if (!prev) return updated;
+        return {
+          ...prev,
+          preis: { ...(prev?.preis || {}), ...(updated?.preis || {}) },
+          bemerkung:
+            typeof updated?.bemerkung === 'string'
+              ? updated.bemerkung
+              : prev?.bemerkung,
+        };
+      });
 
-    const p = updated?.preis || {};
-    const current = offerPropsData?.preis || {};
-    // Compute pending payload for save
-    const payload = {
-      showUnitPrices: Boolean(p.showUnitPrices),
-      calcTotal: Boolean(p.calcTotal),
-      discountPercent: Boolean(p.discountPercent),
-      discountValue: Number(p.discountValue || 0),
-      discountAmount: Number((p.discount ?? current.discount) || 0),
-      totalPrice: !p.calcTotal ? Number(p.total || 0) : undefined,
-    };
-    setPendingPricing(payload);
-    setOfferPropsDirty(true);
-    if (typeof updated?.bemerkung === 'string') {
-      setRemarkDirty(true);
-    }
-  }, [offerPropsData]);
+      const p = updated?.preis || {};
+      const current = offerPropsData?.preis || {};
+      // Compute pending payload for save
+      const payload = {
+        showUnitPrices: Boolean(p.showUnitPrices),
+        calcTotal: Boolean(p.calcTotal),
+        discountPercent: Boolean(p.discountPercent),
+        discountValue: Number(p.discountValue || 0),
+        discountAmount: Number((p.discount ?? current.discount) || 0),
+        totalPrice: !p.calcTotal ? Number(p.total || 0) : undefined,
+      };
+      setPendingPricing(payload);
+      setOfferPropsDirty(true);
+      if (typeof updated?.bemerkung === 'string') {
+        setRemarkDirty(true);
+      }
+    },
+    [offerPropsData],
+  );
 
   // Recalculate click from calculator icon (only when stale)
   const handleRecalculateClick = useCallback(async () => {
@@ -517,16 +598,20 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         discountAmount: Number(current.discount || 0),
       };
       const resp = await saveQuoteVersionPricing(resolvedVersionId, payload);
-      setOfferPropsData((prev: any) => prev ? {
-        ...prev,
-        preis: {
-          ...prev.preis,
-          calcTotal: true,
-          total: resp.totalPrice,
-          autoTotal: resp.autoTotal,
-          calculationStale: false,
-        }
-      } : prev);
+      setOfferPropsData((prev: any) =>
+        prev
+          ? {
+              ...prev,
+              preis: {
+                ...prev.preis,
+                calcTotal: true,
+                total: resp.totalPrice,
+                autoTotal: resp.autoTotal,
+                calculationStale: false,
+              },
+            }
+          : prev,
+      );
       triggerReload();
       toast.success('Gesamtpreis neu berechnet.');
     } catch (e) {
@@ -545,13 +630,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           tabIndex={0}
           aria-label="Angebots-Titel"
         >
-          {loadingIds || loadingDisplayData ? (
-            'Lade Angebotsdaten...'
-          ) : quoteNumber && variantNumber && versionNumber ? (
-            `${quoteNumber}-${variantNumber}-${versionNumber}`
-          ) : (
-            'Angebot'
-          )}
+          {loadingIds || loadingDisplayData
+            ? 'Lade Angebotsdaten...'
+            : quoteNumber && variantNumber && versionNumber
+              ? `${quoteNumber}-${variantNumber}-${versionNumber}`
+              : 'Angebot'}
         </h2>
         {language && (
           <p className="text-sm text-gray-500 mb-2">Sprache: {language}</p>
@@ -621,16 +704,26 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         </div>
         {/* Global price summary + recalc button */}
         <div className="mt-2 flex items-center justify-end gap-4">
-          <div className="text-right font-semibold text-lg text-gray-800 dark:text-gray-100 select-none" aria-label="Gesamtpreis nach Rabatt">
+          <div
+            className="text-right font-semibold text-lg text-gray-800 dark:text-gray-100 select-none"
+            aria-label="Gesamtpreis nach Rabatt"
+          >
             Gesamtpreis nach Rabatt:{' '}
             <span className="text-green-600 dark:text-green-400">
               {(() => {
                 const p = (offerPropsData as any)?.preis;
                 if (!p) return '—';
-                const base = Number(p.calcTotal ? p.autoTotal ?? 0 : p.total ?? 0);
-                const rabatt = p.discountPercent ? base * (Number(p.discountValue || 0) / 100) : Number(p.discount || 0);
+                const base = Number(
+                  p.calcTotal ? (p.autoTotal ?? 0) : (p.total ?? 0),
+                );
+                const rabatt = p.discountPercent
+                  ? base * (Number(p.discountValue || 0) / 100)
+                  : Number(p.discount || 0);
                 const finalVal = Math.max(0, base - rabatt);
-                return finalVal.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
+                return finalVal.toLocaleString('de-DE', {
+                  style: 'currency',
+                  currency: 'EUR',
+                });
               })()}
             </span>
           </div>
@@ -643,18 +736,26 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
                 if (!calcOn) return false;
                 const serverStale = Boolean(p?.calculationStale);
                 // reuse the same local stale checks
-                const localDiscountDirty = offerPropsDirty && pendingPricing && p && (
-                  Boolean(pendingPricing.discountPercent) !== Boolean(p.discountPercent) ||
-                  Number(pendingPricing.discountValue || 0) !== Number(p.discountValue || 0) ||
-                  Number(pendingPricing.discountAmount || 0) !== Number(p.discount || 0)
-                );
+                const localDiscountDirty =
+                  offerPropsDirty &&
+                  pendingPricing &&
+                  p &&
+                  (Boolean(pendingPricing.discountPercent) !==
+                    Boolean(p.discountPercent) ||
+                    Number(pendingPricing.discountValue || 0) !==
+                      Number(p.discountValue || 0) ||
+                    Number(pendingPricing.discountAmount || 0) !==
+                      Number(p.discount || 0));
                 if (localDiscountDirty) return true;
                 const hasPricingChangeInTree = (() => {
                   const hasChange = (nodes: any[]): boolean => {
                     for (const n of nodes || []) {
                       if (hasPositionChanges && hasPositionChanges(n.id)) {
-                        const ch = getPositionChanges ? getPositionChanges(n.id) : undefined;
-                        if (ch && (ch['quantity'] || ch['unitPrice'])) return true;
+                        const ch = getPositionChanges
+                          ? getPositionChanges(n.id)
+                          : undefined;
+                        if (ch && (ch['quantity'] || ch['unitPrice']))
+                          return true;
                       }
                       if (n.children && n.children.length > 0) {
                         if (hasChange(n.children)) return true;
@@ -666,13 +767,21 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
                 })();
                 return serverStale || hasPricingChangeInTree;
               })();
-              return calcOn ? (stale ? 'Neu berechnen' : 'Aktualisierung nicht erforderlich') : 'Kalkulation deaktiviert';
+              return calcOn
+                ? stale
+                  ? 'Neu berechnen'
+                  : 'Aktualisierung nicht erforderlich'
+                : 'Kalkulation deaktiviert';
             })()}
             title={(() => {
               const p = (offerPropsData as any)?.preis;
               const calcOn = Boolean(p?.calcTotal);
               const stale = Boolean(p?.calculationStale);
-              return calcOn ? (stale ? 'Neu berechnen' : 'Aktualisierung nicht erforderlich') : 'Kalkulation deaktiviert';
+              return calcOn
+                ? stale
+                  ? 'Neu berechnen'
+                  : 'Aktualisierung nicht erforderlich'
+                : 'Kalkulation deaktiviert';
             })()}
             className={(() => {
               const p = (offerPropsData as any)?.preis;
@@ -680,18 +789,26 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
               const stale = (() => {
                 if (!calcOn) return false;
                 const serverStale = Boolean(p?.calculationStale);
-                const localDiscountDirty = offerPropsDirty && pendingPricing && p && (
-                  Boolean(pendingPricing.discountPercent) !== Boolean(p.discountPercent) ||
-                  Number(pendingPricing.discountValue || 0) !== Number(p.discountValue || 0) ||
-                  Number(pendingPricing.discountAmount || 0) !== Number(p.discount || 0)
-                );
+                const localDiscountDirty =
+                  offerPropsDirty &&
+                  pendingPricing &&
+                  p &&
+                  (Boolean(pendingPricing.discountPercent) !==
+                    Boolean(p.discountPercent) ||
+                    Number(pendingPricing.discountValue || 0) !==
+                      Number(p.discountValue || 0) ||
+                    Number(pendingPricing.discountAmount || 0) !==
+                      Number(p.discount || 0));
                 if (localDiscountDirty) return true;
                 const hasPricingChangeInTree = (() => {
                   const hasChange = (nodes: any[]): boolean => {
                     for (const n of nodes || []) {
                       if (hasPositionChanges && hasPositionChanges(n.id)) {
-                        const ch = getPositionChanges ? getPositionChanges(n.id) : undefined;
-                        if (ch && (ch['quantity'] || ch['unitPrice'])) return true;
+                        const ch = getPositionChanges
+                          ? getPositionChanges(n.id)
+                          : undefined;
+                        if (ch && (ch['quantity'] || ch['unitPrice']))
+                          return true;
                       }
                       if (n.children && n.children.length > 0) {
                         if (hasChange(n.children)) return true;
@@ -703,7 +820,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
                 })();
                 return serverStale || hasPricingChangeInTree;
               })();
-              return 'ml-2 transition-colors ' + (!calcOn ? 'text-gray-300' : (stale ? 'text-yellow-500 cursor-pointer hover:text-yellow-600' : 'text-green-600'));
+              return (
+                'ml-2 transition-colors ' +
+                (!calcOn
+                  ? 'text-gray-300'
+                  : stale
+                    ? 'text-yellow-500 cursor-pointer hover:text-yellow-600'
+                    : 'text-green-600')
+              );
             })()}
             onClick={() => {
               const p = (offerPropsData as any)?.preis;
@@ -712,7 +836,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
               handleRecalculateClick();
             }}
           >
-            <Calculator className="w-5 h-5" />
+            <Calculator className="w-5 h-5 cursor-pointer" />
           </div>
         </div>
       </div>
@@ -750,16 +874,21 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
         <TabsContent value="bloecke" className="flex-1 overflow-auto">
           {loadingPositions || loadingIds || loadingDisplayData ? (
             <div className="flex items-center justify-center h-full">
-              <LoadingIndicator text="Lade Angebotspositionen..." variant="centered" />
+              <LoadingIndicator
+                text="Lade Angebotspositionen..."
+                variant="centered"
+              />
             </div>
           ) : !variantLanguageId ? (
             <div className="flex items-center justify-center h-full">
-              <p className="text-gray-500">Keine Sprache für diese Variante definiert.</p>
+              <p className="text-gray-500">
+                Keine Sprache für diese Variante definiert.
+              </p>
             </div>
           ) : (
-            <InteractiveSplitPanel 
-              initialTreeData={treeData} 
-              isEditing={isEditing} 
+            <InteractiveSplitPanel
+              initialTreeData={treeData}
+              isEditing={isEditing}
               versionId={resolvedVersionId}
               onTreeDataChange={setTreeData}
               addChange={addChange}
@@ -775,18 +904,28 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
               languageId={variantLanguageId}
               calcTotal={Boolean((offerPropsData as any)?.preis?.calcTotal)}
               calculationStale={(() => {
-                const serverStale = Boolean((offerPropsData as any)?.preis?.calculationStale);
-                const calcOn = Boolean((offerPropsData as any)?.preis?.calcTotal);
+                const serverStale = Boolean(
+                  (offerPropsData as any)?.preis?.calculationStale,
+                );
+                const calcOn = Boolean(
+                  (offerPropsData as any)?.preis?.calcTotal,
+                );
                 if (!calcOn) return false;
                 // Consider local discount edits as stale as well
-                if (offerPropsDirty && pendingPricing && offerPropsData?.preis) {
+                if (
+                  offerPropsDirty &&
+                  pendingPricing &&
+                  offerPropsData?.preis
+                ) {
                   const p = pendingPricing;
                   const curr = offerPropsData.preis;
-                  const discountDirty = (
-                    Boolean(p.discountPercent) !== Boolean(curr.discountPercent) ||
-                    Number(p.discountValue || 0) !== Number(curr.discountValue || 0) ||
-                    Number(p.discountAmount || 0) !== Number(curr.discount || 0)
-                  );
+                  const discountDirty =
+                    Boolean(p.discountPercent) !==
+                      Boolean(curr.discountPercent) ||
+                    Number(p.discountValue || 0) !==
+                      Number(curr.discountValue || 0) ||
+                    Number(p.discountAmount || 0) !==
+                      Number(curr.discount || 0);
                   if (discountDirty) return true;
                 }
                 // Consider unsaved position quantity/unit price changes as stale as well
@@ -794,8 +933,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
                   const hasChange = (nodes: any[]): boolean => {
                     for (const n of nodes || []) {
                       if (hasPositionChanges && hasPositionChanges(n.id)) {
-                        const ch = getPositionChanges ? getPositionChanges(n.id) : undefined;
-                        if (ch && (ch['quantity'] || ch['unitPrice'])) return true;
+                        const ch = getPositionChanges
+                          ? getPositionChanges(n.id)
+                          : undefined;
+                        if (ch && (ch['quantity'] || ch['unitPrice']))
+                          return true;
                       }
                       if (n.children && n.children.length > 0) {
                         if (hasChange(n.children)) return true;
@@ -811,8 +953,12 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
               finalTotalWithDiscount={(() => {
                 const p = (offerPropsData as any)?.preis;
                 if (!p) return undefined;
-                const base = Number(p.calcTotal ? p.autoTotal ?? 0 : p.total ?? 0);
-                const discount = p.discountPercent ? base * (Number(p.discountValue || 0) / 100) : Number(p.discount || 0);
+                const base = Number(
+                  p.calcTotal ? (p.autoTotal ?? 0) : (p.total ?? 0),
+                );
+                const discount = p.discountPercent
+                  ? base * (Number(p.discountValue || 0) / 100)
+                  : Number(p.discount || 0);
                 return Math.max(0, base - discount);
               })()}
               onRecalculate={handleRecalculateClick}
@@ -824,9 +970,16 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           className="flex-1 overflow-auto flex items-center justify-center"
         >
           {offerPropsData ? (
-            <OfferProperties {...offerPropsData} onChange={handleOfferPropsChange} isEditing={isEditing} />
+            <OfferProperties
+              {...offerPropsData}
+              onChange={handleOfferPropsChange}
+              isEditing={isEditing}
+            />
           ) : (
-            <LoadingIndicator text="Lade Angebotseigenschaften..." variant="centered" />
+            <LoadingIndicator
+              text="Lade Angebotseigenschaften..."
+              variant="centered"
+            />
           )}
         </TabsContent>
         <TabsContent

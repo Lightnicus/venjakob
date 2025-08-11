@@ -113,6 +113,8 @@ export const quotePositions = pgTable("quote_positions", {
 	updatedAt: timestamp("updated_at", { mode: 'string' }).defaultNow().notNull(),
 	title: text(),
 	quotePositionParentId: uuid("quote_position_parent_id"),
+	isOption: boolean("is_option").default(false).notNull(),
+	pageBreakAbove: boolean("page_break_above").default(false).notNull(),
 	deleted: boolean().default(false).notNull(),
 }, (table) => [
 	foreignKey({

@@ -291,6 +291,11 @@ export async function saveQuotePosition(versionId: string, positionId: string, p
 export async function saveQuotePositions(versionId: string, positions: Array<any>): Promise<void>
 ```
 
+New tracked fields supported by batch save:
+- `unitPrice?: string` (dot-decimal, two decimals, from editable "Einzelpreis")
+- `isOption?: boolean` (UI checkbox "Ist Option" for article positions)
+- `pageBreakAbove?: boolean` (persisted on positions; UI not exposed yet for articles)
+
 ## Change Tracking System
 
 ### Hook Usage in Components

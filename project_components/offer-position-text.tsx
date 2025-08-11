@@ -35,6 +35,7 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = React.memo(({
   const [title, setTitle] = useState(selectedNode?.data?.title || "");
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [originalTitle, setOriginalTitle] = useState(selectedNode?.data?.title || "");
+  const [pageBreakAboveChecked, setPageBreakAboveChecked] = useState<boolean>(Boolean((selectedNode as any)?.data?.pageBreakAbove));
   const [currentTab, setCurrentTab] = useState<string>("eingabe");
 
   // Update state when selectedNode changes
@@ -43,6 +44,7 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = React.memo(({
       const newTitle = selectedNode.data.title || "";
       setTitle(newTitle);
       setOriginalTitle(newTitle);
+      setPageBreakAboveChecked(Boolean((selectedNode as any).data?.pageBreakAbove));
     }
   }, [selectedNode]);
 
@@ -129,6 +131,19 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = React.memo(({
     }
   }, [positionId, addChange, removeChange, selectedNode]);
 
+  const handlePageBreakAboveChange = useCallback((checked: boolean | string) => {
+    const next = Boolean(checked === 'indeterminate' ? false : checked);
+    setPageBreakAboveChecked(next);
+    if (positionId && addChange && removeChange) {
+      const oldVal = Boolean((selectedNode as any)?.data?.pageBreakAbove);
+      if (next !== oldVal) {
+        addChange(positionId, 'pageBreakAbove', oldVal, next);
+      } else {
+        removeChange(positionId, 'pageBreakAbove');
+      }
+    }
+  }, [positionId, addChange, removeChange, selectedNode]);
+
   // Check if this position has unsaved changes
   const hasChanges = positionId && hasPositionChanges ? hasPositionChanges(positionId) : false;
 
@@ -149,6 +164,18 @@ const OfferPositionText: React.FC<OfferPositionTextProps> = React.memo(({
           aria-label="Überschrift"
           disabled={!isEditing}
         />
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          id="checkbox-page-break-above-txt"
+          type="checkbox"
+          className="size-4 rounded border"
+          checked={pageBreakAboveChecked}
+          onChange={(e) => handlePageBreakAboveChange(e.target.checked)}
+          disabled={!isEditing}
+          aria-label="Seitenumbruch oberhalb"
+        />
+        <label htmlFor="checkbox-page-break-above-txt" className="text-sm">Seitenumbruch oberhalb</label>
       </div>
       <div className="space-y-2">
         <label htmlFor="editor-beschreibung" className="text-sm font-medium">

@@ -232,6 +232,13 @@
       "when": 1754824516191,
       "tag": "0032_giant_sentry",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1754909041767,
+      "tag": "0033_faithful_unicorn",
+      "breakpoints": true
     }
   ]
 }

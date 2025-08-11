@@ -750,6 +750,16 @@ New articles are initialized with the following calculation items and types:
 - `QuotePositionCalculationItem` - Calculation item snapshot attached to a quote position
 - `EditLockError` - Custom error for edit lock conflicts
 
+#### New Fields (Quote Positions)
+
+- `quote_positions.is_option boolean not null default false`
+  - Shown only for article positions in the UI as "Ist Option"
+  - Currently persisted only; no pricing logic yet
+- `quote_positions.page_break_above boolean not null default false`
+  - Prefilled for block positions from `blocks.page_break_above`
+  - Defaults to `false` for article positions
+  - No PDF logic implemented yet
+
 #### Schema Changes
 - **variantNumber**: Added integer field to `quoteVariants` table alongside existing `variantDescriptor` text field
 - **versionNumber**: Changed from text to integer type in `quoteVersions` table
