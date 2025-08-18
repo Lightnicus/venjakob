@@ -52,7 +52,7 @@ This seed is useful for testing the sales opportunity management features.
 2. Use `ON CONFLICT DO NOTHING` for idempotency
 3. Test the file independently if needed:
    ```bash
-   psql $DATABASE_URL -f lib/db/seeds/your-file.sql
+   psql $POSTGRES_URL -f lib/db/seeds/your-file.sql
    ```
 
 ### TypeScript Seeds
@@ -68,4 +68,4 @@ This seed is useful for testing the sales opportunity management features.
 ## Requirements
 
 - `psql` must be installed and available in PATH
-- `DATABASE_URL` environment variable must be set 
+- `POSTGRES_URL` environment variable must be set 
