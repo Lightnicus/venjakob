@@ -949,37 +949,99 @@ import LoadingButton from '@/project_components/loading-button';
 - **Accessibility**: Proper ARIA labels and disabled states
 - **Type Safety**: Full TypeScript support with proper interfaces
 
-**Components Updated:**
-- **AddBlockDialog & AddArticleDialog**: Primary implementation
-- **SalesOpportunityDetail**: Save button with loading state
-- **TableActionButton**: Icon buttons with loading states
-- **EditLockButton**: Save button with loading state
-- **ArticleListTable**: "Artikel hinzufügen" button with loading state
-- **BlockListTable**: "Block hinzufügen" button with loading state
+### IconButton
 
-**Migration Pattern:**
+A button component for icon-based actions with enhanced loading state support.
+
+**Location:** `project_components/icon-button.tsx`
+
+**Features:**
+- **Loading State**: Shows `Loader2` icon with `animate-spin` when loading
+- **External Loading Control**: Supports external loading state management
+- **Internal Loading**: Automatic loading state for async operations
+- **Flexible**: Supports all Button variants and sizes
+- **TypeScript**: Full type safety with proper interfaces
+
+**Props:**
+- `icon: ReactNode` - Icon to display when not loading
+- `loading?: boolean` - External loading state (optional)
+- `disabled?: boolean` - Disables button
+- `variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'`
+- `className?: string` - Additional CSS classes
+- `'aria-label': string` - Accessibility label
+- `onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void | Promise<void>`
+- `onKeyDown?: (e: React.KeyboardEvent<HTMLButtonElement>) => void | Promise<void>`
+- `onMouseDown?: (e: React.MouseEvent<HTMLButtonElement>) => void`
+
+**Loading State Behavior:**
+- **External Loading**: When `loading` prop is provided, uses external state management
+- **Internal Loading**: When `loading` is undefined, automatically manages loading for async operations
+- **Priority**: External loading takes precedence over internal loading
+
+**Usage:**
 ```tsx
-// Before: Manual loading button
-<Button onClick={handleSave} disabled={isSaving}>
-  {isSaving ? (
-    <>
-      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-      Speichern...
-    </>
-  ) : (
-    'Speichern'
-  )}
-</Button>
+import IconButton from '@/project_components/icon-button';
+import { Copy, Trash2 } from 'lucide-react';
 
-// After: LoadingButton component
-<LoadingButton 
-  onClick={handleSave} 
-  loading={isSaving}
-  loadingText="Speichern..."
->
-  Speichern
-</LoadingButton>
+// With external loading state
+<IconButton
+  icon={<Copy size={16} />}
+  loading={isCopying}
+  aria-label="Kopieren"
+  onClick={handleCopy}
+/>
+
+// With internal loading state (automatic)
+<IconButton
+  icon={<Trash2 size={16} />}
+  aria-label="Löschen"
+  onClick={async () => {
+    await deleteItem();
+  }}
+/>
+
+// With custom styling
+<IconButton
+  icon={<Trash2 size={16} />}
+  variant="destructive"
+  className="text-red-600 hover:text-red-700"
+  aria-label="Löschen"
+  onClick={handleDelete}
+/>
 ```
+
+**Enhanced Features:**
+- **Row-Specific Loading**: Can track loading state per row in tables
+- **Concurrent Operations**: Supports multiple simultaneous operations using Sets
+- **Error Handling**: Proper error handling for async operations
+- **Accessibility**: Full keyboard navigation support
+- **Consistent Styling**: Matches LoadingButton patterns
+
+**Concurrent Loading State Management:**
+```tsx
+// Using Sets to track multiple concurrent operations
+const [copyingBlockIds, setCopyingBlockIds] = useState<Set<string>>(new Set());
+const [deletingBlockIds, setDeletingBlockIds] = useState<Set<string>>(new Set());
+
+// Adding an operation
+setCopyingBlockIds(prev => new Set([...prev, block.id]));
+
+// Removing an operation
+setCopyingBlockIds(prev => {
+  const newSet = new Set(prev);
+  newSet.delete(block.id);
+  return newSet;
+});
+
+// Checking if an item is loading
+loading={copyingBlockIds.has(row.original.id)}
+```
+
+**Benefits of Set-based Loading:**
+- **Multiple Concurrent Operations**: Users can start multiple operations without losing loading states
+- **Independent Loading States**: Each row maintains its own loading state
+- **Better UX**: No loading state conflicts between different operations
+- **Scalable**: Supports unlimited concurrent operations
 
 ## Interactive Split Panel
 
@@ -1071,131 +1133,4 @@ The `InteractiveSplitPanel` component now supports language-specific block loadi
 #### Implementation Details
 
 **Database Level:**
-- `getBlocksWithContentByLanguage(languageId: string)` - Fetches only blocks that have content for the specified language
-- Filters `blockContent` table by `languageId` before joining with blocks
-- Only returns blocks that have at least one content entry for the specified language
-
-**API Level:**
-- `fetchBlocksWithContentByLanguage(languageId: string)` - API wrapper for language-filtered block fetching
-- `GET /api/blocks?languageId={languageId}` - API endpoint that accepts languageId parameter
-
-**Component Level:**
-- `InteractiveSplitPanel` receives `languageId` prop (required)
-- Uses `fetchBlocksWithContentByLanguage()` to load blocks filtered by language
-- `dialogBlocks` useMemo automatically handles the filtered data structure
-
-### QuotesListTable for displaying Variants
-
-#### Implementation Details
-
-**Database Level:**
-- `getVariantsList()` - Fetches all variants with their relationships (quotes, languages, sales opportunities, clients)
-- Includes latest version number for each variant
-- Joins multiple tables to get complete variant information
-
-**API Level:**
-- `fetchVariantsList()` - API wrapper for variant list fetching
-- `GET /api/quotes/variants/list` - API endpoint for variants list
-
-**Component Level:**
-- `QuotesListTable` - Updated existing component to display variants with all required columns
-- Uses `FilterableTable` with sorting, filtering, and pagination
-- Includes status translation helper for German display
-- Action buttons for edit, copy, and delete operations
-- Maintains all existing dialog functionality and quote creation flows
-
-#### Columns Displayed
-
-1. **Angebots-Nr**: Quote number (`quotes.quoteNumber`)
-2. **Titel**: Quote title (`quotes.title`)
-3. **Status**: Sales opportunity status (translated to German)
-4. **KdNr**: Client foreign ID (`clients.foreignId`)
-5. **AngebotsEmpfänger**: Client name (`clients.name`)
-6. **Version**: Latest version number for the variant
-7. **Geändert von**: Last user name who modified the variant
-8. **Geändert am**: Last modification date (German format)
-9. **Aktionen**: Edit, copy, delete buttons
-
-#### Features
-
-- **Sorting**: All columns are sortable
-- **Filtering**: Global search across quote number, title, client name, and client ID
-- **Status Filter**: Dropdown to filter by sales opportunity status
-- **Pagination**: 50 items per page
-- **Row Click**: Opens variant detail in new tab
-- **Action Buttons**: Edit opens QuoteDetail with variant, copy creates new variant, delete soft-deletes variant
-
-### Delete Functionality
-
-The `InteractiveSplitPanel` component includes a delete feature for tree nodes:
-
-#### Implementation Details
-
-**Database Level:**
-- `softDeleteQuotePosition(positionId: string)` - Soft deletes a position and validates it has no children
-- Checks for child positions before deletion to prevent orphaned data
-- Updates `deleted` field and `updatedAt` timestamp
-
-**API Level:**
-- `DELETE /api/quotes/versions/[versionId]/positions/[positionId]` - Deletes a specific position
-- Returns appropriate error messages for validation failures
-- Handles both client and server-side validation
-
-**Component Level:**
-- Delete button only shows when a node is selected
-- Confirmation dialog prevents accidental deletions
-- Loading state during deletion operation
-- Automatic data refresh after successful deletion
-- Error handling with user-friendly toast messages
-
-#### Delete Restrictions
-
-- **Nodes with Children**: Cannot be deleted (shows error toast)
-- **Selected Node Required**: Button disabled when no node is selected
-- **Soft Delete**: Positions are marked as deleted but not physically removed
-- **Data Integrity**: Maintains referential integrity with child positions
-
-#### User Experience
-
-1. **Button State**: Disabled when no node selected or during deletion
-2. **Confirmation**: Shows dialog with clear warning about permanent deletion
-3. **Loading**: Button shows "Lösche..." during operation
-4. **Success**: Toast notification and automatic data refresh
-5. **Error**: Specific error messages for different failure scenarios
-
-#### Usage Example
-
-```tsx
-<InteractiveSplitPanel
-  languageId="en"
-  versionId={versionId}
-  // ... other props
-/>
-```
-
-#### Benefits
-
-1. **Performance**: Only loads blocks relevant to the current language
-2. **User Experience**: Users only see blocks available in their language
-3. **Data Integrity**: Prevents creation of positions with missing content
-4. **Scalability**: Reduces memory usage and network traffic
-5. **Type Safety**: Mandatory languageId ensures proper language filtering
-
-#### Requirements
-
-- `languageId` is now a required prop
-- Must provide a valid language ID that exists in the database
-- Component will show an error message if languageId is not available
-- No fallback to default language - each variant must have a defined language
-
-## Related Documentation
-
-- [Authentication System](./auth.md) - Server-side authentication utilities
-- [Dialog Manager System](./dialog-manager-docs.md) - Modal and dialog patterns
-- [Smart Dialog Flows](./smart-dialog-flows.md) - Advanced dialog routing patterns
-- [useEditLock Hook](./use-edit-lock.md) - Edit conflict prevention patterns
-- [Database Schema](./db.md) - Database operations and quote creation functions
-
----
-
-For questions about component patterns or suggestions for new reusable components, please refer to the project maintainers or create an issue in the project repository.
+- `

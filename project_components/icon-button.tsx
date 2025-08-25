@@ -28,37 +28,50 @@ const IconButton: FC<IconButtonProps> = ({
 }) => {
   const [internalLoading, setInternalLoading] = useState(false);
   
-  const isLoading = loading || internalLoading;
+  // Use external loading if provided, otherwise use internal loading
+  const isLoading = loading !== undefined ? loading : internalLoading;
 
   const handleClick = async (e: React.MouseEvent<HTMLButtonElement>) => {
     if (!onClick || isLoading || disabled) return;
     
-    try {
-      const result = onClick(e);
-      if (result instanceof Promise) {
-        setInternalLoading(true);
-        await result;
+    // Only use internal loading if external loading is not provided
+    if (loading === undefined) {
+      try {
+        const result = onClick(e);
+        if (result instanceof Promise) {
+          setInternalLoading(true);
+          await result;
+        }
+      } catch (error) {
+        console.error('IconButton async operation error:', error);
+      } finally {
+        setInternalLoading(false);
       }
-    } catch (error) {
-      console.error('IconButton async operation error:', error);
-    } finally {
-      setInternalLoading(false);
+    } else {
+      // External loading is managed by parent
+      await onClick(e);
     }
   };
 
   const handleKeyDown = async (e: React.KeyboardEvent<HTMLButtonElement>) => {
     if (!onKeyDown || isLoading || disabled) return;
     
-    try {
-      const result = onKeyDown(e);
-      if (result instanceof Promise) {
-        setInternalLoading(true);
-        await result;
+    // Only use internal loading if external loading is not provided
+    if (loading === undefined) {
+      try {
+        const result = onKeyDown(e);
+        if (result instanceof Promise) {
+          setInternalLoading(true);
+          await result;
+        }
+      } catch (error) {
+        console.error('IconButton async operation error:', error);
+      } finally {
+        setInternalLoading(false);
       }
-    } catch (error) {
-      console.error('IconButton async operation error:', error);
-    } finally {
-      setInternalLoading(false);
+    } else {
+      // External loading is managed by parent
+      await onKeyDown(e);
     }
   };
 

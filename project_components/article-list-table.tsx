@@ -56,6 +56,8 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
   const [articleToDelete, setArticleToDelete] = useState<ArticleListItem | null>(null);
   const [tableData, setTableData] = useState<ArticleListItem[]>(data);
   const [isCreatingArticle, setIsCreatingArticle] = useState(false);
+  const [copyingArticleIds, setCopyingArticleIds] = useState<Set<string>>(new Set());
+  const [deletingArticleIds, setDeletingArticleIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setTableData(data);
@@ -178,6 +180,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     }
 
     try {
+      setCopyingArticleIds(prev => new Set([...prev, article.id]));
       const copiedArticle = await onCopyArticle(article);
       
       // Update the table data with the new copied article
@@ -223,6 +226,12 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     } catch (error) {
       console.error('Fehler beim Kopieren des Artikels:', error);
       toast.error('Fehler beim Kopieren des Artikels');
+    } finally {
+      setCopyingArticleIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(article.id);
+        return newSet;
+      });
     }
   };
 
@@ -230,17 +239,29 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     setArticleToDelete(article);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!articleToDelete) return;
     
-    if (onDeleteArticle) {
-      onDeleteArticle(articleToDelete.id);
+    try {
+      setDeletingArticleIds(prev => new Set([...prev, articleToDelete.id]));
+      if (onDeleteArticle) {
+        await onDeleteArticle(articleToDelete.id);
+      }
+      
+      setTableData(prevData =>
+        prevData.filter(a => a.id !== articleToDelete.id)
+      );
+    } catch (error) {
+      console.error('Error deleting article:', error);
+      toast.error('Fehler beim Löschen des Artikels');
+    } finally {
+      setDeletingArticleIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(articleToDelete.id);
+        return newSet;
+      });
+      setArticleToDelete(null);
     }
-    
-    setTableData(prevData =>
-      prevData.filter(a => a.id !== articleToDelete.id)
-    );
-    setArticleToDelete(null);
   };
 
   const columns: ColumnDef<ArticleListItem>[] = [
@@ -331,6 +352,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
             icon={<Copy size={16} />}
             aria-label="Kopieren"
             disabled={!onCopyArticle}
+            loading={copyingArticleIds.has(row.original.id)}
             onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -351,6 +373,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
             icon={<Trash2 size={16} />}
             aria-label="Löschen"
             className="text-red-600 hover:text-red-700 hover:bg-red-100"
+            loading={deletingArticleIds.has(row.original.id)}
             onClick={e => {
               e.stopPropagation();
               handleInitiateDelete(row.original);

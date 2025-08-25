@@ -54,6 +54,8 @@ const BlockListTable: FC<BlockListTableProps> = ({
   const [tableData, setTableData] = useState<BlockListItem[]>(data);
   const [showStandardOnly, setShowStandardOnly] = useState<boolean>(false);
   const [isCreatingBlock, setIsCreatingBlock] = useState(false);
+  const [copyingBlockIds, setCopyingBlockIds] = useState<Set<string>>(new Set());
+  const [deletingBlockIds, setDeletingBlockIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setTableData(data);
@@ -216,6 +218,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
     }
 
     try {
+      setCopyingBlockIds(prev => new Set([...prev, block.id]));
       const copiedBlock = await onCopyBlock(block);
       
       // Update the table data with the new copied block
@@ -254,6 +257,12 @@ const BlockListTable: FC<BlockListTableProps> = ({
     } catch (error) {
       console.error('Fehler beim Kopieren des Blocks:', error);
       toast.error('Fehler beim Kopieren des Blocks');
+    } finally {
+      setCopyingBlockIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(block.id);
+        return newSet;
+      });
     }
   };
 
@@ -261,18 +270,30 @@ const BlockListTable: FC<BlockListTableProps> = ({
     setBlockToDelete(block);
   };
 
-  const handleConfirmDelete = () => {
+  const handleConfirmDelete = async () => {
     if (!blockToDelete) return;
     
-    if (onDeleteBlock) {
-      onDeleteBlock(blockToDelete.id);
+    try {
+      setDeletingBlockIds(prev => new Set([...prev, blockToDelete.id]));
+      if (onDeleteBlock) {
+        await onDeleteBlock(blockToDelete.id);
+      }
+      
+      setTableData(prevData =>
+        prevData.filter(b => b.id !== blockToDelete.id)
+      );
+      toast.success('Block wurde gelöscht');
+    } catch (error) {
+      console.error('Error deleting block:', error);
+      toast.error('Fehler beim Löschen des Blocks');
+    } finally {
+      setDeletingBlockIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(blockToDelete.id);
+        return newSet;
+      });
+      setBlockToDelete(null);
     }
-    
-    setTableData(prevData =>
-      prevData.filter(b => b.id !== blockToDelete.id)
-    );
-    toast.success('Block wurde gelöscht');
-    setBlockToDelete(null);
   };
 
   const columns: ColumnDef<BlockListItem>[] = [
@@ -372,6 +393,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
             icon={<Copy size={16} />}
             aria-label="Kopieren"
             disabled={!onCopyBlock}
+            loading={copyingBlockIds.has(row.original.id)}
             onClick={async (e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -392,6 +414,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
             icon={<Trash2 size={16} />}
             aria-label="Löschen"
             className="text-red-600 hover:text-red-700 hover:bg-red-100"
+            loading={deletingBlockIds.has(row.original.id)}
             onClick={e => {
               e.stopPropagation();
               handleInitiateDelete(row.original);
