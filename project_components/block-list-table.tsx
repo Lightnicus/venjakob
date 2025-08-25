@@ -12,7 +12,9 @@ import InlineRowCheckbox from './inline-row-checkbox';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
-import type { Block, BlockContent, Language } from '@/lib/db/schema';
+import LoadingButton from './loading-button';
+import type { Language } from '@/lib/db/schema';
+import type { BlockWithContent } from '@/lib/db/blocks';
 
 
 
@@ -51,6 +53,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
   const [blockToDelete, setBlockToDelete] = useState<BlockListItem | null>(null);
   const [tableData, setTableData] = useState<BlockListItem[]>(data);
   const [showStandardOnly, setShowStandardOnly] = useState<boolean>(false);
+  const [isCreatingBlock, setIsCreatingBlock] = useState(false);
 
   useEffect(() => {
     setTableData(data);
@@ -168,6 +171,7 @@ const BlockListTable: FC<BlockListTableProps> = ({
       return;
     }
     
+    setIsCreatingBlock(true);
     try {
       const newBlock = await onCreateBlock();
 
@@ -200,6 +204,8 @@ const BlockListTable: FC<BlockListTableProps> = ({
       });
     } catch (error) {
       toast.error('Fehler beim Erstellen des Blocks');
+    } finally {
+      setIsCreatingBlock(false);
     }
   };
 
@@ -420,17 +426,19 @@ const BlockListTable: FC<BlockListTableProps> = ({
   return (
     <div className="w-full">
       <div className="flex items-center gap-2 mb-2">
-        <Button
+        <LoadingButton
           variant="outline"
           size="sm"
           className="flex items-center gap-1 cursor-pointer"
           aria-label="Block hinzufügen"
           tabIndex={0}
           onClick={handleAddNewBlock}
-          disabled={!onCreateBlock}
+          disabled={!onCreateBlock || isCreatingBlock}
+          loading={isCreatingBlock}
+          loadingText="Erstellen..."
         >
           + Block hinzufügen
-        </Button>
+        </LoadingButton>
       </div>
       <div className="overflow-x-auto">
         <div className="mb-4 flex items-center gap-4 justify-end">

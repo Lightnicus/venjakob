@@ -10,14 +10,10 @@ import OfferPositionText from './offer-position-text';
 import { Calculator } from 'lucide-react';
 import OfferPositionArticle from './offer-position-article';
 import AddBlockDialog from './add-block-dialog';
-import type { BlockWithContent as DialogBlockWithContent } from './add-block-dialog';
 import AddArticleDialog from './add-article-dialog';
 import type { Article } from './add-article-dialog';
-import { fetchBlocksWithContentByLanguage } from '@/lib/api/blocks';
-import type { BlockWithContent } from '@/lib/db/blocks';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
-
 
 interface InteractiveSplitPanelProps {
   initialTreeData?: MyTreeNodeData[];
@@ -58,14 +54,11 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   const [selectedNode, setSelectedNode] = useState<NodeApi<MyTreeNodeData> | null>(null);
   const [selectedNodeType, setSelectedNodeType] = useState<string | undefined>(undefined);
   const [showAddBlockDialog, setShowAddBlockDialog] = useState(false);
-  const [blocks, setBlocks] = useState<BlockWithContent[]>([]);
   const [showAddArticleDialog, setShowAddArticleDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   
   const treeRef = useRef<TreeApi<MyTreeNodeData>>(null);
-  
-
 
   // Update tree data when initialTreeData prop changes
   useEffect(() => {
@@ -84,31 +77,20 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
     return null;
   }, []);
 
-
-
   // Load blocks and languages function
   const loadData = useCallback(async () => {
-    try {
-      const blocksData = await fetchBlocksWithContentByLanguage(languageId);
-      
-      setBlocks(blocksData);
-    } catch (error) {
-      console.error('Error loading blocks:', error);
-    }
-  }, [languageId]);
+    // No longer needed - dialogs load their own data
+  }, []);
 
   // Load blocks and languages on component mount
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    // No longer needed - dialogs load their own data
+  }, []);
 
   // Convert database blocks to dialog format
   const dialogBlocks = useMemo(() => {
-    return blocks.map((block): DialogBlockWithContent => ({
-      ...block,
-      content: block.blockContents?.[0] // Use first content or undefined
-    }));
-  }, [blocks]);
+    return []; // No longer pre-loading blocks for the dialog
+  }, []);
 
   const getNodeDepth = useCallback((nodes: readonly MyTreeNodeData[], targetId: string, currentDepth: number = 1): number => {
     for (const node of nodes) {
@@ -178,7 +160,7 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
           return true;
         });
       };
-      
+
       // Helper function to find nodes by IDs
       const findNodesByIds = (nodes: MyTreeNodeData[], ids: string[]): MyTreeNodeData[] => {
         const foundNodes: MyTreeNodeData[] = [];
@@ -381,10 +363,6 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
     setShowAddBlockDialog(true);
   }, [selectedNodeId]);
   const handleCloseAddBlock = useCallback(() => setShowAddBlockDialog(false), []);
-  const handleAddBlock = useCallback((block: DialogBlockWithContent) => {
-    setShowAddBlockDialog(false);
-    // handle block addition logic here
-  }, []);
 
   // Handle position creation from AddBlockDialog
   const handlePositionCreated = useCallback(async (newPositionId: string) => {
@@ -408,12 +386,6 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
   // AddArticleDialog handlers
   const handleOpenAddArticle = useCallback(() => setShowAddArticleDialog(true), []);
   const handleCloseAddArticle = useCallback(() => setShowAddArticleDialog(false), []);
-  const handleAddArticle = useCallback((article: Article) => {
-    setShowAddArticleDialog(false);
-    // TODO: Implement article addition logic similar to block addition
-    console.log('Adding article:', article);
-    toast.info('Artikel-Hinzufügen-Funktion wird implementiert');
-  }, []);
 
   // Delete position handlers
   const handleDeleteClick = useCallback(() => {
@@ -488,7 +460,6 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
             </>
           )}
         </div>
-        {/* Price summary removed; now displayed above tabs in QuoteDetail */}
       </div>
       <div className="flex h-full w-full border rounded-md overflow-hidden">
         {/* Left Panel - Tree View */}
@@ -546,16 +517,14 @@ const InteractiveSplitPanel: React.FC<InteractiveSplitPanelProps> = ({
       <AddBlockDialog
         open={showAddBlockDialog}
         onClose={handleCloseAddBlock}
-        onAdd={handleAddBlock}
-        blocks={dialogBlocks}
         versionId={versionId}
         selectedNodeId={selectedNodeId}
         onPositionCreated={handlePositionCreated}
+        languageId={languageId}
       />
       <AddArticleDialog
         open={showAddArticleDialog}
         onClose={handleCloseAddArticle}
-        onAdd={handleAddArticle}
         languageId={languageId}
         versionId={versionId}
         selectedNodeId={selectedNodeId}

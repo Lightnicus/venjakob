@@ -6,6 +6,7 @@ import { Edit3, Save, Loader2, Lock, AlertTriangle } from 'lucide-react';
 import { useEditLock, type LockableResource } from '@/hooks/use-edit-lock';
 import { useUser } from '@/hooks/use-user';
 import { toast } from 'sonner';
+import LoadingButton from './loading-button';
 
 interface EditLockButtonProps {
   resourceType: LockableResource;
@@ -451,13 +452,15 @@ const EditLockButton: React.FC<EditLockButtonProps> = ({
 
       {/* Save Button - only show when in edit mode AND we actually have the lock */}
       {isEditing && lockInfo.isLockedByCurrentUser && (
-        <Button
+        <LoadingButton
           size="sm"
           onClick={handleSave}
+          loading={isSaving}
+          loadingText="Speichern..."
           aria-label="Änderungen speichern"
         >
           {getSaveButtonContent()}
-        </Button>
+        </LoadingButton>
       )}
 
       {lockInfo.isLocked && !lockInfo.isLockedByCurrentUser && (

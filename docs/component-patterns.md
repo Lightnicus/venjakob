@@ -801,6 +801,186 @@ openNewTab({
 - **User Experience**: Context-aware tab opening with proper data
 - **Type Safety**: Full TypeScript support for all parameters
 
+## Dialog Components
+
+### AddBlockDialog & AddArticleDialog
+
+Two dialog components for adding blocks and articles to quote positions.
+
+**Location:** `project_components/add-block-dialog.tsx` and `project_components/add-article-dialog.tsx`
+
+**Shared Architecture:**
+- Both load their own data when opened (no pre-loading by parent)
+- Both use `LoadingIndicator` for consistent loading UI
+- Both have standardized preview panes with HTML rendering
+- Both use `Intl.NumberFormat` for currency formatting
+- Both follow the same layout pattern with table, add button, and preview
+- Both use `LoadingButton` for consistent loading states
+
+**Props:**
+- `open: boolean` - Dialog visibility
+- `onClose: () => void` - Close handler
+- `languageId: string` - Language for data fetching
+- `versionId?: string` - Target version for position creation
+- `selectedNodeId?: string | null` - Parent node for positioning
+- `onPositionCreated?: (positionId: string) => void` - Callback after creation
+
+**Data Loading:**
+- **AddBlockDialog**: Fetches via `fetchBlocksWithContentByLanguage(languageId)`
+- **AddArticleDialog**: Fetches via `fetchArticlesByLanguage(languageId)`
+- Both show loading state with `LoadingIndicator` component
+
+**Table Features:**
+- Radio selection for single item choice
+- Global search across relevant fields
+- Consistent column definitions with proper formatting
+- Row click to select items
+
+**Preview Pane:**
+- Converts Plate JSON content to HTML for preview
+- Shows title (if not hidden) and rendered content
+- Fixed height (32) with scrollable content
+- Error handling for content conversion
+
+**Actions:**
+- Uses `LoadingButton` component for consistent loading states
+- Button text: "Hinzufügen" (normal) / "Hinzufügen..." (loading)
+- Calls respective API (`createQuotePosition` or `createQuotePositionForArticle`)
+- Notifies parent via `onPositionCreated` callback
+- Shows success/error toasts
+
+**Usage:**
+```tsx
+// Both dialogs follow the same pattern
+<AddBlockDialog
+  open={showDialog}
+  onClose={handleClose}
+  languageId={languageId}
+  versionId={versionId}
+  selectedNodeId={selectedNodeId}
+  onPositionCreated={handlePositionCreated}
+/>
+
+<AddArticleDialog
+  open={showDialog}
+  onClose={handleClose}
+  languageId={languageId}
+  versionId={versionId}
+  selectedNodeId={selectedNodeId}
+  onPositionCreated={handlePositionCreated}
+/>
+```
+
+**Key Improvements (DRY):**
+1. **Unified data loading** - Both dialogs fetch their own data
+2. **Standardized loading UI** - Both use `LoadingIndicator`
+3. **Normalized preview pane** - Same layout and height
+4. **Unified currency/date formatting** - Consistent German formatting
+5. **Clarified add behavior** - Removed unused `onAdd` props
+6. **Column definition consistency** - Similar structure and formatting
+7. **LoadingButton integration** - Consistent loading states across dialogs
+
+### LoadingButton
+
+A reusable button component that handles loading states with visual feedback.
+
+**Location:** `project_components/loading-button.tsx`
+
+**Features:**
+- **Loading State**: Shows `Loader2` icon with `animate-spin` when loading
+- **Text Change**: Optional `loadingText` prop to change button text during loading
+- **Disabled State**: Automatically disables button when loading
+- **Flexible**: Supports all Button variants, sizes, and props
+- **TypeScript**: Full type safety with proper interfaces
+
+**Props:**
+- `loading?: boolean` - Shows loading state
+- `loadingText?: string` - Text to show when loading (optional)
+- `disabled?: boolean` - Disables button
+- `variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link'`
+- `size?: 'default' | 'sm' | 'lg' | 'icon'`
+- `className?: string` - Additional CSS classes
+- `children: React.ReactNode` - Button content
+- `onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void | Promise<void>`
+- `type?: 'button' | 'submit' | 'reset'`
+- `'aria-label'?: string` - Accessibility label
+
+**Usage:**
+```tsx
+import LoadingButton from '@/project_components/loading-button';
+
+// Basic usage
+<LoadingButton
+  onClick={handleClick}
+  loading={isLoading}
+  loadingText="Speichern..."
+>
+  Speichern
+</LoadingButton>
+
+// With disabled state
+<LoadingButton
+  onClick={handleSubmit}
+  disabled={!isValid}
+  loading={isSubmitting}
+  loadingText="Wird gesendet..."
+  type="submit"
+>
+  Absenden
+</LoadingButton>
+
+// With custom styling
+<LoadingButton
+  onClick={handleDelete}
+  variant="destructive"
+  size="sm"
+  loading={isDeleting}
+  loadingText="Lösche..."
+  className="w-full"
+>
+  Löschen
+</LoadingButton>
+```
+
+**Benefits:**
+- **DRY Principle**: Eliminates duplicate loading button markup
+- **Consistency**: Provides uniform loading states across the application
+- **Maintainability**: Single place to update loading button behavior
+- **Accessibility**: Proper ARIA labels and disabled states
+- **Type Safety**: Full TypeScript support with proper interfaces
+
+**Components Updated:**
+- **AddBlockDialog & AddArticleDialog**: Primary implementation
+- **SalesOpportunityDetail**: Save button with loading state
+- **TableActionButton**: Icon buttons with loading states
+- **EditLockButton**: Save button with loading state
+- **ArticleListTable**: "Artikel hinzufügen" button with loading state
+- **BlockListTable**: "Block hinzufügen" button with loading state
+
+**Migration Pattern:**
+```tsx
+// Before: Manual loading button
+<Button onClick={handleSave} disabled={isSaving}>
+  {isSaving ? (
+    <>
+      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+      Speichern...
+    </>
+  ) : (
+    'Speichern'
+  )}
+</Button>
+
+// After: LoadingButton component
+<LoadingButton 
+  onClick={handleSave} 
+  loading={isSaving}
+  loadingText="Speichern..."
+>
+  Speichern
+</LoadingButton>
+```
+
 ## Interactive Split Panel
 
 The `InteractiveSplitPanel` component provides a tree view with drag-and-drop functionality for quote positions. It features:

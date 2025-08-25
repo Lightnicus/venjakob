@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Edit, Save, X, Loader2 } from 'lucide-react';
+import { Save, X, Edit3 } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchSalesOpportunity, saveSalesOpportunityPropertiesAPI } from '@/lib/api/sales-opportunities';
 import { fetchLanguages } from '@/lib/api/blocks';
@@ -11,6 +11,7 @@ import type { SalesOpportunityWithDetails } from '@/lib/db/sales-opportunities';
 import type { SalesOpportunity, Language } from '@/lib/db/schema';
 import { useTabReload, useTabTitle } from '@/project_components/tabbed-interface-provider';
 import { LoadingIndicator } from '@/project_components/loading-indicator';
+import LoadingButton from './loading-button';
 
 interface SalesOpportunityDetailProps {
   salesOpportunityId: string;
@@ -150,24 +151,22 @@ const SalesOpportunityDetail: React.FC<SalesOpportunityDetailProps> = ({ salesOp
         <div className="flex gap-2">
           {!isEditing ? (
             <Button onClick={handleEdit} variant="outline" disabled={isSaving}>
-              <Edit className="h-4 w-4 mr-2" />
+              <Edit3 className="h-4 w-4 mr-2" />
               Bearbeiten
             </Button>
           ) : (
             <>
-              <Button onClick={handleSave} variant="default" disabled={isSaving}>
-                {isSaving ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Speichern...
-                  </>
-                ) : (
-                  <>
-                    <Save className="h-4 w-4 mr-2" />
-                    Speichern
-                  </>
-                )}
-              </Button>
+              <LoadingButton 
+                onClick={handleSave} 
+                variant="default" 
+                loading={isSaving}
+                loadingText="Speichern..."
+              >
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Speichern
+                </>
+              </LoadingButton>
               <Button onClick={handleCancel} variant="outline" disabled={isSaving}>
                 <X className="h-4 w-4 mr-2" />
                 Abbrechen

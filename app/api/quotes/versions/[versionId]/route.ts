@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { quoteVersions } from '@/lib/db/schema';
 import { eq, sql } from 'drizzle-orm';
 import { requireAuth } from '@/lib/auth/server';
+import { getQuoteVersionById } from '@/lib/db/quotes';
 
 export async function DELETE(
   request: NextRequest,
@@ -34,9 +35,6 @@ export async function DELETE(
     );
   }
 }
-
-import { NextRequest, NextResponse } from 'next/server';
-import { getQuoteVersionById } from '@/lib/db/quotes';
 
 export async function GET(
   request: NextRequest,

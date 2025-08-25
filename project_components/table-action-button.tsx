@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Loader2, LucideIcon } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import LoadingButton from './loading-button';
 
 interface TableActionButtonProps {
   icon: LucideIcon;
@@ -49,11 +50,12 @@ export const TableActionButton = ({
   const isDisabled = isLoading || disabled;
 
   return (
-    <Button
+    <LoadingButton
       variant={variant}
       size="sm"
       onClick={handleClick}
       disabled={isDisabled}
+      loading={isLoading}
       className={cn(
         "h-8 w-8 p-0",
         variant === 'destructive' && "text-red-600 hover:text-red-700 hover:bg-red-50",
@@ -61,11 +63,7 @@ export const TableActionButton = ({
       )}
       title={title}
     >
-      {isLoading ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
-      ) : (
-        <Icon className="h-4 w-4" />
-      )}
-    </Button>
+      <Icon className="h-4 w-4" />
+    </LoadingButton>
   );
 }; 

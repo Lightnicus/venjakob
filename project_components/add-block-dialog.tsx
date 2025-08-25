@@ -1,58 +1,79 @@
+'use client';
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { FilterableTable } from './filterable-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import type { Block, BlockContent } from '@/lib/db/schema';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { toast } from 'sonner';
+import { createQuotePosition } from '@/lib/api/quotes';
+import { fetchBlocksWithContentByLanguage } from '@/lib/api/blocks';
+import { formatGermanDate } from '@/helper/date-formatter';
 import { parseJsonContent } from '@/helper/plate-json-parser';
 import { plateValueToHtml } from '@/helper/plate-serialization';
-import { formatGermanDate } from '@/helper/date-formatter';
-import { createQuotePosition } from '@/lib/api/quotes';
-import { toast } from 'sonner';
+import { LoadingIndicator } from './loading-indicator';
+import LoadingButton from './loading-button';
+import type { BlockWithContent } from '@/lib/db/blocks';
 
-export type BlockWithContent = Block & {
-  content?: BlockContent;
+export type DialogBlockWithContent = BlockWithContent & {
+  content?: {
+    title: string;
+    content: string;
+  } | null;
 };
 
 type Props = {
   open: boolean;
   onClose: () => void;
-  onAdd: (block: BlockWithContent) => void;
-  blocks: BlockWithContent[];
   versionId?: string;
   selectedNodeId?: string | null;
-  onPositionCreated?: (newPositionId: string) => void;
+  onPositionCreated?: (positionId: string) => void;
+  languageId: string;
 };
 
 const AddBlockDialog: React.FC<Props> = ({ 
   open, 
   onClose, 
-  onAdd, 
-  blocks, 
   versionId, 
   selectedNodeId,
-  onPositionCreated 
+  onPositionCreated,
+  languageId
 }) => {
   const [search, setSearch] = useState('');
-  const [selectedId, setSelectedId] = useState<string | null>(
-    blocks[0]?.id ?? null,
-  );
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [blocks, setBlocks] = useState<BlockWithContent[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string>("");
   const [isAdding, setIsAdding] = useState(false);
+
+  // Load blocks when dialog opens and languageId is available
+  useEffect(() => {
+    if (open && languageId) {
+      setIsLoading(true);
+      fetchBlocksWithContentByLanguage(languageId)
+        .then((fetchedBlocks) => {
+          setBlocks(fetchedBlocks);
+          if (fetchedBlocks.length > 0 && !selectedId) {
+            setSelectedId(fetchedBlocks[0].id);
+          }
+        })
+        .catch((error) => {
+          console.error('Error fetching blocks:', error);
+          toast.error('Fehler beim Laden der Blöcke');
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [open, languageId]);
 
   const filteredBlocks = useMemo(
     () =>
       blocks.filter(
         b =>
           b.name.toLowerCase().includes(search.toLowerCase()) ||
-          (b.content?.title && b.content.title.toLowerCase().includes(search.toLowerCase())),
+          (b.blockContents?.[0]?.title && b.blockContents[0].title.toLowerCase().includes(search.toLowerCase())),
       ),
     [search, blocks],
   );
@@ -64,14 +85,14 @@ const AddBlockDialog: React.FC<Props> = ({
 
   // Function to update preview HTML with current block content
   const updatePreviewHtml = useCallback(async () => {
-    if (!selectedBlock?.content?.content) {
+    if (!selectedBlock?.blockContents?.[0]?.content) {
       setPreviewHtml("<em>(Kein Inhalt verfügbar)</em>");
       return;
     }
 
     try {
       // Parse the JSON string back to PlateJS value
-      const plateValue = parseJsonContent(selectedBlock.content.content);
+      const plateValue = parseJsonContent(selectedBlock.blockContents[0].content);
       // Convert to HTML
       const html = await plateValueToHtml(plateValue);
       setPreviewHtml(html);
@@ -111,9 +132,9 @@ const AddBlockDialog: React.FC<Props> = ({
         header: 'Bezeichnung',
       },
       {
-        accessorKey: 'content.title',
+        accessorKey: 'blockContents.title',
         header: 'Überschrift',
-        cell: ({ row }) => row.original.content?.title || '-',
+        cell: ({ row }) => row.original.blockContents?.[0]?.title || '-',
       },
       {
         accessorKey: 'updatedAt',
@@ -183,41 +204,49 @@ const AddBlockDialog: React.FC<Props> = ({
         <div className="flex-1 overflow-hidden flex flex-col space-y-4">
           {/* Table */}
           <div className="flex-1 overflow-auto">
-            <FilterableTable
-              data={filteredBlocks}
-              columns={columns}
-              getRowClassName={row =>
-                selectedId === row.original.id
-                  ? 'cursor-pointer'
-                  : 'bg-white text-black hover:bg-gray-100 cursor-pointer'
-              }
-              globalFilterColumnIds={['name', 'content.title']}
-              onRowClick={row => setSelectedId(row.original.id)}
-              tableClassName="min-w-full border border-gray-300 text-sm"
-              cellClassName="px-3 py-2 border-b border-gray-200"
-              headerClassName="px-3 py-2 font-bold text-left border-b border-gray-300 bg-gray-100"
-            />
+            {isLoading ? (
+              <div className="flex items-center justify-center h-32">
+                <LoadingIndicator text="Blöcke werden geladen..." variant="centered" />
+              </div>
+            ) : (
+              <FilterableTable
+                data={filteredBlocks}
+                columns={columns}
+                getRowClassName={row =>
+                  selectedId === row.original.id
+                    ? 'cursor-pointer'
+                    : 'bg-white text-black hover:bg-gray-100 cursor-pointer'
+                }
+                globalFilterColumnIds={['name', 'blockContents.title']}
+                onRowClick={row => setSelectedId(row.original.id)}
+                tableClassName="min-w-full border border-gray-300 text-sm"
+                cellClassName="px-3 py-2 border-b border-gray-200"
+                headerClassName="px-3 py-2 font-bold text-left border-b border-gray-300 bg-gray-100"
+              />
+            )}
           </div>
           
           {/* Add Button */}
           <div className="flex justify-end">
-            <Button
+            <LoadingButton
               onClick={handleAddBlock}
-              disabled={!selectedBlock || isAdding}
+              disabled={!selectedBlock}
+              loading={isAdding}
+              loadingText="Hinzufügen..."
               aria-label="Block hinzufügen"
             >
-              {isAdding ? 'Hinzufügen...' : '+ Hinzufügen'}
-            </Button>
+              Hinzufügen
+            </LoadingButton>
           </div>
           
           {/* Vorschau */}
           <div className="border border-gray-300 rounded p-4 bg-white">
             <div className="font-bold mb-2">Vorschau</div>
-            <div className="relative h-48 overflow-y-auto border border-gray-200 rounded p-2 bg-gray-50">
+            <div className="relative h-32 overflow-y-auto border border-gray-200 rounded p-2 bg-gray-50 mb-2">
               {selectedBlock ? (
                 <div className="space-y-2">
-                  {selectedBlock.content?.title && !selectedBlock.hideTitle && (
-                    <h3 className="font-bold text-lg">{selectedBlock.content.title}</h3>
+                  {selectedBlock.blockContents?.[0]?.title && !selectedBlock.hideTitle && (
+                    <h3 className="font-bold text-lg">{selectedBlock.blockContents[0].title}</h3>
                   )}
                   <div 
                     className="prose max-w-none"

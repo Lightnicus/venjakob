@@ -10,6 +10,7 @@ import InlineRowCheckbox from './inline-row-checkbox';
 import type { ColumnDef, Row } from '@tanstack/react-table';
 import { toast } from 'sonner';
 import { DeleteConfirmationDialog } from './delete-confirmation-dialog';
+import LoadingButton from './loading-button';
 import type { Language } from '@/lib/db/schema';
 import type { ArticleWithCalculations } from '@/lib/db/articles';
 
@@ -54,6 +55,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
   const { openNewTab } = useTabbedInterface();
   const [articleToDelete, setArticleToDelete] = useState<ArticleListItem | null>(null);
   const [tableData, setTableData] = useState<ArticleListItem[]>(data);
+  const [isCreatingArticle, setIsCreatingArticle] = useState(false);
 
   useEffect(() => {
     setTableData(data);
@@ -124,6 +126,7 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     }
     
     try {
+      setIsCreatingArticle(true);
       const newArticle = await onCreateArticle();
 
       // Create wrapper functions to match ArticleDetail's expected signatures
@@ -163,6 +166,8 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
     } catch (error) {
       console.error('Error creating/loading article:', error);
       toast.error('Fehler beim Erstellen des Artikels');
+    } finally {
+      setIsCreatingArticle(false);
     }
   };
 
@@ -380,17 +385,19 @@ const ArticleListTable: FC<ArticleListTableProps> = ({
   return (
     <div className="w-full">
       <div className="flex items-center gap-2 mb-2">
-        <Button
+        <LoadingButton
           variant="outline"
           size="sm"
           className="flex items-center gap-1 cursor-pointer"
           aria-label="Artikel hinzufügen"
           tabIndex={0}
           onClick={handleAddNewArticle}
-          disabled={!onCreateArticle}
+          disabled={!onCreateArticle || isCreatingArticle}
+          loading={isCreatingArticle}
+          loadingText="Erstellung..."
         >
           + Artikel hinzufügen
-        </Button>
+        </LoadingButton>
       </div>
       <div className="overflow-x-auto">
         <FilterableTable

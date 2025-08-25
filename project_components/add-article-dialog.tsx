@@ -1,46 +1,42 @@
+'use client';
+
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { FilterableTable } from './filterable-table';
 import type { ColumnDef } from '@tanstack/react-table';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { fetchArticlesByLanguage } from '@/lib/api/articles';
-import { createQuotePositionForArticle } from '@/lib/api/quotes';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
+import { createQuotePositionForArticle } from '@/lib/api/quotes';
+import { fetchArticlesByLanguage } from '@/lib/api/articles';
+import { formatGermanDate } from '@/helper/date-formatter';
 import { parseJsonContent } from '@/helper/plate-json-parser';
 import { plateValueToHtml } from '@/helper/plate-serialization';
-import { formatGermanDate } from '@/helper/date-formatter';
+import { LoadingIndicator } from './loading-indicator';
+import LoadingButton from './loading-button';
 
 export type Article = {
   id: string;
   number: string;
   title: string;
   price: string | null;
+  content: string | null;
   hideTitle: boolean;
   updatedAt: string;
-  content: string | null;
 };
 
-interface Props {
+type Props = {
   open: boolean;
   onClose: () => void;
-  onAdd?: (article: Article) => void;
-  languageId?: string;
+  languageId: string;
   versionId?: string;
   selectedNodeId?: string | null;
   onPositionCreated?: (positionId: string) => void;
-}
+};
 
 const AddArticleDialog: React.FC<Props> = ({
   open,
   onClose,
-  onAdd,
   languageId,
   versionId,
   selectedNodeId,
@@ -179,7 +175,7 @@ const AddArticleDialog: React.FC<Props> = ({
         header: 'Preis',
         cell: ({ row }) => 
           row.original.price 
-            ? `€${parseFloat(row.original.price).toFixed(2)}`
+            ? new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' }).format(parseFloat(row.original.price))
             : '-',
       },
       {
@@ -209,7 +205,7 @@ const AddArticleDialog: React.FC<Props> = ({
           <div className="flex-1 overflow-auto">
             {isLoading ? (
               <div className="flex items-center justify-center h-32">
-                <div className="text-gray-500">Lade Artikel...</div>
+                <LoadingIndicator text="Artikel werden geladen..." variant="centered" />
               </div>
             ) : (
               <FilterableTable
@@ -231,13 +227,15 @@ const AddArticleDialog: React.FC<Props> = ({
           
           {/* Add Button */}
           <div className="flex justify-end">
-            <Button
+            <LoadingButton
               onClick={handleAddArticle}
-              disabled={!selectedArticle || isAdding}
+              disabled={!selectedArticle}
+              loading={isAdding}
+              loadingText="Hinzufügen..."
               aria-label="Artikel hinzufügen"
             >
-              {isAdding ? 'Hinzufügen...' : '+ Hinzufügen'}
-            </Button>
+              Hinzufügen
+            </LoadingButton>
           </div>
           
           {/* Vorschau */}
