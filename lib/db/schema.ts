@@ -50,7 +50,10 @@ export const languages = pgTable('languages', {
   default: boolean('default').notNull().default(false),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
-});
+}, table => ({
+  // Performance indexes
+  defaultIdx: index('idx_languages_default').on(table.default),
+}));
 
 // Clients table
 export const clients = pgTable('clients', {
@@ -95,7 +98,11 @@ export const articles = pgTable('articles', {
   deleted: boolean('deleted').notNull().default(false),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
-});
+}, table => ({
+  // Performance indexes
+  deletedNumberIdx: index('idx_articles_deleted_number').on(table.deleted, table.number),
+  numberIdx: index('idx_articles_number').on(table.number),
+}));
 
 // Block Content table
 export const blockContent = pgTable(
@@ -127,6 +134,9 @@ export const blockContent = pgTable(
       'block_or_article_check',
       sql`(${table.blockId} IS NOT NULL AND ${table.articleId} IS NULL) OR (${table.blockId} IS NULL AND ${table.articleId} IS NOT NULL)`,
     ),
+    // Performance indexes
+    articleLanguageDeletedIdx: index('idx_block_content_article_language_deleted').on(table.articleId, table.languageId, table.deleted),
+    articleBlockDeletedIdx: index('idx_block_content_article_block_deleted').on(table.articleId, table.blockId, table.deleted),
   }),
 );
 
@@ -164,7 +174,10 @@ export const articleCalculationItem = pgTable('article_calculation_item', {
   deleted: boolean('deleted').notNull().default(false),
   createdAt: timestamp('created_at', { mode: 'string' }).defaultNow().notNull(),
   updatedAt: timestamp('updated_at', { mode: 'string' }).defaultNow().notNull(),
-});
+}, table => ({
+  // Performance indexes
+  articleDeletedIdx: index('idx_article_calculation_items_article_deleted').on(table.articleId, table.deleted),
+}));
 
 // Roles table
 export const roles = pgTable('roles', {

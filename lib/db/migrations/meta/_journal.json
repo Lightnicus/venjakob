@@ -239,6 +239,13 @@
       "when": 1754909041767,
       "tag": "0033_faithful_unicorn",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1756157726683,
+      "tag": "0034_loud_stingray",
+      "breakpoints": true
     }
   ]
 }
