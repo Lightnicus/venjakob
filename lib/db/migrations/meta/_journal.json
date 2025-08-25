@@ -246,6 +246,34 @@
       "when": 1756157726683,
       "tag": "0034_loud_stingray",
       "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1756159074080,
+      "tag": "0035_famous_norrin_radd",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1756159971890,
+      "tag": "0036_messy_purple_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1756160915444,
+      "tag": "0037_naive_jack_power",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1756161275531,
+      "tag": "0038_marvelous_red_ghost",
+      "breakpoints": true
     }
   ]
 }

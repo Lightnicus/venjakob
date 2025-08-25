@@ -25,8 +25,12 @@ class PerformanceMonitor {
     startTime: number;
     queries: QueryMetric[];
   } | null = null;
+  private enabled: boolean;
 
-  private constructor() {}
+  private constructor() {
+    // Check environment variable for performance monitoring
+    this.enabled = process.env.PERFORMANCE_LOG === 'true';
+  }
 
   static getInstance(): PerformanceMonitor {
     if (!PerformanceMonitor.instance) {
@@ -36,6 +40,8 @@ class PerformanceMonitor {
   }
 
   startApiCall(endpoint: string, method: string): void {
+    if (!this.enabled) return;
+    
     this.currentApiCall = {
       endpoint,
       method,
@@ -45,16 +51,18 @@ class PerformanceMonitor {
   }
 
   recordQuery(queryName: string, duration: number): void {
-    if (this.currentApiCall) {
-      this.currentApiCall.queries.push({
-        queryName,
-        duration,
-        timestamp: performance.now(),
-      });
-    }
+    if (!this.enabled || !this.currentApiCall) return;
+    
+    this.currentApiCall.queries.push({
+      queryName,
+      duration,
+      timestamp: performance.now(),
+    });
   }
 
   endApiCall(statusCode: number): void {
+    if (!this.enabled) return;
+    
     if (!this.currentApiCall) {
       console.warn('PerformanceMonitor: No active API call to end');
       return;
@@ -105,6 +113,11 @@ class PerformanceMonitor {
     
     console.groupEnd();
   }
+
+  // Method to check if monitoring is enabled
+  isEnabled(): boolean {
+    return this.enabled;
+  }
 }
 
 export const performanceMonitor = PerformanceMonitor.getInstance();
@@ -116,6 +129,11 @@ export const withPerformanceMonitoring = <T extends any[], R>(
   method: string
 ) => {
   return async (...args: T): Promise<R> => {
+    // If performance monitoring is disabled, just call the handler directly
+    if (!performanceMonitor.isEnabled()) {
+      return await handler(...args);
+    }
+
     performanceMonitor.startApiCall(endpoint, method);
     
     try {
@@ -136,6 +154,11 @@ export const withQueryMonitoring = <T>(
   queryName: string
 ) => {
   return async (): Promise<T> => {
+    // If performance monitoring is disabled, just call the query function directly
+    if (!performanceMonitor.isEnabled()) {
+      return await queryFn();
+    }
+
     const startTime = performance.now();
     
     try {

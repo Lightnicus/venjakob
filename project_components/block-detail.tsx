@@ -225,8 +225,8 @@ const BlockDetail: FC<BlockDetailProps> = ({
   };
 
   const handleToggleEdit = () => {
-    if (isEditing && block) {
-      // Reset to original data
+    // Initialize/reset edit buffers only when ENTERING edit mode
+    if (!isEditing && block) {
       setEditedBlockProperties({
         name: block.name,
         standard: block.standard,
@@ -295,7 +295,6 @@ const BlockDetail: FC<BlockDetailProps> = ({
         await onSaveBlockProperties(block.id, editedBlockProperties);
       }
 
-      setIsEditing(false);
       toast.success('Block gespeichert');
 
       // Update tab title if block name changed
@@ -304,6 +303,15 @@ const BlockDetail: FC<BlockDetailProps> = ({
         editedBlockProperties.name !== block.name
       ) {
         updateTitle(`Block: ${editedBlockProperties.name}`);
+      }
+
+      // Update the block state with the saved properties
+      if (block) {
+        setBlock(prev => ({
+          ...prev!,
+          ...editedBlockProperties,
+          updatedAt: new Date().toISOString()
+        }));
       }
 
       // Trigger reload for other tabs (like BlockManagement)

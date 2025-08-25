@@ -1,0 +1,2 @@
+ALTER TABLE "block_content" DROP CONSTRAINT "block_content_block_language_unique";--> statement-breakpoint
+ALTER TABLE "block_content" ADD CONSTRAINT "block_content_block_language_unique" UNIQUE("block_id","language_id","deleted");

@@ -375,10 +375,10 @@ export const auditedBlockContentOperations = {
     metadata?: Record<string, any>
   ) => {
     return await db.transaction(async (tx) => {
-      // 1. Get existing content before deletion
+      // 1. Get existing content before deletion (only non-deleted content)
       const whereClause = entityType === 'blocks' 
-        ? eq(blockContent.blockId, entityId)
-        : eq(blockContent.articleId, entityId);
+        ? and(eq(blockContent.blockId, entityId), eq(blockContent.deleted, false))
+        : and(eq(blockContent.articleId, entityId), eq(blockContent.deleted, false));
       
       const existingContent = await tx.select().from(blockContent).where(whereClause);
 

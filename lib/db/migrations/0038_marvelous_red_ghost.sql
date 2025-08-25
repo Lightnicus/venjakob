@@ -1,0 +1,1 @@
+ALTER TABLE "block_content" DROP CONSTRAINT "block_content_block_language_unique";

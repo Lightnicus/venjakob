@@ -509,12 +509,11 @@ export async function getBlockList(): Promise<
       }
 
       // Get languages for this block
-      const blockLanguages = blockContents
-        .map(bc => {
-          const lang = allLanguages.find(l => l.id === bc.languageId);
-          return lang;
-        })
-        .filter(lang => lang !== undefined);
+      // Deduplicate by languageId in case historical rows exist
+      const uniqueLanguageIds = Array.from(new Set(blockContents.map(bc => bc.languageId)));
+      const blockLanguages = uniqueLanguageIds
+        .map(languageId => allLanguages.find(l => l.id === languageId))
+        .filter((lang): lang is typeof allLanguages[number] => Boolean(lang));
 
       // Sort languages: default first, then alphabetically by label
       const sortedLanguages = blockLanguages.sort((a, b) => {

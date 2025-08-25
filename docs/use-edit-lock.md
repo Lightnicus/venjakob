@@ -85,6 +85,10 @@ const MyComponent = () => {
   };
 
   const handleToggleEdit = () => {
+    // Initialize edit buffers only when entering edit mode
+    if (!isEditing) {
+      // load/clone current data into local edit state here
+    }
     setIsEditing(!isEditing);
   };
 
@@ -93,9 +97,9 @@ const MyComponent = () => {
     try {
       // Your save logic here
       await saveData(resourceData);
+      // Do NOT call setIsEditing(false) here; EditLockButton exits edit mode after unlock
     } finally {
       setIsSaving(false);
-      setIsEditing(false);
     }
   };
 
@@ -492,6 +496,41 @@ Use `refreshLockStatus()` when:
 **UI not updating after lock changes:**
 - Ensure `refreshLockStatus()` is called after manual lock operations
 - Check that component re-renders on state changes
+
+### Reversion after Save in Detail Views (Blocks/Articles)
+
+**Symptoms:** After a successful save, the UI briefly shows a reload and then displays old content.
+
+**Root cause:** Race between local edit exit and state reset. `EditLockButton` exits edit mode (after unlock) while the detail component also toggled edit state and reset buffers on exit. Because React state updates are async, the exit-reset used stale `block/article` data and overwrote freshly saved edits.
+
+**Fix pattern (applied in `BlockDetail` and `ArticleDetail`):
+1. Reset/init edit buffers only when entering edit mode.
+2. Do not call `setIsEditing(false)` inside the save handler; let `EditLockButton` exit edit mode after unlock.
+
+Code sketch:
+
+```tsx
+// Enter-only reset
+const handleToggleEdit = () => {
+  if (!isEditing && entity) {
+    // clone current entity into local edit buffers here
+  }
+  setIsEditing(!isEditing);
+};
+
+// Save without directly exiting edit mode
+const handleSave = async () => {
+  setIsSaving(true);
+  try {
+    await onSave();
+    // do not call setIsEditing(false) here
+  } finally {
+    setIsSaving(false);
+  }
+};
+```
+
+This ensures the baseline used for resets is fresh and avoids double-toggling races.
 
 **Permission errors:**
 - Verify user authentication

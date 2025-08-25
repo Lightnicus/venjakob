@@ -134,6 +134,8 @@ export const blockContent = pgTable(
       'block_or_article_check',
       sql`(${table.blockId} IS NOT NULL AND ${table.articleId} IS NULL) OR (${table.blockId} IS NULL AND ${table.articleId} IS NOT NULL)`,
     ),
+    // Note: We rely on application logic to prevent duplicates, not database constraints
+    // This allows for proper soft-delete functionality without constraint violations
     // Performance indexes
     articleLanguageDeletedIdx: index('idx_block_content_article_language_deleted').on(table.articleId, table.languageId, table.deleted),
     articleBlockDeletedIdx: index('idx_block_content_article_block_deleted').on(table.articleId, table.blockId, table.deleted),

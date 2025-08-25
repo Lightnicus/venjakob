@@ -224,25 +224,25 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
   };
 
   const handleToggleEdit = () => {
-    if (isEditing && article) {
-      // Reset to original data
+    // Initialize/reset edit buffers only when ENTERING edit mode
+    if (!isEditing && article) {
+      // Initialize properties
       setEditedAllgemeineData({
         nr: article.number || '',
         einzelpreis: article.price || '0.00',
         ueberschriftNichtDrucken: article.hideTitle || false,
       });
 
-      // Reset calculation data to original values
+      // Initialize calculation data
       const resetKalkulation: Record<string, string> = {};
       article.calculations.forEach(item => {
         resetKalkulation[item.id] = item.value || '0';
       });
       setEditedKalkulationData(resetKalkulation);
 
+      // Initialize content buffers
       const initial: Record<string, { title: string; content: string; languageId: string }> = {};
       const contentLanguages: Language[] = [];
-      
-      // Reset from existing article content
       if (article.content) {
         article.content.forEach(content => {
           const lang = languages.find(l => l.id === content.languageId);
@@ -258,19 +258,13 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
           }
         });
       }
-      
       setEditedArticleContents(initial);
       setCurrentLanguages(contentLanguages);
-      
-      if (contentLanguages.length > 0) {
-        setSelectedPreviewLanguage(
-          contentLanguages.find(l => l.value === selectedPreviewLanguage)
-            ? selectedPreviewLanguage
-            : contentLanguages[0].value
-        );
-      } else {
-        setSelectedPreviewLanguage('');
-      }
+      setSelectedPreviewLanguage(
+        contentLanguages.find(l => l.value === selectedPreviewLanguage)?.value ||
+          contentLanguages[0]?.value ||
+          ''
+      );
     }
     setIsEditing(!isEditing);
   };
@@ -337,7 +331,6 @@ const ArticleDetail: FC<ArticleDetailProps> = ({
         await onSaveContent(article.id, contentToSave);
       }
 
-      setIsEditing(false);
       toast.success('Artikel gespeichert');
       
       // Update tab title and header with new title from default language using edited content
