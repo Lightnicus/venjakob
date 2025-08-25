@@ -457,6 +457,17 @@ All management components follow the same implementation pattern:
 3. **Error Handling**: Implement consistent error handling across components
 4. **Performance**: Avoid unnecessary re-renders with proper state management
 
+### Avoid cross-component setState during render
+
+When a child component needs to inform a parent about changes (e.g., tracking unsaved changes), never call the parent's state setters from inside a child `setState` updater or during render. Prefer to:
+
+- Perform the child's local `setState` first
+- Then, in the same event handler (after local state), invoke the parent's setter/callback
+
+This prevents React error: "Cannot update a component (Parent) while rendering a different component (Child)."
+
+Example (OfferPositionArticle): Register calculation changes outside the `setCalcItems` updater and after computing the normalized value.
+
 ### Controlled Form Pattern (OfferProperties)
 
 For simple forms that should mirror server/parent state exactly, use a controlled component without local `useState`.
@@ -654,6 +665,32 @@ interface TableAction {
 Implemented in:
 - **QuotesListTable** - Edit, Copy, Delete actions with loading states
 - **SalesOpportunitiesListTable** - Edit, Copy, Delete actions with loading states
+
+### VariantVersionsTable
+
+A table component to display versions for a specific quote variant.
+
+**Location:** `project_components/variant-versions-table.tsx`
+
+**Props:**
+- `variantId: string` (required)
+
+**Features:**
+- Loads versions from `GET /api/quotes/variants/[variantId]/versions`
+- Default sorting by `versionNumber` descending
+- Actions: "PDF ansehen" (opens `PdfPreview`), "Löschen" (soft delete)
+- Loading state via `LoadingIndicator`
+
+**Usage:**
+```tsx
+import VariantVersionsTable from '@/project_components/variant-versions-table';
+
+<VariantVersionsTable variantId={variantId} />
+```
+
+**Related APIs:**
+- `GET /api/quotes/variants/[variantId]/versions`
+- `DELETE /api/quotes/versions/[versionId]`
 
 #### Migration Guide
 

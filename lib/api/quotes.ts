@@ -228,6 +228,30 @@ export async function fetchVersionById(versionId: string): Promise<any | null> {
   return response.json();
 }
 
+// Fetch versions list for a variant (non-deleted), default sorted by versionNumber desc
+export async function fetchVersionsForVariant(variantId: string): Promise<Array<{
+  id: string;
+  versionNumber: number;
+  createdAt: string;
+  updatedAt: string;
+  totalPrice: string | null;
+  isLatest: boolean;
+}>> {
+  const response = await fetch(`/api/quotes/variants/${variantId}/versions`);
+  if (!response.ok) {
+    throw new Error('Failed to fetch versions for variant');
+  }
+  return response.json();
+}
+
+// Soft delete a version
+export async function softDeleteVersion(versionId: string): Promise<void> {
+  const response = await fetch(`/api/quotes/versions/${versionId}`, { method: 'DELETE' });
+  if (!response.ok) {
+    throw new Error('Failed to delete version');
+  }
+}
+
 // Fetch complete quote data (consolidated endpoint)
 export async function fetchCompleteQuoteData(
   quoteId: string,

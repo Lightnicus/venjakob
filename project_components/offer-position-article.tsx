@@ -278,20 +278,17 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
 
   const handleCalcValueBlur = useCallback((id: string) => (e: React.FocusEvent<HTMLInputElement>) => {
     const raw = e.target.value.trim();
-    setCalcItems(prev => prev.map(it => {
-      if (it.id !== id) return it;
-      const oldCanonical = it.value;
-      const normalized = clampTwoDecimals(parseGermanDecimal(raw));
-      // If empty or invalid, fall back to old value
-      if (normalized === '') {
-        return { ...it, editingValue: it.editingValue ?? '' };
-      }
-      // Update canonical and editing value, and register change
-      registerCalcChange(id, normalized, oldCanonical);
-      const germanDisplay = normalized.replace('.', ',');
-      return { ...it, value: normalized, editingValue: germanDisplay };
-    }));
-  }, [registerCalcChange])
+    const normalized = clampTwoDecimals(parseGermanDecimal(raw));
+    if (normalized === '') {
+      setCalcItems(prev => prev.map(it => (it.id === id ? { ...it, editingValue: it.editingValue ?? '' } : it)));
+      return;
+    }
+    const current = calcItems.find(it => it.id === id);
+    const oldCanonical = current ? current.value : '';
+    const germanDisplay = normalized.replace('.', ',');
+    setCalcItems(prev => prev.map(it => (it.id === id ? { ...it, value: normalized, editingValue: germanDisplay } : it)));
+    registerCalcChange(id, normalized, oldCanonical);
+  }, [calcItems, registerCalcChange])
 
   // No local save; central Save in QuoteDetail handles persistence
 
@@ -451,13 +448,15 @@ const OfferPositionArticle: React.FC<OfferPositionArticleProps> = React.memo(({
           type="button"
           variant="outline"
           onClick={() => {
-            setCalcItems(prev => prev.map(it => {
+            const pending: Array<{ id: string; newVal: string; oldVal: string }> = [];
+            const next = calcItems.map(it => {
               const orig = (it.originalValue ?? it.value) as string;
               const german = (orig ?? '').toString().replace('.', ',');
-              // register change back to original
-              registerCalcChange(it.id, orig, it.value);
+              if (orig !== it.value) pending.push({ id: it.id, newVal: orig, oldVal: it.value });
               return { ...it, value: orig, editingValue: german };
-            }));
+            });
+            setCalcItems(next);
+            pending.forEach(c => registerCalcChange(c.id, c.newVal, c.oldVal));
           }}
           disabled={!isEditing}
           aria-label="Zurücksetzen"

@@ -3,7 +3,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import InteractiveSplitPanel from '@/project_components/interactive-split-panel';
 import OfferProperties from '@/project_components/offer-properties';
 import PdfPreview from '@/project_components/pdf-preview';
-import OfferVersionsTable from '@/project_components/offer-versions-table';
+import VariantVersionsTable from '@/project_components/variant-versions-table';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -992,7 +992,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({
           value="versionen"
           className="flex-1 overflow-auto flex items-center justify-center"
         >
-          <OfferVersionsTable />
+          {variantId ? (
+            <VariantVersionsTable variantId={variantId} />
+          ) : (
+            <div className="text-gray-500">Keine Variante ausgewählt.</div>
+          )}
         </TabsContent>
       </Tabs>
       {formatLastChangedText() && (
